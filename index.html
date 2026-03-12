@@ -211,6 +211,78 @@ const DEFAULT_GAME_DATA = {
   ],
 };
 
+// ═══════════════════════════════════════════════════════════════
+// BLANK GAME DATA — Fresh campaign (wizard fills in name/race)
+// ═══════════════════════════════════════════════════════════════
+
+function createBlankGameData(wizardData = {}) {
+  return {
+    campaign: {
+      name: wizardData.worldName || "New World",
+      session: 1,
+      day: 1,
+      time: "Dawn",
+      location: wizardData.startingLocation || "Unknown",
+      mood: "anticipation",
+    },
+    character: {
+      name: wizardData.characterName || "",
+      race: wizardData.race || "",
+      class: "",
+      assignedBy: "",
+      level: 1,
+      ep: { current: 0, max: 1000 },
+      hp: { current: 20, max: 20 },
+      mp: { current: 10, max: 10 },
+      sanity: { current: 100, max: 100 },
+      gold: 0,
+      weight: { current: 0, max: 50 },
+      stats: {
+        RESONANCE: { value: 0, trend: "stable", prevValue: 0 },
+        VITALITY: { value: 0, trend: "stable", prevValue: 0 },
+        ACUITY: { value: 0, trend: "stable", prevValue: 0 },
+        WILL: { value: 0, trend: "stable", prevValue: 0 },
+        AFFINITY: { value: 0, trend: "stable", prevValue: 0 },
+      },
+      conditions: [],
+      abilities: [],
+      traits: [],
+    },
+    hiddenTrackers: {
+      sanity: { value: 100, hint: "Your mind is clear. For now." },
+      worldAwareness: { value: 0, hint: "The world has not yet noticed you." },
+      corruption: { value: 0, hint: "You are uncorrupted." },
+      magicalDebt: { value: 0, hint: "You owe nothing to the arcane." },
+      transformation: { value: 0, hint: "You are unchanged." },
+    },
+    inventory: {
+      equipped: [],
+      consumables: [],
+      keyItems: [],
+      materials: [],
+    },
+    quests: [],
+    npcs: [],
+    npcRelationships: [],
+    combat: {
+      active: false,
+      round: 0,
+      location: "",
+      turnOrder: [],
+      currentTurn: 0,
+      log: [],
+    },
+    mapLocations: [],
+    mapPaths: [],
+    lore: {
+      categories: ["Geography", "Factions", "Magic", "Bestiary", "History", "Pantheon"],
+      entries: [],
+    },
+    sessions: [],
+    consequenceLog: [],
+  };
+}
+
 
 // ═══════════════════════════════════════════════════════════════
 // STATE MANAGEMENT — REDUCER + CONTEXT
@@ -315,6 +387,13 @@ function gameReducer(state, action) {
       return { ...state, gameData: { ...state.gameData, lore: { ...state.gameData.lore, entries } } };
     }
 
+    // ─── Campaign Wizard ───
+    case 'SET_WORLD_BIBLE': return { ...state, worldBible: action.payload };
+    case 'SHOW_CAMPAIGN_WIZARD': return { ...state, showCampaignWizard: action.payload };
+    case 'START_NEW_CAMPAIGN': {
+      return { ...state, gameData: action.payload.gameData, worldBible: action.payload.worldBible, chatMessages: [], showCampaignWizard: false };
+    }
+
     // ─── Persistence ───
     case 'LOAD_GAME_STATE': return { ...state, ...action.payload };
     case 'SET_GAME_DATA': return { ...state, gameData: action.payload };
@@ -330,7 +409,7 @@ const initialState = {
   notifications: [],
   showLevelUp: false,
   combatTurn: 0,
-  // New: chat + API state
+  // Chat + API state
   chatMessages: [],
   isStreaming: false,
   apiKey: '',
@@ -338,6 +417,9 @@ const initialState = {
   apiStatus: 'disconnected', // disconnected | connected | testing | error
   dmEngine: '',
   gameData: DEFAULT_GAME_DATA,
+  // Campaign wizard
+  worldBible: '',
+  showCampaignWizard: false,
 };
 
 function GameProvider({ children }) {
@@ -350,6 +432,7 @@ function GameProvider({ children }) {
       const savedModel = localStorage.getItem('dnd-model');
       const savedChat = localStorage.getItem('dnd-chat');
       const savedGameData = localStorage.getItem('dnd-gameData');
+      const savedWorldBible = localStorage.getItem('dnd-worldBible');
       if (savedKey) dispatch({ type: 'SET_API_KEY', payload: savedKey });
       if (savedModel) dispatch({ type: 'SET_MODEL', payload: savedModel });
       if (savedChat) {
@@ -358,6 +441,7 @@ function GameProvider({ children }) {
       if (savedGameData) {
         try { dispatch({ type: 'SET_GAME_DATA', payload: JSON.parse(savedGameData) }); } catch(e) {}
       }
+      if (savedWorldBible) dispatch({ type: 'SET_WORLD_BIBLE', payload: savedWorldBible });
     } catch(e) {}
 
     // Load DM Engine
@@ -378,10 +462,11 @@ function GameProvider({ children }) {
         const trimmed = state.chatMessages.slice(-50);
         localStorage.setItem('dnd-chat', JSON.stringify(trimmed));
         localStorage.setItem('dnd-gameData', JSON.stringify(state.gameData));
+        if (state.worldBible) localStorage.setItem('dnd-worldBible', state.worldBible);
       } catch(e) {}
     }, 2000);
     return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
-  }, [state.chatMessages, state.gameData, state.apiKey, state.model]);
+  }, [state.chatMessages, state.gameData, state.apiKey, state.model, state.worldBible]);
 
   return React.createElement(GameContext.Provider, { value: { state, dispatch } }, children);
 }
@@ -488,7 +573,7 @@ function dispatchTagActions(tags, dispatch) {
 // SYSTEM PROMPT BUILDER
 // ═══════════════════════════════════════════════════════════════
 
-function buildSystemPrompt(dmEngine, gameData) {
+function buildSystemPrompt(dmEngine, gameData, worldBible) {
   const worldState = JSON.stringify({
     campaign: gameData.campaign,
     character: {
@@ -541,7 +626,15 @@ Available tags:
 
 ALWAYS include relevant tags at the END of your response. Include ALL state changes. The companion app depends on these tags to keep the player's dashboard updated.`;
 
-  return `${dmEngine}\n\n═══ CURRENT WORLD STATE ═══\n${worldState}\n${tagInstructions}`;
+  // Replace [YOUR WORLD] placeholders with actual world name
+  let processedEngine = dmEngine;
+  if (gameData.campaign.name) {
+    processedEngine = dmEngine.replace(/\[YOUR WORLD\]/g, gameData.campaign.name);
+  }
+
+  // Build prompt layers: DM Engine → World Bible → World State → Tag Instructions
+  const worldBibleSection = worldBible ? `\n\n═══ WORLD BIBLE ═══\n${worldBible}\n` : '';
+  return `${processedEngine}${worldBibleSection}\n\n═══ CURRENT WORLD STATE ═══\n${worldState}\n${tagInstructions}`;
 }
 
 
@@ -568,7 +661,7 @@ async function sendChatMessage(message, state, dispatch) {
   dispatch({ type: 'ADD_CHAT_MESSAGE', payload: { role: 'dm', content: '' } });
   dispatch({ type: 'SET_STREAMING', payload: true });
 
-  const systemPrompt = buildSystemPrompt(state.dmEngine, state.gameData);
+  const systemPrompt = buildSystemPrompt(state.dmEngine, state.gameData, state.worldBible);
 
   try {
     const response = await fetch('/api/chat', {
@@ -633,6 +726,318 @@ async function sendChatMessage(message, state, dispatch) {
   }
 
   dispatch({ type: 'SET_STREAMING', payload: false });
+}
+
+
+// ═══════════════════════════════════════════════════════════════
+// WORLD BIBLE GENERATOR
+// ═══════════════════════════════════════════════════════════════
+
+function generateWorldBible(w) {
+  const sentientMap = { yes: 'The world is alive and sentient — it watches, judges, and responds to the actions of its inhabitants.', partially: 'The world carries echoes of sentience — residual awareness that manifests in strange coincidences, shifting landscapes, and whispered warnings.', no: 'The world is indifferent to its inhabitants — a vast, uncaring stage for mortal drama.' };
+  const ageMap = { ancient: 'This is an ancient world, layered with millennia of forgotten civilizations, buried secrets, and powers that predate recorded history.', young: 'This is a young world, raw and unformed — its rules are still being written, its boundaries still being tested.', dying: 'This is a dying world — its magic fading, its lands crumbling, its people clinging to what remains.', cyclical: 'This world moves in cycles — ages of glory and ruin that repeat with terrible inevitability. The current cycle feels close to its end.' };
+  const horrorMap = { none: 'Horror is absent — danger exists, but it is physical and comprehensible.', creeping: 'A creeping dread pervades the world — things are wrong in ways that are hard to articulate, and the truth is always worse than expected.', visceral: 'Horror is visceral and ever-present — the world contains genuine nightmares, body horror, psychological torment, and entities that break minds.' };
+  const comedyMap = { serious: 'The tone is consistently serious and grounded.', dry: 'Dry wit and dark humor punctuate the tension — gallows humor is a survival mechanism.', chaotic: 'Chaos and absurdity are woven into the fabric of the world — the universe has a sick sense of humor.' };
+  const magicMap = { none: 'Magic does not exist in this world. All power is mundane.', low: 'Magic is rare and feared — most people live their entire lives without witnessing it.', common: 'Magic is a known force — practiced by specialists, regulated by authorities, and woven into daily life.', high: 'Magic saturates everything — the air hums with it, children are born with it, and reality itself is negotiable.' };
+  const sourceMap = { internal: 'Magic comes from within — willpower, bloodline, emotional resonance, or spiritual cultivation.', external: 'Magic is drawn from external sources — ley lines, celestial bodies, ancient artifacts, or pacts with entities.', forbidden: 'All magic is stolen or forbidden — every spell is a transgression, every casting a crime against natural law.' };
+  const costMap = { free: 'Magic flows freely with minimal personal cost — it is a tool like any other.', expensive: 'Magic demands a price — fatigue, shortened lifespan, sanity erosion, or material sacrifice.', catastrophic: 'Every use of magic risks catastrophe — unintended consequences, corruption, or attracting the attention of things best left undisturbed.' };
+  const locationMap = { settlement: 'a remote settlement', ruins: 'ancient ruins', city: 'a sprawling city', wilderness: 'untamed wilderness', prison: 'a prison or place of confinement' };
+  const situationMap = { stranger: 'A stranger arrives in an unfamiliar place — no allies, no reputation, no safety net.', local: 'A local whose ordinary life is shattered by sudden crisis — everything familiar becomes dangerous.', amnesia: 'Awakening with no memory — fragments of identity surface through play, and the truth may be unwelcome.', hired: 'Hired for a job that is more than it appears — the employer has secrets, the task has hidden layers.' };
+
+  let bible = `# World Bible: ${w.worldName}\n\n`;
+  bible += `## Core Identity\n`;
+  bible += `**${w.worldName}** — ${w.premise || 'A world of adventure and mystery.'}\n\n`;
+  bible += `${sentientMap[w.sentient] || sentientMap.no} ${ageMap[w.worldAge] || ageMap.ancient}\n\n`;
+
+  bible += `## Tone & Atmosphere\n`;
+  const darknessLabel = w.darkness <= 25 ? 'Grimdark' : w.darkness <= 50 ? 'Dark with glimmers of hope' : w.darkness <= 75 ? 'Balanced between darkness and hope' : 'Hopeful with shadows at the edges';
+  bible += `The world sits at **${darknessLabel}** on the spectrum (${w.darkness}/100 hope). `;
+  bible += `${horrorMap[w.horror] || horrorMap.none} ${comedyMap[w.comedy] || comedyMap.serious}\n`;
+  if (w.inspirations && w.inspirations.length > 0) {
+    bible += `\nInspirational touchstones: ${w.inspirations.join(', ')}.\n`;
+  }
+  bible += `\n`;
+
+  bible += `## Magic System\n`;
+  bible += `${magicMap[w.magicLevel] || magicMap.common} ${sourceMap[w.magicSource] || sourceMap.internal} ${costMap[w.magicCost] || costMap.expensive}\n`;
+  if (w.magicFlavor) {
+    bible += `\nMagic in ${w.worldName} manifests as: ${w.magicFlavor}\n`;
+  }
+  bible += `\n`;
+
+  bible += `## Starting Scenario\n`;
+  bible += `The story begins in ${locationMap[w.startingLocation] || 'an unknown place'}. `;
+  bible += `${situationMap[w.openingSituation] || situationMap.stranger}\n`;
+  if (w.initialConflict) {
+    bible += `\nImmediate conflict: ${w.initialConflict}\n`;
+  }
+  if (w.factions) {
+    bible += `\nFactions & power structures: ${w.factions}\n`;
+  }
+  bible += `\n`;
+
+  bible += `## Player Character\n`;
+  bible += `**Player:** ${w.playerName || 'Adventurer'}\n`;
+  if (w.characterName) bible += `**Character Name:** ${w.characterName}\n`;
+  if (w.race && w.race !== 'decide') bible += `**Race:** ${w.race}\n`;
+  if (w.race === 'decide') bible += `**Race:** To be determined by the world during character creation.\n`;
+  if (w.characterConcept) bible += `**Concept/Hooks:** ${w.characterConcept}\n`;
+  bible += `\nClass, stats, abilities, and detailed backstory will be established through the Opening Instructions character creation process.\n`;
+
+  return bible;
+}
+
+
+// ═══════════════════════════════════════════════════════════════
+// CAMPAIGN CREATION WIZARD
+// ═══════════════════════════════════════════════════════════════
+
+function CampaignWizard() {
+  const { dispatch } = useGame();
+  const [step, setStep] = useState(0);
+  const [wizardData, setWizardData] = useState({
+    worldName: '', premise: '', sentient: 'partially', worldAge: 'ancient',
+    darkness: 65, horror: 'creeping', comedy: 'dry', inspirations: [],
+    magicLevel: 'common', magicSource: 'internal', magicCost: 'expensive', magicFlavor: '',
+    startingLocation: 'settlement', openingSituation: 'stranger', initialConflict: '', factions: '',
+    playerName: 'Chris', characterName: '', race: '', characterConcept: '',
+  });
+
+  const update = (key, val) => setWizardData(prev => ({ ...prev, [key]: val }));
+  const toggleInspiration = (tag) => {
+    setWizardData(prev => {
+      const has = prev.inspirations.includes(tag);
+      if (has) return { ...prev, inspirations: prev.inspirations.filter(t => t !== tag) };
+      if (prev.inspirations.length >= 3) return prev;
+      return { ...prev, inspirations: [...prev.inspirations, tag] };
+    });
+  };
+
+  const canProceed = step === 0 ? wizardData.worldName.trim().length > 0 : true;
+  const stepTitles = ['Forge Your World', 'Set the Tone', 'Shape the Magic', 'The Opening Chapter', 'Your Character'];
+  const stepIcons = ['🌍', '🎭', '✨', '📖', '⚔️'];
+
+  const beginCampaign = () => {
+    const worldBible = generateWorldBible(wizardData);
+    const gameData = createBlankGameData(wizardData);
+    dispatch({ type: 'START_NEW_CAMPAIGN', payload: { gameData, worldBible } });
+    localStorage.removeItem('dnd-chat');
+    localStorage.removeItem('dnd-gameData');
+    localStorage.removeItem('dnd-worldBible');
+  };
+
+  const OptionCard = ({ value, current, onSelect, icon, label, desc }) => (
+    <div className={`wizard-option-card ${current === value ? 'selected' : ''}`} onClick={() => onSelect(value)}>
+      {icon && <span className="wizard-option-icon">{icon}</span>}
+      <span className="wizard-option-label">{label}</span>
+      {desc && <span className="wizard-option-desc">{desc}</span>}
+    </div>
+  );
+
+  const renderStep = () => {
+    switch(step) {
+      case 0: return (
+        <div className="wizard-step-content">
+          <div className="wizard-field">
+            <label className="wizard-label">World Name <span className="wizard-required">*</span></label>
+            <input className="wizard-input" type="text" value={wizardData.worldName} onChange={e => update('worldName', e.target.value)} placeholder="The Shattered Reaches, Valdris, Aethermoor..." autoFocus />
+          </div>
+          <div className="wizard-field">
+            <label className="wizard-label">Core Premise</label>
+            <textarea className="wizard-textarea" value={wizardData.premise} onChange={e => update('premise', e.target.value)} placeholder="A dying continent where magic is sentient and the gods have gone silent..." rows={3} />
+          </div>
+          <div className="wizard-field">
+            <label className="wizard-label">Is the World Sentient?</label>
+            <div className="wizard-option-grid cols-3">
+              <OptionCard value="yes" current={wizardData.sentient} onSelect={v => update('sentient', v)} icon="👁" label="Yes" desc="Watches and judges" />
+              <OptionCard value="partially" current={wizardData.sentient} onSelect={v => update('sentient', v)} icon="🌀" label="Echoes" desc="Residual awareness" />
+              <OptionCard value="no" current={wizardData.sentient} onSelect={v => update('sentient', v)} icon="🪨" label="No" desc="Indifferent stage" />
+            </div>
+          </div>
+          <div className="wizard-field">
+            <label className="wizard-label">World Age</label>
+            <div className="wizard-option-grid cols-4">
+              <OptionCard value="ancient" current={wizardData.worldAge} onSelect={v => update('worldAge', v)} icon="🏛" label="Ancient" />
+              <OptionCard value="young" current={wizardData.worldAge} onSelect={v => update('worldAge', v)} icon="🌱" label="Young" />
+              <OptionCard value="dying" current={wizardData.worldAge} onSelect={v => update('worldAge', v)} icon="💀" label="Dying" />
+              <OptionCard value="cyclical" current={wizardData.worldAge} onSelect={v => update('worldAge', v)} icon="🔄" label="Cyclical" />
+            </div>
+          </div>
+        </div>
+      );
+
+      case 1: return (
+        <div className="wizard-step-content">
+          <div className="wizard-field">
+            <label className="wizard-label">Darkness / Hope Ratio</label>
+            <div className="wizard-slider-container">
+              <span className="wizard-slider-label">💀 Grimdark</span>
+              <input type="range" className="wizard-slider" min="0" max="100" value={wizardData.darkness} onChange={e => update('darkness', parseInt(e.target.value))} />
+              <span className="wizard-slider-label">☀️ Hopeful</span>
+            </div>
+            <div className="wizard-slider-value">{wizardData.darkness}/100</div>
+          </div>
+          <div className="wizard-field">
+            <label className="wizard-label">Horror Level</label>
+            <div className="wizard-option-grid cols-3">
+              <OptionCard value="none" current={wizardData.horror} onSelect={v => update('horror', v)} icon="😌" label="None" desc="Clean danger" />
+              <OptionCard value="creeping" current={wizardData.horror} onSelect={v => update('horror', v)} icon="😰" label="Creeping" desc="Subtle dread" />
+              <OptionCard value="visceral" current={wizardData.horror} onSelect={v => update('horror', v)} icon="😱" label="Visceral" desc="Full nightmare" />
+            </div>
+          </div>
+          <div className="wizard-field">
+            <label className="wizard-label">Comedy Level</label>
+            <div className="wizard-option-grid cols-3">
+              <OptionCard value="serious" current={wizardData.comedy} onSelect={v => update('comedy', v)} icon="😐" label="Serious" desc="Grounded tone" />
+              <OptionCard value="dry" current={wizardData.comedy} onSelect={v => update('comedy', v)} icon="😏" label="Dry Wit" desc="Gallows humor" />
+              <OptionCard value="chaotic" current={wizardData.comedy} onSelect={v => update('comedy', v)} icon="🤪" label="Chaotic" desc="Absurd universe" />
+            </div>
+          </div>
+          <div className="wizard-field">
+            <label className="wizard-label">Inspiration Tags <span className="wizard-hint">(pick 1-3)</span></label>
+            <div className="wizard-chip-grid">
+              {['LitRPG Progression', 'Dark Souls', 'Lovecraftian', 'Sword & Sorcery', 'Political Intrigue', 'Survival Horror', 'Epic Quest', 'Mystery'].map(tag => (
+                <button key={tag} className={`wizard-chip ${wizardData.inspirations.includes(tag) ? 'selected' : ''}`} onClick={() => toggleInspiration(tag)}>{tag}</button>
+              ))}
+            </div>
+          </div>
+        </div>
+      );
+
+      case 2: return (
+        <div className="wizard-step-content">
+          <div className="wizard-field">
+            <label className="wizard-label">Magic Prevalence</label>
+            <div className="wizard-option-grid cols-4">
+              <OptionCard value="none" current={wizardData.magicLevel} onSelect={v => update('magicLevel', v)} icon="🚫" label="None" desc="No magic" />
+              <OptionCard value="low" current={wizardData.magicLevel} onSelect={v => update('magicLevel', v)} icon="🕯" label="Low" desc="Rare & feared" />
+              <OptionCard value="common" current={wizardData.magicLevel} onSelect={v => update('magicLevel', v)} icon="🔮" label="Common" desc="Known force" />
+              <OptionCard value="high" current={wizardData.magicLevel} onSelect={v => update('magicLevel', v)} icon="⚡" label="High" desc="Saturates all" />
+            </div>
+          </div>
+          <div className="wizard-field">
+            <label className="wizard-label">Source of Magic</label>
+            <div className="wizard-option-grid cols-3">
+              <OptionCard value="internal" current={wizardData.magicSource} onSelect={v => update('magicSource', v)} icon="💪" label="Internal" desc="From within" />
+              <OptionCard value="external" current={wizardData.magicSource} onSelect={v => update('magicSource', v)} icon="🌌" label="External" desc="Drawn from the world" />
+              <OptionCard value="forbidden" current={wizardData.magicSource} onSelect={v => update('magicSource', v)} icon="⛓" label="Forbidden" desc="Stolen & transgressive" />
+            </div>
+          </div>
+          <div className="wizard-field">
+            <label className="wizard-label">Cost of Magic</label>
+            <div className="wizard-option-grid cols-3">
+              <OptionCard value="free" current={wizardData.magicCost} onSelect={v => update('magicCost', v)} icon="🎁" label="Free" desc="Minimal cost" />
+              <OptionCard value="expensive" current={wizardData.magicCost} onSelect={v => update('magicCost', v)} icon="💰" label="Expensive" desc="Demands a price" />
+              <OptionCard value="catastrophic" current={wizardData.magicCost} onSelect={v => update('magicCost', v)} icon="💥" label="Catastrophic" desc="Risks disaster" />
+            </div>
+          </div>
+          <div className="wizard-field">
+            <label className="wizard-label">Magic Flavor <span className="wizard-hint">(optional)</span></label>
+            <input className="wizard-input" type="text" value={wizardData.magicFlavor} onChange={e => update('magicFlavor', e.target.value)} placeholder="Rune-carved bones, blood sigils, crystallized emotions..." />
+          </div>
+        </div>
+      );
+
+      case 3: return (
+        <div className="wizard-step-content">
+          <div className="wizard-field">
+            <label className="wizard-label">Starting Location</label>
+            <div className="wizard-option-grid cols-5">
+              <OptionCard value="settlement" current={wizardData.startingLocation} onSelect={v => update('startingLocation', v)} icon="🏘" label="Settlement" />
+              <OptionCard value="ruins" current={wizardData.startingLocation} onSelect={v => update('startingLocation', v)} icon="🏚" label="Ruins" />
+              <OptionCard value="city" current={wizardData.startingLocation} onSelect={v => update('startingLocation', v)} icon="🏰" label="City" />
+              <OptionCard value="wilderness" current={wizardData.startingLocation} onSelect={v => update('startingLocation', v)} icon="🌲" label="Wilderness" />
+              <OptionCard value="prison" current={wizardData.startingLocation} onSelect={v => update('startingLocation', v)} icon="⛓" label="Prison" />
+            </div>
+          </div>
+          <div className="wizard-field">
+            <label className="wizard-label">Opening Situation</label>
+            <div className="wizard-option-grid cols-2">
+              <OptionCard value="stranger" current={wizardData.openingSituation} onSelect={v => update('openingSituation', v)} icon="🚶" label="Stranger Arrives" desc="No allies, no reputation" />
+              <OptionCard value="local" current={wizardData.openingSituation} onSelect={v => update('openingSituation', v)} icon="🏠" label="Local in Crisis" desc="Ordinary life shattered" />
+              <OptionCard value="amnesia" current={wizardData.openingSituation} onSelect={v => update('openingSituation', v)} icon="❓" label="Amnesia" desc="Fragments surface through play" />
+              <OptionCard value="hired" current={wizardData.openingSituation} onSelect={v => update('openingSituation', v)} icon="📋" label="Hired for a Job" desc="More than it appears" />
+            </div>
+          </div>
+          <div className="wizard-field">
+            <label className="wizard-label">Initial Conflict <span className="wizard-hint">(optional — Claude generates if blank)</span></label>
+            <input className="wizard-input" type="text" value={wizardData.initialConflict} onChange={e => update('initialConflict', e.target.value)} placeholder="A murder in the town square, a strange plague, missing children..." />
+          </div>
+          <div className="wizard-field">
+            <label className="wizard-label">Factions & Powers <span className="wizard-hint">(optional)</span></label>
+            <textarea className="wizard-textarea" value={wizardData.factions} onChange={e => update('factions', e.target.value)} placeholder="A corrupt merchant guild, a dying order of knights, a cult worshipping something beneath the earth..." rows={3} />
+          </div>
+        </div>
+      );
+
+      case 4: return (
+        <div className="wizard-step-content">
+          <div className="wizard-field">
+            <label className="wizard-label">Player Name</label>
+            <input className="wizard-input" type="text" value={wizardData.playerName} onChange={e => update('playerName', e.target.value)} placeholder="Your real name" />
+          </div>
+          <div className="wizard-field">
+            <label className="wizard-label">Character Name <span className="wizard-hint">(leave blank to choose in chat)</span></label>
+            <input className="wizard-input" type="text" value={wizardData.characterName} onChange={e => update('characterName', e.target.value)} placeholder="Kaelen, Sera, Moth..." />
+          </div>
+          <div className="wizard-field">
+            <label className="wizard-label">Race Preference</label>
+            <select className="wizard-select" value={wizardData.race} onChange={e => update('race', e.target.value)}>
+              <option value="">— Choose —</option>
+              <option value="Human">Human</option>
+              <option value="Elf">Elf</option>
+              <option value="Dwarf">Dwarf</option>
+              <option value="Halfling">Halfling</option>
+              <option value="Orc">Orc</option>
+              <option value="Tiefling">Tiefling</option>
+              <option value="Exotic">Exotic / Other</option>
+              <option value="decide">Let the World Decide</option>
+            </select>
+          </div>
+          <div className="wizard-field">
+            <label className="wizard-label">Character Concept <span className="wizard-hint">(optional backstory hooks)</span></label>
+            <textarea className="wizard-textarea" value={wizardData.characterConcept} onChange={e => update('characterConcept', e.target.value)} placeholder="A disgraced soldier seeking redemption, a street thief with a hidden bloodline, a scholar fleeing a burning library..." rows={3} />
+          </div>
+          <div className="wizard-field">
+            <label className="wizard-label">World Bible Preview</label>
+            <div className="wizard-preview">{generateWorldBible(wizardData)}</div>
+          </div>
+          <div className="wizard-info-box">
+            ⚔️ Your class, stats, and abilities will be assigned by the world during play through the character creation process.
+          </div>
+        </div>
+      );
+    }
+  };
+
+  return (
+    <div className="wizard-overlay" onClick={e => e.target === e.currentTarget && dispatch({ type: 'SHOW_CAMPAIGN_WIZARD', payload: false })}>
+      <div className="wizard-container">
+        <button className="wizard-close" onClick={() => dispatch({ type: 'SHOW_CAMPAIGN_WIZARD', payload: false })}>✕</button>
+        <div className="wizard-header">
+          <h2 className="wizard-title">{stepIcons[step]} {stepTitles[step]}</h2>
+          <div className="wizard-steps">
+            {stepTitles.map((_, i) => (
+              <div key={i} className={`wizard-dot ${i === step ? 'active' : i < step ? 'completed' : ''}`} onClick={() => { if (i < step || (i === step + 1 && canProceed)) setStep(i); }} />
+            ))}
+          </div>
+          <div className="wizard-step-label">Step {step + 1} of 5</div>
+        </div>
+
+        {renderStep()}
+
+        <div className="wizard-nav">
+          {step > 0 && <button className="wizard-btn wizard-btn-back" onClick={() => setStep(step - 1)}>← Back</button>}
+          <div style={{flex:1}} />
+          {step < 4 ? (
+            <button className="wizard-btn wizard-btn-next" onClick={() => canProceed && setStep(step + 1)} disabled={!canProceed}>Next →</button>
+          ) : (
+            <button className="wizard-btn wizard-btn-begin" onClick={beginCampaign}>⚔️ Begin Campaign</button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 
@@ -883,7 +1288,7 @@ function DashboardPanel() {
       <div className="card" style={{background:'linear-gradient(135deg, var(--deep-stone), var(--stone))', borderColor:'var(--border-gold)'}}>
         <p style={{fontSize:'0.9rem',lineHeight:1.7,color:'var(--parchment-light)'}}>
           {state.chatMessages.length === 0
-            ? "Welcome to The Shattered Reaches. Configure your API key in Settings, then start chatting with your DM to begin the adventure."
+            ? `Welcome to ${c.name}. Configure your API key in Settings, then start chatting with your DM to begin the adventure.`
             : `You are at ${c.location}. The mood is ${c.mood}.`
           }
         </p>
@@ -1377,7 +1782,7 @@ function MapPanel() {
   return (
     <div>
       <div className="section-header">
-        <h1 className="section-title"><span className="icon">🗺</span> The Shattered Reaches</h1>
+        <h1 className="section-title"><span className="icon">🗺</span> {state.gameData.campaign.name}</h1>
         <span className="section-count">{locs.filter(l=>l.status!=='unexplored').length}/{locs.length} discovered</span>
       </div>
 
@@ -1592,11 +1997,7 @@ function SettingsPanel() {
   };
 
   const newCampaign = () => {
-    if (confirm('Start a new campaign? This will reset ALL game data and chat history.')) {
-      dispatch({ type: 'LOAD_GAME_STATE', payload: { chatMessages: [], gameData: DEFAULT_GAME_DATA } });
-      localStorage.removeItem('dnd-chat');
-      localStorage.removeItem('dnd-gameData');
-    }
+    dispatch({ type: 'SHOW_CAMPAIGN_WIZARD', payload: true });
   };
 
   return (
@@ -1685,7 +2086,7 @@ function SettingsPanel() {
       <div className="card">
         <h4 style={{marginBottom:12}}>About</h4>
         <div style={{fontSize:'0.8rem',color:'var(--silver)',lineHeight:1.6}}>
-          <p>The Shattered Reaches Companion App</p>
+          <p>{state.gameData.campaign.name} Companion App</p>
           <p style={{color:'var(--muted)',marginTop:4}}>Built for Chris's DM Engine V3</p>
           <p style={{color:'var(--muted)',marginTop:4}}>Powered by Claude API — AI Dungeon Master</p>
           <p style={{color:'var(--gold-dim)',marginTop:8,fontFamily:"'Fira Code',monospace",fontSize:'0.7rem'}}>v0.2.0 — The System sees you.</p>
@@ -1731,7 +2132,7 @@ function ChatPanel() {
         {state.chatMessages.length === 0 && (
           <div className="chat-welcome">
             <div style={{fontSize:'2rem',marginBottom:12}}>⚔️</div>
-            <h2 style={{fontFamily:"'Cinzel',serif",color:'var(--gold)',marginBottom:8}}>The Shattered Reaches</h2>
+            <h2 style={{fontFamily:"'Cinzel',serif",color:'var(--gold)',marginBottom:8}}>{state.gameData.campaign.name}</h2>
             <p style={{color:'var(--silver)',fontSize:'0.85rem',lineHeight:1.6,maxWidth:400}}>
               Your AI Dungeon Master awaits. Type a message to begin your adventure.
             </p>
@@ -2130,6 +2531,7 @@ function App() {
       <Footer />
       <NotificationOverlay />
       <LevelUpOverlay />
+      {state.showCampaignWizard && <CampaignWizard />}
     </React.Fragment>
   );
 }
