@@ -14,7 +14,7 @@ import urllib.request
 import urllib.error
 
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
-PORT = 3000
+PORT = int(os.environ.get("PORT", 3000))
 ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages"
 
 
