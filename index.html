@@ -1,0 +1,2141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>The Shattered Reaches — Campaign Companion</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://unpkg.com/d3@7/dist/d3.min.js"></script>
+</head>
+<body>
+  <div id="root"></div>
+
+<script type="text/babel" data-type="module">
+const { useState, useEffect, useRef, useCallback, createContext, useContext, useReducer, useMemo } = React;
+
+// ═══════════════════════════════════════════════════════════════
+// DEFAULT GAME DATA — THE SHATTERED REACHES (starting state)
+// ═══════════════════════════════════════════════════════════════
+
+const DEFAULT_GAME_DATA = {
+  campaign: {
+    name: "The Shattered Reaches",
+    session: 14,
+    day: 47,
+    time: "Dusk",
+    location: "The Hollowed Sanctum",
+    mood: "tense",
+  },
+  character: {
+    name: "Kaelen Ashvane",
+    race: "Human (Voidtouched)",
+    class: "Shadow Walker",
+    assignedBy: "The Reach itself whispered the name into your bones during the Trial of Echoes.",
+    level: 4,
+    ep: { current: 2840, max: 5000 },
+    hp: { current: 38, max: 45 },
+    mp: { current: 12, max: 20 },
+    sanity: { current: 82, max: 100 },
+    gold: 347,
+    weight: { current: 42, max: 60 },
+    stats: {
+      RESONANCE: { value: 5, trend: "up", prevValue: 4 },
+      VITALITY: { value: 7, trend: "stable", prevValue: 7 },
+      ACUITY: { value: 6, trend: "up", prevValue: 5 },
+      WILL: { value: 4, trend: "down", prevValue: 5 },
+      AFFINITY: { value: 3, trend: "stable", prevValue: 3 },
+    },
+    conditions: [
+      { name: "Voidtouched", type: "neutral", desc: "The Reach has marked you. Your shadow moves independently in moonlight.", icon: "👁" },
+      { name: "Blessed by the Moon", type: "buff", desc: "+2 to all Stealth checks while outdoors at night. Granted by the Pale Shrine.", icon: "🌙" },
+      { name: "Fractured Will", type: "debuff", desc: "Disadvantage on WIS saves. The whispers from the Sanctum won't stop.", icon: "💀" },
+      { name: "Resonance Surge", type: "buff", desc: "+15% spell effectiveness for 3 sessions. Cost of the Power Site communion.", icon: "⚡" },
+    ],
+    abilities: [
+      { name: "Ghost Step", type: "Active", desc: "Become undetectable in crowds, invisible in shadows.", req: "RES 4+", cost: "10 EP", cooldown: "30 min", scaling: "RES 4=50%, 7=70%, 10=100%", proficiency: "Skilled", uses: 47 },
+      { name: "Shadow Meld", type: "Active", desc: "Merge with any shadow large enough to contain your body.", req: "RES 5+", cost: "15 EP + 2 Sanity", cooldown: "1 hour", scaling: "RES 5=40%, 8=75%", proficiency: "Novice", uses: 12 },
+      { name: "Void Sight", type: "Passive", desc: "See traces of magical residue. Stronger sources glow brighter.", req: "ACU 5+", cost: "Passive", cooldown: "—", scaling: "ACU 5=faint, 8=clear, 10=perfect", proficiency: "Adept", uses: 203 },
+      { name: "Echoing Strike", type: "Active", desc: "Attack resonates, dealing 50% damage again 3 seconds later.", req: "RES 3+", cost: "8 EP", cooldown: "2 rounds", scaling: "RES 3=30%, 6=50%, 9=75%", proficiency: "Skilled", uses: 31 },
+      { name: "Whisper Ward", type: "Reaction", desc: "Deflect one psychic attack per encounter. The Ward screams silently.", req: "WILL 4+", cost: "5 EP + 1 Sanity", cooldown: "Per encounter", scaling: "WILL 4=50%, 7=80%", proficiency: "Novice", uses: 8 },
+    ],
+    traits: [
+      { name: "Shadow-Born Reflexes", desc: "Advantage on initiative rolls in dim light or darkness." },
+      { name: "Memory of the Void", desc: "Can recall any text read in the last 30 days with perfect clarity." },
+      { name: "Marked by the Reach", desc: "The world watches you. NPCs with magical sensitivity can sense your presence." },
+    ],
+  },
+  hiddenTrackers: {
+    sanity: { value: 82, hint: "The whispers are louder tonight. You haven't slept well in three days." },
+    worldAwareness: { value: 47, hint: "Something vast considers you. Coincidences have stopped being coincidences." },
+    corruption: { value: 23, hint: "Your right arm aches. The black veins spread slowly past the elbow." },
+    magicalDebt: { value: 18, hint: "The Keepers haven't forgotten what you took from the Pale Shrine." },
+    transformation: { value: 15, hint: "Your shadow is darker than it should be. It moves when you don't." },
+  },
+  inventory: {
+    equipped: [
+      { name: "Voidweave Cloak", rarity: "epic", icon: "🧥", desc: "Woven from shadow-silk by the Blind Weavers. Grants +2 Stealth, -1 Affinity.", slot: "Back", weight: 2 },
+      { name: "Echoblade", rarity: "rare", icon: "⚔️", desc: "A short sword that hums at a frequency only you can hear. Deals 1d8+3 slashing + echo damage.", slot: "Main Hand", weight: 3 },
+      { name: "Ashvane Signet Ring", rarity: "uncommon", icon: "💍", desc: "Your family ring. The only thing left. Grants +1 WILL when worn.", slot: "Ring", weight: 0 },
+      { name: "Worn Leather Armor", rarity: "common", icon: "🛡", desc: "Scarred and patched. AC 12. It's kept you alive this long.", slot: "Chest", weight: 8 },
+    ],
+    consumables: [
+      { name: "Essence Vial (Minor)", rarity: "uncommon", icon: "🧪", desc: "Restores 15 EP. Tastes like lightning and regret.", qty: 3, weight: 0.5 },
+      { name: "Pale Moss Poultice", rarity: "common", icon: "🌿", desc: "Restores 2d4+2 HP over 1 minute. Stings terribly.", qty: 5, weight: 0.3 },
+      { name: "Mindquiet Tincture", rarity: "rare", icon: "💜", desc: "Restores 1d6 Sanity. The silence it brings is almost worse than the whispers.", qty: 1, weight: 0.5 },
+      { name: "Ration Pack", rarity: "common", icon: "🍖", desc: "Dried meat, hardtack, dried fruit. One day of sustenance.", qty: 8, weight: 1 },
+    ],
+    keyItems: [
+      { name: "Map Fragment — The Deep", rarity: "legendary", icon: "🗺", desc: "Torn from a larger map. Shows tunnels beneath the Sanctum. Writing in a language you almost understand.", qty: 1, weight: 0 },
+      { name: "Keeper's Seal (Broken)", rarity: "epic", icon: "🔮", desc: "Taken from the dead Keeper in Session 8. It still pulses with residual authority.", qty: 1, weight: 0.5 },
+      { name: "Mira's Letter", rarity: "uncommon", icon: "📜", desc: "A letter from Mira Thornwood. 'If you're reading this, I've already gone. Find the Hollow Gate. Trust no one from the Order.'", qty: 1, weight: 0 },
+      { name: "Black Glass Shard", rarity: "artifact", icon: "💎", desc: "A fragment of something ancient. It's warm. It shouldn't be warm. Looking at it too long makes your teeth ache.", qty: 1, weight: 1 },
+    ],
+    materials: [
+      { name: "Shadow Silk Thread", rarity: "rare", icon: "🧵", desc: "Harvested from void spiders. Used in enchanting.", qty: 7, weight: 0.1 },
+      { name: "Resonance Crystal", rarity: "epic", icon: "💠", desc: "Crystallized magical energy. Hums when near power sources.", qty: 2, weight: 0.5 },
+      { name: "Iron Dust", rarity: "common", icon: "⚙️", desc: "Ground from old weapons. Component for warding circles.", qty: 15, weight: 0.2 },
+    ],
+  },
+  quests: [
+    { id: "q1", title: "The Hollow Gate", type: "main", status: "active", desc: "Find the Hollow Gate beneath the Sanctum. Mira's letter says it's the key to understanding why the Reach is dying.", progress: 45, milestones: ["Find Mira's Letter ✓", "Reach the Sanctum ✓", "Find the Gate entrance", "Open the Gate", "Learn the truth"], deadline: null, giver: "Mira Thornwood (letter)" },
+    { id: "q2", title: "The Keeper's Debt", type: "active", status: "active", desc: "The Pale Keepers want their Seal returned — or its equivalent in service. Ignoring them is getting expensive.", progress: 20, milestones: ["Acknowledge the debt ✓", "Meet the Keeper envoy", "Complete their task OR return the Seal"], deadline: "3 sessions", giver: "The Pale Keepers" },
+    { id: "q3", title: "Voss's Supply Run", type: "active", status: "active", desc: "Dren Voss needs medicinal herbs from the Thornmarsh. Simple job. Good pay. Probably not simple.", progress: 60, milestones: ["Accept the job ✓", "Travel to Thornmarsh ✓", "Gather Moonpetal x5 ✓", "Return to Voss"], deadline: null, giver: "Dren Voss" },
+    { id: "q4", title: "Whispers from Below", type: "rumored", status: "rumored", desc: "Miners in Ashfall have been hearing voices from deep shafts. Three have gone missing. The town elder is looking for someone brave or stupid enough to investigate.", progress: 0, milestones: ["Investigate Ashfall mines"], deadline: null, giver: "Unknown" },
+    { id: "q5", title: "The Merchant's Trust", type: "failed", status: "failed", desc: "Promised to escort Merchant Grelan through the Thornmarsh. Got sidetracked by the Sanctum discovery. Grelan hired mercenaries instead. Two died.", progress: 100, milestones: ["Accept escort job ✓", "FAILED: Abandoned quest for Sanctum"], consequence: "Grelan spreads word of your unreliability. -10 faction standing with Traders' Circle. Two mercenaries dead.", giver: "Merchant Grelan" },
+  ],
+  npcs: [
+    { name: "Dren Voss", role: "Apothecary & Fence", relationship: "ally", loyalty: 7, stars: 4, avatar: "🧪", location: "Haven's Edge", desc: "Scarred hands, warm eyes. Always smells of dried herbs and lamp oil. Says 'mark my words' before every prediction.", motivation: "Wants to cure his daughter's wasting sickness. Needs rare ingredients.", hidden: null, status: "Waiting for your return with Moonpetal herbs." },
+    { name: "Sera Brightmantle", role: "Ex-Paladin, Wanderer", relationship: "ally", loyalty: 9, stars: 5, avatar: "⚔️", location: "Traveling — last seen heading east", desc: "Silver hair cropped short. Missing two fingers on her left hand. Laughs like she means it. Former Order of Dawn paladin — left after discovering corruption.", motivation: "Seeks redemption for something she won't discuss.", hidden: null, status: "Left 4 days ago. Said she'd return 'when the stars shifted.' Cryptic as always." },
+    { name: "The Archivist", role: "Sanctum Guardian", relationship: "neutral", loyalty: 5, stars: 3, avatar: "📚", location: "The Hollowed Sanctum", desc: "Tall, impossibly thin. Skin like old paper. Speaks in questions. Has not blinked once in your presence.", motivation: "Protects the Sanctum's knowledge. Judges who is worthy of access.", hidden: "Answers to a higher authority within the Sanctum. Has been watching you longer than you know.", status: "Observing. Waiting. Asked you three questions. You answered two correctly." },
+    { name: "Kael Ironhand", role: "Mercenary Captain", relationship: "neutral", loyalty: 4, stars: 2, avatar: "🪓", location: "Ashfall", desc: "Built like a siege engine. Iron prosthetic left hand — hence the name. Speaks softly. Hits hard.", motivation: "Gold. Reputation. Protecting his crew.", hidden: "Owes a massive debt to the Pale Keepers. Might sell information about you to pay it.", status: "Neutral but wary. You turned down his offer to join his crew in Session 9." },
+    { name: "Lady Veris Thorn", role: "Keeper Envoy", relationship: "hostile", loyalty: 1, stars: 1, avatar: "🌹", location: "Unknown — last seen at the Pale Shrine", desc: "Beautiful in the way a blade is beautiful. Pale eyes that never warm. Speaks with absolute certainty.", motivation: "Recover the Keeper's Seal you took. Enforce the Keepers' authority.", hidden: "Genuinely believes the Keepers protect the world from something worse. Not wrong.", status: "Hunting you. Has recruited local informants. The debt clock is ticking." },
+    { name: "Moth", role: "Street Urchin & Informant", relationship: "ally", loyalty: 6, stars: 3, avatar: "🦋", location: "Haven's Edge", desc: "Small, quick, dirty face. Age unclear — could be 12 or 16. Calls everyone 'friend' but means it for about three people. You're one of them.", motivation: "Survival. Dreams of leaving Haven's Edge someday.", hidden: null, status: "Passed you a note last session: 'People asking about you. Not the nice kind.'" },
+    { name: "The Hollow Voice", role: "Unknown Entity", relationship: "rumored", loyalty: 0, stars: 0, avatar: "🕳", location: "Beneath the Sanctum", desc: "You've never seen it. You've heard it. Once, in the deep corridors. It said your name.", motivation: "Unknown.", hidden: "Unknown.", status: "Heard once. Session 12. It knew things it shouldn't know." },
+    { name: "Commander Rhys Ashford", role: "Order of Dawn Officer", relationship: "hostile", loyalty: 2, stars: 1, avatar: "🛡", location: "Ashfall Garrison", desc: "Rigid posture, immaculate uniform, cold grey eyes. Every word measured. Sera's former commanding officer.", motivation: "Restore Order of Dawn's authority in the region. Recover 'stolen assets' — including Sera.", hidden: "Knows more about the Hollow Gate than he lets on. The Order has been there before.", status: "Sent soldiers to watch the Sanctum entrance. Knows you're inside." },
+  ],
+  npcRelationships: [
+    { source: "Dren Voss", target: "Moth", type: "ally", desc: "Voss gives Moth food. Moth runs errands." },
+    { source: "Sera Brightmantle", target: "Commander Rhys Ashford", type: "hostile", desc: "Sera deserted. Ashford wants her back." },
+    { source: "Lady Veris Thorn", target: "Kael Ironhand", type: "neutral", desc: "Veris is trying to recruit Ironhand. He's considering it." },
+    { source: "The Archivist", target: "The Hollow Voice", type: "unknown", desc: "The Archivist freezes when the Voice is mentioned." },
+    { source: "Moth", target: "Lady Veris Thorn", type: "hostile", desc: "Moth avoids the Keepers. Something happened." },
+    { source: "Commander Rhys Ashford", target: "The Archivist", type: "neutral", desc: "Ashford has been trying to gain Sanctum access. Denied." },
+    { source: "Kaelen Ashvane", target: "Dren Voss", type: "ally" },
+    { source: "Kaelen Ashvane", target: "Sera Brightmantle", type: "ally" },
+    { source: "Kaelen Ashvane", target: "Moth", type: "ally" },
+    { source: "Kaelen Ashvane", target: "The Archivist", type: "neutral" },
+    { source: "Kaelen Ashvane", target: "Lady Veris Thorn", type: "hostile" },
+    { source: "Kaelen Ashvane", target: "Commander Rhys Ashford", type: "hostile" },
+  ],
+  combat: {
+    active: true,
+    round: 3,
+    location: "Sanctum Lower Corridor — narrow, torchlit, rubble on the floor",
+    turnOrder: [
+      { name: "Kaelen Ashvane", type: "player", initiative: 18, hp: 38, maxHp: 45, ac: 14, conditions: ["Resonance Surge"] },
+      { name: "Bone Warden", type: "enemy", initiative: 15, hp: 44, maxHp: 60, ac: 16, conditions: ["Enraged"], desc: "Massive skeletal guardian. Greatsword. Glowing runes on ribcage." },
+      { name: "Sanctum Shade (A)", type: "enemy", initiative: 13, hp: 8, maxHp: 18, ac: 12, conditions: [], desc: "Wispy shadow creature. Fast. Weak but hard to hit." },
+      { name: "Sanctum Shade (B)", type: "enemy", initiative: 11, hp: 18, maxHp: 18, ac: 12, conditions: [], desc: "Flanking from the east corridor." },
+    ],
+    currentTurn: 0,
+    log: [
+      { text: "═══ COMBAT BEGINS — ROUND 1 ═══", type: "system" },
+      { text: "Bone Warden emerges from alcove. Initiative rolled.", type: "system" },
+      { text: "Kaelen uses Ghost Step. Vanishes into shadow.", type: "action" },
+      { text: "Bone Warden swings at empty air. MISS.", type: "miss" },
+      { text: "Shade (A) senses movement. Lunges. Hits for 4 damage.", type: "damage" },
+      { text: "═══ ROUND 2 ═══", type: "system" },
+      { text: "Kaelen uses Echoing Strike on Bone Warden. 8 slashing + 4 echo.", type: "action" },
+      { text: "Bone Warden takes 12 total damage. (60→48)", type: "damage" },
+      { text: "Bone Warden RAGES. Overhead slam. Hits for 11 damage.", type: "damage" },
+      { text: "Kaelen HP: 45→38. Armor absorbs 3.", type: "damage" },
+      { text: "Shade (A) flanks. Hits for 6 damage. Resisted 2 (Voidweave).", type: "damage" },
+      { text: "Shade (A) takes 4 damage from counter. (18→14)", type: "damage" },
+      { text: "═══ ROUND 3 — YOUR TURN ═══", type: "system" },
+      { text: "Bone Warden raises greatsword. Runes flare. Preparing heavy strike.", type: "system" },
+      { text: "Shade (B) enters from east corridor. New threat.", type: "system" },
+    ],
+  },
+  mapLocations: [
+    { id: "haven", name: "Haven's Edge", icon: "🏘", x: 15, y: 60, status: "explored", danger: "low", desc: "A ramshackle settlement clinging to the edge of the Reaches. Your base of operations." },
+    { id: "thornmarsh", name: "Thornmarsh", icon: "🌿", x: 35, y: 75, status: "explored", danger: "medium", desc: "Fetid swampland. Rich in alchemical ingredients. Also rich in things that want to eat you." },
+    { id: "sanctum", name: "The Hollowed Sanctum", icon: "🏛", x: 50, y: 40, status: "current", danger: "high", desc: "Ancient structure. The Archivist guards its secrets. Something lives in the deeper levels." },
+    { id: "ashfall", name: "Ashfall", icon: "⛏", x: 75, y: 55, status: "explored", danger: "medium", desc: "Mining town built on volcanic ash. Order of Dawn garrison. Miners reporting strange voices." },
+    { id: "shrine", name: "The Pale Shrine", icon: "🕯", x: 30, y: 30, status: "explored", danger: "high", desc: "Keeper stronghold. You stole their Seal. They haven't forgotten." },
+    { id: "deep", name: "The Deep", icon: "🕳", x: 50, y: 15, status: "unexplored", danger: "extreme", desc: "???", note: "The map fragment shows tunnels here. Below the Sanctum." },
+    { id: "crossing", name: "Duskwater Crossing", icon: "🌉", x: 65, y: 30, status: "unexplored", danger: "unknown", desc: "???", note: "Sera mentioned it once. Changed the subject quickly." },
+  ],
+  mapPaths: [
+    { from: "haven", to: "thornmarsh", traveled: true },
+    { from: "haven", to: "sanctum", traveled: true },
+    { from: "haven", to: "ashfall", traveled: true },
+    { from: "haven", to: "shrine", traveled: true },
+    { from: "sanctum", to: "deep", traveled: false },
+    { from: "ashfall", to: "crossing", traveled: false },
+    { from: "sanctum", to: "crossing", traveled: false },
+  ],
+  lore: {
+    categories: ["Geography", "Factions", "Magic", "Bestiary", "History", "Pantheon"],
+    entries: [
+      { title: "The Shattered Reaches", category: "Geography", discovered: true, content: "A vast, broken landscape where reality itself seems wounded. The land shifts — not dramatically, but enough that maps are suggestions rather than facts. The sky is perpetually overcast, tinged violet at dusk. Vegetation grows in patterns that suggest intention rather than nature. The Reaches are alive. Not metaphorically. The ground has a pulse if you know where to listen." },
+      { title: "Haven's Edge", category: "Geography", discovered: true, content: "Population: ~200. Built from salvaged materials and desperate hope. The only settlement that doesn't move. Nobody knows why Haven's Edge stays anchored when other structures drift. The locals don't question it. They're just grateful." },
+      { title: "The Pale Keepers", category: "Factions", discovered: true, content: "An ancient order that claims to maintain the Reaches' stability. They control access to Power Sites, regulate magical practice, and collect 'tithes' of essence from practitioners. Their methods are authoritarian. Their results are... measurably effective. The Reaches are more stable near their strongholds." },
+      { title: "The Order of Dawn", category: "Factions", discovered: true, content: "A military-religious organization that believes the Reaches are corrupted and must be 'purified.' Their methods involve sealing Power Sites, restricting magic use, and maintaining strict hierarchies. Commander Ashford represents their forward presence." },
+      { title: "Resonance", category: "Magic", discovered: true, content: "The fundamental magical force of the Reaches. Everything has resonance — people, stones, creatures, the air itself. High resonance means stronger connection to the Reaches' power. Also means the Reaches notice you more." },
+      { title: "Power Sites", category: "Magic", discovered: true, content: "Locations where resonance concentrates. Standing in one feels like standing inside a heartbeat. Extended exposure increases magical ability but also Corruption Pressure." },
+      { title: "Bone Wardens", category: "Bestiary", discovered: true, content: "Skeletal guardians animated by concentrated resonance. Found in ancient structures. They don't think — they protect. The runes on their bones suggest they chose this. Volunteered." },
+      { title: "Sanctum Shades", category: "Bestiary", discovered: true, content: "Shadow creatures native to the deeper Sanctum levels. Fast, insubstantial, hard to hit with physical weapons. Resonance-based attacks are effective." },
+      { title: "The Founding Wound", category: "History", discovered: true, content: "Something broke the Reaches. Nobody agrees on what. The Keepers say it was mortal hubris. The Order says it was divine punishment. The Archivist says it was 'necessary.'" },
+      { title: "The Hollow Voice", category: "History", discovered: false, content: "???", note: "You heard it once. It said your name. The Archivist's face went blank when you mentioned it." },
+      { title: "The Old Gods", category: "Pantheon", discovered: true, content: "The Reaches may have had gods once. Their shrines are scattered, broken, repurposed. The Keepers say they left. The Order says they were imprisoned. Local folklore says they're sleeping." },
+    ],
+  },
+  sessions: [
+    { number: 12, title: "The Voice in the Dark", date: "Day 41", summary: "Entered the Hollowed Sanctum for the first time. Met the Archivist. Explored the upper levels. Found Mira Thornwood's hidden study. Discovered the Map Fragment. Heard the Hollow Voice.", xp: 480, gold: 25, combats: 1, deaths: 0, decisions: 14, keyMoment: "The Voice knew your name. The Archivist heard it too — and said nothing." },
+    { number: 13, title: "Debts and Shadows", date: "Day 44", summary: "Lady Veris Thorn cornered you outside Haven's Edge. Demanded the Keeper's Seal. You refused. Moth warned you about informants. Accepted Voss's herb-gathering quest. Sera departed east.", xp: 320, gold: -40, combats: 0, deaths: 0, decisions: 11, keyMoment: "Veris said: 'The Seal chose to break in your hands. That's either remarkable or damning.'" },
+    { number: 14, title: "Into the Lower Sanctum", date: "Day 47", summary: "Returned to the Sanctum. The Archivist asked three questions. Granted access to the lower levels. Discovered ancient murals. Ambushed by Bone Warden and Sanctum Shades. Combat ongoing.", xp: 290, gold: 0, combats: 1, deaths: 0, decisions: 8, keyMoment: "The murals show figures that look like the Pale Keepers — but thousands of years older. They're containing something." },
+  ],
+  consequenceLog: [
+    { event: "Stole Keeper's Seal", session: 8, impact: "Pale Keepers now actively hostile. Lady Veris hunting you. 3-session deadline imposed." },
+    { event: "Abandoned Grelan's escort", session: 10, impact: "Traders' Circle standing -10. Two mercenaries died. Guilt weighs." },
+    { event: "Communed with Power Site", session: 11, impact: "RESONANCE 4→5. Sanity -8. Black veins appeared on right arm. World Awareness spiked." },
+    { event: "Heard the Hollow Voice", session: 12, impact: "Unknown. The Archivist reacted. Something is aware of you from below." },
+  ],
+};
+
+
+// ═══════════════════════════════════════════════════════════════
+// STATE MANAGEMENT — REDUCER + CONTEXT
+// ═══════════════════════════════════════════════════════════════
+
+const GameContext = createContext();
+
+function gameReducer(state, action) {
+  switch (action.type) {
+    case 'SET_PANEL': return { ...state, activePanel: action.payload };
+    case 'SET_TAB': return { ...state, tabs: { ...state.tabs, [action.panel]: action.payload } };
+    case 'SELECT_ITEM': return { ...state, selected: { ...state.selected, [action.category]: action.payload } };
+    case 'ADD_NOTIFICATION': return { ...state, notifications: [...state.notifications, { ...action.payload, id: Date.now() + Math.random(), timestamp: Date.now() }] };
+    case 'REMOVE_NOTIFICATION': return { ...state, notifications: state.notifications.filter(n => n.id !== action.payload) };
+    case 'TOGGLE_LEVELUP': return { ...state, showLevelUp: action.payload };
+    case 'NEXT_TURN': {
+      const next = (state.combatTurn + 1) % (state.gameData.combat.turnOrder || []).length;
+      return { ...state, combatTurn: next };
+    }
+
+    // ─── Chat actions ───
+    case 'ADD_CHAT_MESSAGE': return { ...state, chatMessages: [...state.chatMessages, { ...action.payload, id: Date.now() + Math.random(), timestamp: Date.now() }] };
+    case 'SET_STREAMING': return { ...state, isStreaming: action.payload };
+    case 'UPDATE_STREAM_TEXT': {
+      const msgs = [...state.chatMessages];
+      const last = msgs[msgs.length - 1];
+      if (last && last.role === 'dm') { msgs[msgs.length - 1] = { ...last, content: action.payload }; }
+      return { ...state, chatMessages: msgs };
+    }
+
+    // ─── API config ───
+    case 'SET_API_KEY': return { ...state, apiKey: action.payload };
+    case 'SET_MODEL': return { ...state, model: action.payload };
+    case 'SET_API_STATUS': return { ...state, apiStatus: action.payload };
+    case 'SET_DM_ENGINE': return { ...state, dmEngine: action.payload };
+
+    // ─── Game state updates from metadata tags ───
+    case 'UPDATE_CAMPAIGN': return { ...state, gameData: { ...state.gameData, campaign: { ...state.gameData.campaign, ...action.payload } } };
+    case 'UPDATE_CHARACTER': return { ...state, gameData: { ...state.gameData, character: { ...state.gameData.character, ...action.payload } } };
+    case 'UPDATE_STAT': {
+      const { stat, value, prevValue } = action.payload;
+      const trend = value > (prevValue || 0) ? 'up' : value < (prevValue || 0) ? 'down' : 'stable';
+      return { ...state, gameData: { ...state.gameData, character: { ...state.gameData.character, stats: { ...state.gameData.character.stats, [stat]: { value, prevValue: prevValue || state.gameData.character.stats[stat]?.value || 0, trend } } } } };
+    }
+    case 'UPDATE_VITALS': {
+      const ch = { ...state.gameData.character };
+      if (action.payload.hp !== undefined) ch.hp = { ...ch.hp, current: action.payload.hp };
+      if (action.payload.mp !== undefined) ch.mp = { ...ch.mp, current: action.payload.mp };
+      if (action.payload.xp !== undefined) ch.ep = { ...ch.ep, current: action.payload.xp };
+      if (action.payload.sanity !== undefined) ch.sanity = { ...ch.sanity, current: action.payload.sanity };
+      if (action.payload.gold !== undefined) ch.gold = action.payload.gold;
+      return { ...state, gameData: { ...state.gameData, character: ch } };
+    }
+    case 'ADD_CONDITION': {
+      const conds = [...state.gameData.character.conditions, action.payload];
+      return { ...state, gameData: { ...state.gameData, character: { ...state.gameData.character, conditions: conds } } };
+    }
+    case 'REMOVE_CONDITION': {
+      const conds = state.gameData.character.conditions.filter(c => c.name !== action.payload);
+      return { ...state, gameData: { ...state.gameData, character: { ...state.gameData.character, conditions: conds } } };
+    }
+    case 'ADD_ITEM': {
+      const cat = action.payload.category || 'keyItems';
+      const inv = { ...state.gameData.inventory };
+      inv[cat] = [...(inv[cat] || []), action.payload.item];
+      return { ...state, gameData: { ...state.gameData, inventory: inv } };
+    }
+    case 'REMOVE_ITEM': {
+      const inv = { ...state.gameData.inventory };
+      for (const cat of Object.keys(inv)) {
+        inv[cat] = inv[cat].filter(i => i.name !== action.payload);
+      }
+      return { ...state, gameData: { ...state.gameData, inventory: inv } };
+    }
+    case 'UPDATE_QUEST': {
+      const quests = state.gameData.quests.map(q => q.id === action.payload.id ? { ...q, ...action.payload } : q);
+      return { ...state, gameData: { ...state.gameData, quests: quests } };
+    }
+    case 'ADD_QUEST': {
+      return { ...state, gameData: { ...state.gameData, quests: [...state.gameData.quests, action.payload] } };
+    }
+    case 'UPDATE_NPC': {
+      const npcs = state.gameData.npcs.map(n => n.name === action.payload.name ? { ...n, ...action.payload } : n);
+      const exists = state.gameData.npcs.some(n => n.name === action.payload.name);
+      return { ...state, gameData: { ...state.gameData, npcs: exists ? npcs : [...state.gameData.npcs, action.payload] } };
+    }
+    case 'UPDATE_TRACKER': {
+      const trackers = { ...state.gameData.hiddenTrackers };
+      if (trackers[action.payload.tracker]) {
+        trackers[action.payload.tracker] = { ...trackers[action.payload.tracker], value: action.payload.value, hint: action.payload.hint || trackers[action.payload.tracker].hint };
+      }
+      return { ...state, gameData: { ...state.gameData, hiddenTrackers: trackers } };
+    }
+    case 'COMBAT_START': {
+      return { ...state, gameData: { ...state.gameData, combat: { active: true, round: 1, location: action.payload.environment || '', turnOrder: [], currentTurn: 0, log: [{ text: '═══ COMBAT BEGINS ═══', type: 'system' }] } } };
+    }
+    case 'COMBAT_END': {
+      return { ...state, gameData: { ...state.gameData, combat: { ...state.gameData.combat, active: false } } };
+    }
+    case 'ADD_LORE': {
+      const entries = [...state.gameData.lore.entries, { ...action.payload, discovered: true }];
+      return { ...state, gameData: { ...state.gameData, lore: { ...state.gameData.lore, entries } } };
+    }
+
+    // ─── Persistence ───
+    case 'LOAD_GAME_STATE': return { ...state, ...action.payload };
+    case 'SET_GAME_DATA': return { ...state, gameData: action.payload };
+
+    default: return state;
+  }
+}
+
+const initialState = {
+  activePanel: 'dashboard',
+  tabs: { character: 'stats', inventory: 'equipped', codex: 'Geography' },
+  selected: { inventory: null, npc: null, quest: null, codex: null, map: null, session: null },
+  notifications: [],
+  showLevelUp: false,
+  combatTurn: 0,
+  // New: chat + API state
+  chatMessages: [],
+  isStreaming: false,
+  apiKey: '',
+  model: 'claude-sonnet-4-20250514',
+  apiStatus: 'disconnected', // disconnected | connected | testing | error
+  dmEngine: '',
+  gameData: DEFAULT_GAME_DATA,
+};
+
+function GameProvider({ children }) {
+  const [state, dispatch] = useReducer(gameReducer, initialState);
+
+  // Load from localStorage on mount
+  useEffect(() => {
+    try {
+      const savedKey = localStorage.getItem('dnd-apiKey');
+      const savedModel = localStorage.getItem('dnd-model');
+      const savedChat = localStorage.getItem('dnd-chat');
+      const savedGameData = localStorage.getItem('dnd-gameData');
+      if (savedKey) dispatch({ type: 'SET_API_KEY', payload: savedKey });
+      if (savedModel) dispatch({ type: 'SET_MODEL', payload: savedModel });
+      if (savedChat) {
+        try { const msgs = JSON.parse(savedChat); msgs.forEach(m => dispatch({ type: 'ADD_CHAT_MESSAGE', payload: m })); } catch(e) {}
+      }
+      if (savedGameData) {
+        try { dispatch({ type: 'SET_GAME_DATA', payload: JSON.parse(savedGameData) }); } catch(e) {}
+      }
+    } catch(e) {}
+
+    // Load DM Engine
+    fetch('/dm-engine.md').then(r => r.ok ? r.text() : '').then(t => {
+      if (t) dispatch({ type: 'SET_DM_ENGINE', payload: t });
+    }).catch(() => {});
+  }, []);
+
+  // Auto-save to localStorage (debounced)
+  const saveTimer = useRef(null);
+  useEffect(() => {
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      try {
+        if (state.apiKey) localStorage.setItem('dnd-apiKey', state.apiKey);
+        if (state.model) localStorage.setItem('dnd-model', state.model);
+        // Save last 50 messages
+        const trimmed = state.chatMessages.slice(-50);
+        localStorage.setItem('dnd-chat', JSON.stringify(trimmed));
+        localStorage.setItem('dnd-gameData', JSON.stringify(state.gameData));
+      } catch(e) {}
+    }, 2000);
+    return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
+  }, [state.chatMessages, state.gameData, state.apiKey, state.model]);
+
+  return React.createElement(GameContext.Provider, { value: { state, dispatch } }, children);
+}
+
+function useGame() { return useContext(GameContext); }
+
+
+// ═══════════════════════════════════════════════════════════════
+// METADATA TAG PARSER
+// ═══════════════════════════════════════════════════════════════
+
+const TAG_REGEX = /\[([A-Z_]+):\s*([^\]]+)\]/g;
+
+function parseTagParams(paramStr) {
+  const params = {};
+  const regex = /(\w+)\s*=\s*(?:"([^"]*)"|'([^']*)'|\[([^\]]*)\]|(\S+))/g;
+  let m;
+  while ((m = regex.exec(paramStr)) !== null) {
+    const key = m[1];
+    const val = m[2] !== undefined ? m[2] : m[3] !== undefined ? m[3] : m[4] !== undefined ? m[4].split(',').map(s => s.trim().replace(/['"]/g, '')) : m[5];
+    if (!isNaN(val) && val !== '' && typeof val === 'string') { params[key] = parseFloat(val); }
+    else { params[key] = val; }
+  }
+  return params;
+}
+
+function parseMetadataTags(text) {
+  const tags = [];
+  let cleanText = text;
+  let match;
+  const re = /\[([A-Z_]+):\s*([^\]]+)\]/g;
+  while ((match = re.exec(text)) !== null) {
+    tags.push({ type: match[1], params: parseTagParams(match[2]), raw: match[0] });
+  }
+  for (const tag of tags) { cleanText = cleanText.replace(tag.raw, ''); }
+  return { cleanText: cleanText.replace(/\n{3,}/g, '\n\n').trim(), tags };
+}
+
+function dispatchTagActions(tags, dispatch) {
+  for (const tag of tags) {
+    const p = tag.params;
+    switch (tag.type) {
+      case 'SCENE_UPDATE':
+        dispatch({ type: 'UPDATE_CAMPAIGN', payload: { location: p.location, time: p.time, day: p.day, mood: p.mood } });
+        break;
+      case 'STAT_CHANGE':
+        dispatch({ type: 'UPDATE_STAT', payload: { stat: p.stat, value: p.new || p.value, prevValue: p.old } });
+        dispatch({ type: 'ADD_NOTIFICATION', payload: { title: `${p.stat} ${(p.new||0) > (p.old||0) ? 'INCREASED' : 'DECREASED'}`, body: p.reason || '', statChanges: [{ stat: p.stat, from: p.old, to: p.new || p.value, dir: (p.new||0) > (p.old||0) ? 'increase' : 'decrease' }] } });
+        break;
+      case 'HP_CHANGE':
+        dispatch({ type: 'UPDATE_VITALS', payload: { hp: p.new || p.value } });
+        if ((p.new||0) < (p.old||999)) dispatch({ type: 'ADD_NOTIFICATION', payload: { title: 'DAMAGE TAKEN', body: p.reason || '', style: 'critical', statChanges: [{ stat: 'HP', from: p.old, to: p.new, dir: 'decrease' }] } });
+        break;
+      case 'MP_CHANGE':
+        dispatch({ type: 'UPDATE_VITALS', payload: { mp: p.new || p.value } });
+        break;
+      case 'XP_GAIN':
+        dispatch({ type: 'ADD_NOTIFICATION', payload: { title: 'EXPERIENCE GAINED', body: `+${p.amount} XP — ${p.reason || p.source || ''}`, style: 'success' } });
+        break;
+      case 'ITEM_ACQUIRED':
+        dispatch({ type: 'ADD_ITEM', payload: { category: p.type === 'consumable' ? 'consumables' : p.type === 'material' ? 'materials' : 'keyItems', item: { name: p.name, rarity: p.rarity || 'common', icon: '🔮', desc: p.desc || '', qty: 1, weight: 0 } } });
+        dispatch({ type: 'ADD_NOTIFICATION', payload: { title: 'ITEM ACQUIRED', body: `${p.name} (${p.rarity || 'common'}) — ${p.desc || ''}`, style: 'arcane' } });
+        break;
+      case 'ITEM_REMOVED':
+        dispatch({ type: 'REMOVE_ITEM', payload: p.name });
+        break;
+      case 'QUEST_UPDATE':
+        dispatch({ type: 'UPDATE_QUEST', payload: { id: p.id, status: p.status, progress: p.progress, objective: p.objective } });
+        dispatch({ type: 'ADD_NOTIFICATION', payload: { title: 'QUEST UPDATED', body: `${p.id} — ${p.objective || p.status || ''}`, style: 'success' } });
+        break;
+      case 'NPC_UPDATE':
+        dispatch({ type: 'UPDATE_NPC', payload: { name: p.name, relationship: p.relationship, status: p.status, location: p.location, loyalty: p.loyalty } });
+        break;
+      case 'COMBAT_START':
+        dispatch({ type: 'COMBAT_START', payload: { environment: p.environment } });
+        dispatch({ type: 'ADD_NOTIFICATION', payload: { title: '⚔ COMBAT INITIATED', body: p.environment || 'Roll initiative!', style: 'critical' } });
+        break;
+      case 'COMBAT_END':
+        dispatch({ type: 'COMBAT_END', payload: {} });
+        dispatch({ type: 'ADD_NOTIFICATION', payload: { title: 'COMBAT ENDED', body: `Result: ${p.result || 'Victory'}${p.xp ? ` — +${p.xp} XP` : ''}`, style: 'success' } });
+        break;
+      case 'ROLL_RESULT':
+        dispatch({ type: 'ADD_NOTIFICATION', payload: { title: `ROLL: ${p.type || 'Check'}`, body: `Rolled ${p.rolled}${p.modifier ? `+${p.modifier}` : ''} vs DC ${p.dc || '?'} — ${p.result || ''}`, style: p.result === 'success' || p.result === 'critical_success' ? 'success' : 'critical' } });
+        break;
+      case 'HIDDEN_TRACKER':
+        dispatch({ type: 'UPDATE_TRACKER', payload: { tracker: p.tracker, value: p.new_value, hint: p.hint } });
+        break;
+      case 'CONDITION_ADD':
+        dispatch({ type: 'ADD_CONDITION', payload: { name: p.name, type: p.type || 'neutral', desc: p.desc || '', icon: p.type === 'buff' ? '⚡' : p.type === 'debuff' ? '💀' : '👁' } });
+        break;
+      case 'CONDITION_REMOVE':
+        dispatch({ type: 'REMOVE_CONDITION', payload: p.name });
+        break;
+      case 'LORE_UNLOCK':
+        dispatch({ type: 'ADD_LORE', payload: { title: p.title, category: p.category || 'History', content: p.content || '???' } });
+        dispatch({ type: 'ADD_NOTIFICATION', payload: { title: 'LORE UNLOCKED', body: `${p.category}: ${p.title}`, style: 'arcane' } });
+        break;
+    }
+  }
+}
+
+
+// ═══════════════════════════════════════════════════════════════
+// SYSTEM PROMPT BUILDER
+// ═══════════════════════════════════════════════════════════════
+
+function buildSystemPrompt(dmEngine, gameData) {
+  const worldState = JSON.stringify({
+    campaign: gameData.campaign,
+    character: {
+      name: gameData.character.name,
+      race: gameData.character.race,
+      class: gameData.character.class,
+      level: gameData.character.level,
+      hp: gameData.character.hp,
+      mp: gameData.character.mp,
+      sanity: gameData.character.sanity,
+      gold: gameData.character.gold,
+      stats: gameData.character.stats,
+      conditions: gameData.character.conditions.map(c => c.name),
+      abilities: gameData.character.abilities.map(a => a.name),
+    },
+    inventory: {
+      equipped: gameData.inventory.equipped.map(i => i.name),
+      consumables: gameData.inventory.consumables.map(i => `${i.name} x${i.qty}`),
+      keyItems: gameData.inventory.keyItems.map(i => i.name),
+    },
+    quests: gameData.quests.filter(q => q.status === 'active').map(q => ({ title: q.title, progress: q.progress })),
+    npcs: gameData.npcs.map(n => ({ name: n.name, relationship: n.relationship, location: n.location })),
+    combat: gameData.combat.active ? { active: true, round: gameData.combat.round } : { active: false },
+  }, null, 2);
+
+  const tagInstructions = `
+
+METADATA TAG INSTRUCTIONS:
+After EVERY response, include metadata tags for any state changes.
+Tags are parsed silently by the companion app — the player never sees them.
+Format: [TAG_TYPE: key=value, key=value]
+
+Available tags:
+[SCENE_UPDATE: location="...", time="...", day=N, mood="..."]
+[STAT_CHANGE: stat="...", old=N, new=N, reason="..."]
+[HP_CHANGE: old=N, new=N, reason="..."]
+[MP_CHANGE: old=N, new=N, reason="..."]
+[XP_GAIN: amount=N, source="...", reason="..."]
+[ITEM_ACQUIRED: name="...", rarity="...", type="...", desc="..."]
+[ITEM_REMOVED: name="...", reason="..."]
+[QUEST_UPDATE: id="...", status="...", progress=N, objective="..."]
+[NPC_UPDATE: name="...", relationship="...", status="...", location="..."]
+[COMBAT_START: enemies="...", environment="..."]
+[COMBAT_END: result="...", xp=N]
+[ROLL_RESULT: type="...", rolled=N, modifier=N, dc=N, result="..."]
+[HIDDEN_TRACKER: tracker="...", change=N, new_value=N]
+[CONDITION_ADD: name="...", type="...", desc="..."]
+[CONDITION_REMOVE: name="..."]
+[LORE_UNLOCK: category="...", title="...", content="..."]
+
+ALWAYS include relevant tags at the END of your response. Include ALL state changes. The companion app depends on these tags to keep the player's dashboard updated.`;
+
+  return `${dmEngine}\n\n═══ CURRENT WORLD STATE ═══\n${worldState}\n${tagInstructions}`;
+}
+
+
+// ═══════════════════════════════════════════════════════════════
+// STREAMING CHAT — sends messages to API, processes SSE stream
+// ═══════════════════════════════════════════════════════════════
+
+async function sendChatMessage(message, state, dispatch) {
+  if (!state.apiKey) {
+    dispatch({ type: 'ADD_CHAT_MESSAGE', payload: { role: 'system', content: '⚠ No API key configured. Go to Settings → API Configuration to add your key.' } });
+    return;
+  }
+
+  // Add player message
+  dispatch({ type: 'ADD_CHAT_MESSAGE', payload: { role: 'player', content: message } });
+
+  // Build messages for API (last 40 messages for context)
+  const recentMessages = [...state.chatMessages, { role: 'player', content: message }].slice(-40).map(m => ({
+    role: m.role === 'player' ? 'user' : 'assistant',
+    content: m.content,
+  })).filter(m => m.role === 'user' || m.role === 'assistant');
+
+  // Add placeholder DM message for streaming
+  dispatch({ type: 'ADD_CHAT_MESSAGE', payload: { role: 'dm', content: '' } });
+  dispatch({ type: 'SET_STREAMING', payload: true });
+
+  const systemPrompt = buildSystemPrompt(state.dmEngine, state.gameData);
+
+  try {
+    const response = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        apiKey: state.apiKey,
+        model: state.model,
+        messages: recentMessages,
+        systemPrompt,
+        maxTokens: 4096,
+      }),
+    });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({ message: 'Connection failed' }));
+      dispatch({ type: 'UPDATE_STREAM_TEXT', payload: `⚠ Error: ${err.message || 'Unknown error'}` });
+      dispatch({ type: 'SET_STREAMING', payload: false });
+      return;
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let fullText = '';
+    let buffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const data = line.slice(6).trim();
+        if (data === '[DONE]') continue;
+
+        try {
+          const event = JSON.parse(data);
+          if (event.type === 'content_block_delta' && event.delta?.text) {
+            fullText += event.delta.text;
+            // Parse and strip tags from display, but show clean text
+            const { cleanText } = parseMetadataTags(fullText);
+            dispatch({ type: 'UPDATE_STREAM_TEXT', payload: cleanText });
+          }
+          if (event.type === 'error') {
+            dispatch({ type: 'UPDATE_STREAM_TEXT', payload: `⚠ ${event.error?.message || 'Stream error'}` });
+          }
+        } catch(e) { /* skip non-JSON lines */ }
+      }
+    }
+
+    // Final parse — dispatch metadata tags
+    const { cleanText, tags } = parseMetadataTags(fullText);
+    dispatch({ type: 'UPDATE_STREAM_TEXT', payload: cleanText });
+    if (tags.length > 0) dispatchTagActions(tags, dispatch);
+
+  } catch (err) {
+    dispatch({ type: 'UPDATE_STREAM_TEXT', payload: `⚠ Connection error: ${err.message}` });
+  }
+
+  dispatch({ type: 'SET_STREAMING', payload: false });
+}
+
+
+// ═══════════════════════════════════════════════════════════════
+// SHARED COMPONENTS
+// ═══════════════════════════════════════════════════════════════
+
+function StatBar({ label, current, max, type, showNumbers = true }) {
+  const pct = Math.round((current / max) * 100);
+  return (
+    <div className="stat-bar-container">
+      <div className="stat-bar-label">
+        <span className="name">{label}</span>
+        {showNumbers && <span className="value">{current}/{max}</span>}
+      </div>
+      <div className="stat-bar">
+        <div className={`stat-bar-fill ${type}`} style={{ width: `${pct}%` }} />
+      </div>
+    </div>
+  );
+}
+
+function Stars({ count, max = 5 }) {
+  return (
+    <div className="stars">
+      {Array.from({ length: max }, (_, i) => (
+        <span key={i} className={`star ${i < count ? 'filled' : ''}`}>★</span>
+      ))}
+    </div>
+  );
+}
+
+function Badge({ rarity, children }) {
+  return <span className={`badge ${rarity}`}>{children || rarity}</span>;
+}
+
+function ConditionTag({ condition }) {
+  const typeClass = condition.type === 'buff' ? 'buff' : condition.type === 'debuff' ? 'debuff' : 'neutral-tag';
+  return <span className={`condition-tag ${typeClass}`}>{condition.icon} {condition.name}</span>;
+}
+
+
+// ═══════════════════════════════════════════════════════════════
+// PARTICLE BACKGROUND
+// ═══════════════════════════════════════════════════════════════
+
+function ParticleBackground() {
+  const canvasRef = useRef(null);
+  const particles = useRef([]);
+  const animRef = useRef(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    let w = canvas.width = window.innerWidth;
+    let h = canvas.height = window.innerHeight;
+
+    const runes = ['⊕','⊗','△','◇','☽','⟐','⊹','✧','◈','⟡','⊛','⟁'];
+    const count = 40;
+
+    particles.current = Array.from({ length: count }, () => ({
+      x: Math.random() * w,
+      y: Math.random() * h,
+      vx: (Math.random() - 0.5) * 0.3,
+      vy: (Math.random() - 0.5) * 0.2 - 0.1,
+      size: 8 + Math.random() * 14,
+      opacity: 0.05 + Math.random() * 0.15,
+      rune: runes[Math.floor(Math.random() * runes.length)],
+      pulse: Math.random() * Math.PI * 2,
+      pulseSpeed: 0.005 + Math.random() * 0.015,
+    }));
+
+    function draw() {
+      ctx.clearRect(0, 0, w, h);
+      for (const p of particles.current) {
+        p.x += p.vx; p.y += p.vy; p.pulse += p.pulseSpeed;
+        if (p.x < -20) p.x = w + 20; if (p.x > w + 20) p.x = -20;
+        if (p.y < -20) p.y = h + 20; if (p.y > h + 20) p.y = -20;
+        const alpha = p.opacity * (0.5 + 0.5 * Math.sin(p.pulse));
+        ctx.font = `${p.size}px serif`;
+        ctx.fillStyle = `rgba(201, 168, 76, ${alpha})`;
+        ctx.fillText(p.rune, p.x, p.y);
+      }
+      animRef.current = requestAnimationFrame(draw);
+    }
+    draw();
+
+    const onResize = () => { w = canvas.width = window.innerWidth; h = canvas.height = window.innerHeight; };
+    window.addEventListener('resize', onResize);
+    return () => { cancelAnimationFrame(animRef.current); window.removeEventListener('resize', onResize); };
+  }, []);
+
+  return <canvas ref={canvasRef} className="particles-canvas" />;
+}
+
+
+// ═══════════════════════════════════════════════════════════════
+// SYSTEM NOTIFICATIONS
+// ═══════════════════════════════════════════════════════════════
+
+function NotificationOverlay() {
+  const { state, dispatch } = useGame();
+  useEffect(() => {
+    const timers = state.notifications.map(n =>
+      setTimeout(() => dispatch({ type: 'REMOVE_NOTIFICATION', payload: n.id }), 6000)
+    );
+    return () => timers.forEach(clearTimeout);
+  }, [state.notifications]);
+
+  return (
+    <div className="notification-overlay">
+      {state.notifications.map(n => (
+        <div key={n.id} className={`system-notification ${n.style || ''}`}>
+          <div className="notification-border">═══════════════════════════════</div>
+          <div className="notification-title">{n.title}</div>
+          <div className="notification-body">{n.body}</div>
+          {n.statChanges && (
+            <div className="notification-stat-change">
+              {n.statChanges.map((s, i) => (
+                <div key={i} className="stat-change-line">
+                  <span className="stat-change-name">{s.stat}</span>
+                  <span className={`stat-change-value ${s.dir}`}>{s.from} → {s.to}</span>
+                </div>
+              ))}
+            </div>
+          )}
+          <div className="notification-border">═══════════════════════════════</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function LevelUpOverlay() {
+  const { state, dispatch } = useGame();
+  if (!state.showLevelUp) return null;
+  return (
+    <div className="levelup-overlay" onClick={() => dispatch({ type: 'TOGGLE_LEVELUP', payload: false })}>
+      <div className="levelup-content">
+        <div className="levelup-title">LEVEL UP</div>
+        <div className="levelup-level">Level {state.gameData.character.level} → Level {state.gameData.character.level + 1}</div>
+        <div className="levelup-rewards" style={{ fontFamily: "'Fira Code', monospace" }}>
+          <div>═══════════════════════════════════</div>
+          <div style={{marginTop:8}}>Await your DM's narration...</div>
+          <div style={{marginTop:8}}>═══════════════════════════════════</div>
+          <div style={{marginTop:16,color:'var(--muted)',fontSize:'0.75rem'}}>Click anywhere to dismiss</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+// ═══════════════════════════════════════════════════════════════
+// HEADER
+// ═══════════════════════════════════════════════════════════════
+
+function Header() {
+  const { state } = useGame();
+  const c = state.gameData.campaign;
+  const ch = state.gameData.character;
+  return (
+    <header className="app-header">
+      <div className="header-title">{c.name}</div>
+      <div className="header-divider" />
+      <div className="header-stat">
+        <span className="label">Session</span>
+        <span className="value">{c.session}</span>
+      </div>
+      <div className="header-stat">
+        <span className="label">Day</span>
+        <span className="value">{c.day}</span>
+      </div>
+      <div className="header-stat">
+        <span className="label">Time</span>
+        <span className="value">{c.time}</span>
+      </div>
+      <div className="header-divider" />
+      <div className="header-stat">
+        <span className="label">Level</span>
+        <span className="value">{ch.level}</span>
+      </div>
+      <div className="header-stat">
+        <span className="label">HP</span>
+        <span className="value" style={{color: ch.hp.current < ch.hp.max * 0.5 ? 'var(--crimson-bright)' : 'var(--parchment)'}}>{ch.hp.current}/{ch.hp.max}</span>
+      </div>
+      <div className="header-alerts">
+        {state.gameData.combat.active && <span className="alert-badge warning">⚔ Combat Active</span>}
+        <span className="alert-badge arcane">👁 The Reach watches</span>
+      </div>
+    </header>
+  );
+}
+
+
+// ═══════════════════════════════════════════════════════════════
+// SIDEBAR (center strip between chat and companion)
+// ═══════════════════════════════════════════════════════════════
+
+const PANELS = [
+  { id: 'dashboard', icon: '🏠', label: 'Dashboard' },
+  { id: 'character', icon: '👤', label: 'Character' },
+  { id: 'inventory', icon: '🎒', label: 'Inventory' },
+  { id: 'quests', icon: '📜', label: 'Quests' },
+  { id: 'npcs', icon: '👥', label: 'NPCs' },
+  { id: 'combat', icon: '⚔️', label: 'Combat' },
+  { id: 'map', icon: '🗺', label: 'Map' },
+  { id: 'codex', icon: '📖', label: 'Lore Codex' },
+  { id: 'journal', icon: '📓', label: 'Journal' },
+  { id: 'settings', icon: '⚙️', label: 'Settings' },
+];
+
+function Sidebar() {
+  const { state, dispatch } = useGame();
+  return (
+    <nav className="center-sidebar">
+      {PANELS.map(p => (
+        <div key={p.id}
+          className={`sidebar-item ${state.activePanel === p.id ? 'active' : ''}`}
+          onClick={() => dispatch({ type: 'SET_PANEL', payload: p.id })}
+        >
+          <span className="icon">{p.icon}</span>
+          <span className="sidebar-tooltip">{p.label}</span>
+        </div>
+      ))}
+    </nav>
+  );
+}
+
+
+// ═══════════════════════════════════════════════════════════════
+// PANEL: DASHBOARD
+// ═══════════════════════════════════════════════════════════════
+
+function DashboardPanel() {
+  const { state, dispatch } = useGame();
+  const c = state.gameData.campaign;
+  const ch = state.gameData.character;
+
+  return (
+    <div>
+      <div className="section-header">
+        <h1 className="section-title"><span className="icon">🏛</span> {c.location}</h1>
+        <span style={{fontFamily:"'Fira Code',monospace",fontSize:'0.75rem',color:'var(--muted)'}}>Day {c.day} · {c.time}</span>
+      </div>
+
+      <div className="card" style={{background:'linear-gradient(135deg, var(--deep-stone), var(--stone))', borderColor:'var(--border-gold)'}}>
+        <p style={{fontSize:'0.9rem',lineHeight:1.7,color:'var(--parchment-light)'}}>
+          {state.chatMessages.length === 0
+            ? "Welcome to The Shattered Reaches. Configure your API key in Settings, then start chatting with your DM to begin the adventure."
+            : `You are at ${c.location}. The mood is ${c.mood}.`
+          }
+        </p>
+        {state.apiStatus !== 'connected' && state.chatMessages.length === 0 && (
+          <p style={{fontSize:'0.85rem',marginTop:12,color:'var(--amber)',fontFamily:"'Fira Code',monospace"}}>
+            ⚙ Go to Settings → API Configuration to connect
+          </p>
+        )}
+      </div>
+
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:12,marginTop:16}}>
+        <div className="card">
+          <h4 style={{marginBottom:8}}>Vitals</h4>
+          <StatBar label="HP" current={ch.hp.current} max={ch.hp.max} type="hp" />
+          <StatBar label="EP" current={ch.mp.current} max={ch.mp.max} type="mp" />
+          <StatBar label="XP" current={ch.ep.current} max={ch.ep.max} type="xp" />
+          <StatBar label="Sanity" current={ch.sanity.current} max={ch.sanity.max} type="sanity" />
+        </div>
+
+        <div className="card">
+          <h4 style={{marginBottom:8}}>Active Conditions</h4>
+          {ch.conditions.map((c,i) => <div key={i} style={{marginBottom:4}}><ConditionTag condition={c} /></div>)}
+        </div>
+
+        <div className="card">
+          <h4 style={{marginBottom:8}}>Quick Stats</h4>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6}}>
+            {Object.entries(ch.stats).map(([k,v]) => (
+              <div key={k} style={{display:'flex',justifyContent:'space-between',fontSize:'0.8rem',padding:'4px 0'}}>
+                <span style={{color:'var(--muted)',fontFamily:"'Fira Code',monospace",fontSize:'0.7rem'}}>{k}</span>
+                <span style={{color:'var(--gold-bright)',fontWeight:700}}>{v.value} {v.trend==='up'?'↑':v.trend==='down'?'↓':'·'}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+// ═══════════════════════════════════════════════════════════════
+// PANEL: CHARACTER SHEET
+// ═══════════════════════════════════════════════════════════════
+
+function CharacterPanel() {
+  const { state, dispatch } = useGame();
+  const tab = state.tabs.character || 'stats';
+  const ch = state.gameData.character;
+
+  return (
+    <div>
+      <div className="section-header">
+        <h1 className="section-title"><span className="icon">👤</span> {ch.name}</h1>
+        <span style={{fontFamily:"'Fira Code',monospace",fontSize:'0.75rem',color:'var(--muted)'}}>{ch.race} · {ch.class} · Lvl {ch.level}</span>
+      </div>
+      <p style={{fontSize:'0.78rem',color:'var(--silver)',marginBottom:16,fontStyle:'italic'}}>"{ch.assignedBy}"</p>
+
+      <div className="tab-bar">
+        {['stats','conditions','abilities','traits','trackers'].map(t => (
+          <div key={t} className={`tab-item ${tab===t?'active':''}`}
+            onClick={() => dispatch({ type: 'SET_TAB', panel: 'character', payload: t })}
+          >{t.charAt(0).toUpperCase()+t.slice(1)}</div>
+        ))}
+      </div>
+
+      {tab === 'stats' && (
+        <div>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16,marginBottom:16}}>
+            <div>
+              <StatBar label="Hit Points" current={ch.hp.current} max={ch.hp.max} type="hp" />
+              <StatBar label="Essence Points" current={ch.mp.current} max={ch.mp.max} type="mp" />
+            </div>
+            <div>
+              <StatBar label="Experience" current={ch.ep.current} max={ch.ep.max} type="xp" />
+              <StatBar label="Sanity" current={ch.sanity.current} max={ch.sanity.max} type="sanity" />
+            </div>
+          </div>
+          <div className="stat-grid">
+            {Object.entries(ch.stats).map(([name, s]) => (
+              <div key={name} className="stat-block">
+                <div className="stat-name">{name}</div>
+                <div className="stat-value">{s.value}</div>
+                <div className={`stat-trend ${s.trend}`}>
+                  {s.trend==='up' ? `▲ ${s.prevValue}→${s.value}` : s.trend==='down' ? `▼ ${s.prevValue}→${s.value}` : '— stable'}
+                </div>
+              </div>
+            ))}
+          </div>
+          <div style={{display:'flex',gap:16,marginTop:16,fontSize:'0.8rem'}}>
+            <div><span style={{color:'var(--muted)'}}>Gold:</span> <span style={{color:'var(--gold)',fontWeight:600}}>{ch.gold}</span></div>
+            <div><span style={{color:'var(--muted)'}}>Weight:</span> <span style={{color: ch.weight.current > ch.weight.max * 0.8 ? 'var(--amber)' : 'var(--parchment)'}}>{ch.weight.current}/{ch.weight.max}</span></div>
+          </div>
+        </div>
+      )}
+
+      {tab === 'conditions' && (
+        <div>
+          {ch.conditions.map((c, i) => (
+            <div key={i} className="card" style={{display:'flex',gap:12,alignItems:'flex-start'}}>
+              <span style={{fontSize:'1.5rem'}}>{c.icon}</span>
+              <div>
+                <div style={{display:'flex',alignItems:'center',gap:8}}>
+                  <span style={{fontWeight:600,fontSize:'0.9rem'}}>{c.name}</span>
+                  <span className={`condition-tag ${c.type==='buff'?'buff':c.type==='debuff'?'debuff':'neutral-tag'}`} style={{margin:0}}>{c.type}</span>
+                </div>
+                <p style={{fontSize:'0.8rem',color:'var(--silver)',marginTop:4,lineHeight:1.5}}>{c.desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {tab === 'abilities' && (
+        <div>
+          {ch.abilities.map((a, i) => (
+            <div key={i} className="ability-card">
+              <div className="ability-header">
+                <span className="ability-name">{a.name}</span>
+                <span className="ability-type">{a.type}</span>
+              </div>
+              <div className="ability-desc">{a.desc}</div>
+              <div className="ability-meta">
+                <span>Req: {a.req}</span><span>Cost: {a.cost}</span><span>CD: {a.cooldown}</span><span>Prof: {a.proficiency} ({a.uses} uses)</span>
+              </div>
+              <div style={{marginTop:6}}>
+                <div className="progress-container">
+                  <span style={{fontSize:'0.65rem',color:'var(--muted)',minWidth:50}}>{a.proficiency}</span>
+                  <div className="progress-bar">
+                    <div className="progress-fill" style={{width:`${Math.min(100,(a.uses/50)*100)}%`,background:a.proficiency==='Adept'?'var(--emerald)':a.proficiency==='Skilled'?'var(--frost)':'var(--gold-dim)'}} />
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {tab === 'traits' && (
+        <div>
+          {ch.traits.map((t, i) => (
+            <div key={i} className="card">
+              <h4 style={{marginBottom:4}}>{t.name}</h4>
+              <p style={{fontSize:'0.8rem',color:'var(--silver)',lineHeight:1.5}}>{t.desc}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {tab === 'trackers' && (
+        <div>
+          <p style={{fontSize:'0.78rem',color:'var(--muted)',marginBottom:16,fontStyle:'italic'}}>
+            These readings are... approximate. The System does not reveal its full calculations.
+          </p>
+          {Object.entries(state.gameData.hiddenTrackers).map(([key, t]) => (
+            <div key={key} className="tracker-mystery">
+              <div className="tracker-name">
+                <span>{key === 'sanity' ? '🧠' : key === 'worldAwareness' ? '👁' : key === 'corruption' ? '☠️' : key === 'magicalDebt' ? '⚖️' : '🔮'}</span>
+                <span style={{textTransform:'capitalize'}}>{key.replace(/([A-Z])/g,' $1').trim()}</span>
+              </div>
+              <div className="tracker-bar">
+                <div className={`tracker-fill ${key === 'sanity' ? 'sanity' : key === 'worldAwareness' ? 'awareness' : key === 'corruption' ? 'corruption' : 'transformation'}`}
+                  style={{ width: `${t.value}%` }} />
+              </div>
+              <div className="tracker-hint">"{t.hint}"</div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+// ═══════════════════════════════════════════════════════════════
+// PANEL: INVENTORY
+// ═══════════════════════════════════════════════════════════════
+
+function InventoryPanel() {
+  const { state, dispatch } = useGame();
+  const tab = state.tabs.inventory || 'equipped';
+  const sel = state.selected.inventory;
+  const inv = state.gameData.inventory;
+  const categories = { equipped: inv.equipped, consumables: inv.consumables, keyItems: inv.keyItems, materials: inv.materials };
+  const items = categories[tab] || [];
+
+  const rarityColors = {
+    common: 'var(--rarity-common)', uncommon: 'var(--rarity-uncommon)', rare: 'var(--rarity-rare)',
+    epic: 'var(--rarity-epic)', legendary: 'var(--rarity-legendary)', artifact: 'var(--rarity-artifact)',
+  };
+
+  return (
+    <div>
+      <div className="section-header">
+        <h1 className="section-title"><span className="icon">🎒</span> Inventory</h1>
+        <div style={{display:'flex',gap:12,fontSize:'0.75rem',fontFamily:"'Fira Code',monospace"}}>
+          <span style={{color:'var(--gold)'}}>💰 {state.gameData.character.gold}g</span>
+          <span style={{color: state.gameData.character.weight.current > state.gameData.character.weight.max * 0.8 ? 'var(--amber)' : 'var(--silver)'}}>
+            ⚖ {state.gameData.character.weight.current}/{state.gameData.character.weight.max}
+          </span>
+        </div>
+      </div>
+
+      <div className="tab-bar">
+        {[['equipped','Equipped'],['consumables','Consumables'],['keyItems','Key Items'],['materials','Materials']].map(([k,l]) => (
+          <div key={k} className={`tab-item ${tab===k?'active':''}`}
+            onClick={() => dispatch({ type: 'SET_TAB', panel: 'inventory', payload: k })}
+          >{l} <span style={{color:'var(--muted)',fontSize:'0.7rem'}}>({(categories[k]||[]).length})</span></div>
+        ))}
+      </div>
+
+      {items.map((item, i) => (
+        <div key={i} className={`item-row ${sel === i ? 'selected' : ''}`}
+          onClick={() => dispatch({ type: 'SELECT_ITEM', category: 'inventory', payload: i })}>
+          <div className="item-icon" style={{ background: `${rarityColors[item.rarity]}15`, borderColor: `${rarityColors[item.rarity]}50`, color: rarityColors[item.rarity] }}>{item.icon}</div>
+          <div className="item-info">
+            <div className="item-name" style={{ color: rarityColors[item.rarity] }}>{item.name}</div>
+            <div className="item-desc">{item.desc}</div>
+          </div>
+          <div style={{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:2}}>
+            <Badge rarity={item.rarity}>{item.rarity}</Badge>
+            {item.qty && <span className="item-qty">x{item.qty}</span>}
+            {item.slot && <span style={{fontSize:'0.65rem',color:'var(--muted)'}}>{item.slot}</span>}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+
+// ═══════════════════════════════════════════════════════════════
+// PANEL: QUEST TRACKER
+// ═══════════════════════════════════════════════════════════════
+
+function QuestEntry({ quest, selected, onClick }) {
+  const statusClass = quest.type === 'main' ? 'main-quest' : quest.status;
+  return (
+    <div className={`quest-entry ${statusClass} ${selected?'selected':''}`} onClick={onClick}>
+      <div className="quest-title" style={{color: quest.status==='failed'?'var(--crimson-bright)':'var(--gold)'}}>{quest.title}</div>
+      <div className="quest-desc">{quest.desc}</div>
+      {quest.progress !== undefined && quest.status !== 'failed' && (
+        <div className="progress-container" style={{marginBottom:8}}>
+          <div className="progress-bar"><div className="progress-fill" style={{width:`${quest.progress}%`}} /></div>
+          <span className="progress-text">{quest.progress}%</span>
+        </div>
+      )}
+      {quest.milestones && (
+        <div style={{fontSize:'0.72rem',color:'var(--muted)',marginBottom:6}}>
+          {quest.milestones.map((m,i) => (
+            <div key={i} style={{padding:'1px 0',color: m.includes('✓') ? 'var(--emerald-bright)' : m.includes('FAILED') ? 'var(--crimson-bright)' : 'var(--muted)'}}>
+              {m.includes('✓') ? '✓' : m.includes('FAILED') ? '✗' : '○'} {m}
+            </div>
+          ))}
+        </div>
+      )}
+      <div className="quest-meta">
+        {quest.giver && <span>From: {quest.giver}</span>}
+        {quest.deadline && <span style={{color:'var(--amber)'}}>⏰ {quest.deadline}</span>}
+      </div>
+      {quest.consequence && (
+        <div style={{marginTop:8,padding:'8px 10px',background:'rgba(198,40,40,0.08)',borderRadius:4,fontSize:'0.75rem',color:'var(--crimson-bright)',border:'1px solid rgba(198,40,40,0.2)'}}>
+          ⚠ Consequence: {quest.consequence}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function QuestPanel() {
+  const { state, dispatch } = useGame();
+  const sel = state.selected.quest;
+  const quests = state.gameData.quests;
+
+  const groups = [
+    { label: 'Main Quest', type: 'main', icon: '👑' },
+    { label: 'Active', type: 'active', icon: '🔥' },
+    { label: 'Rumored', type: 'rumored', icon: '❓' },
+    { label: 'Failed', type: 'failed', icon: '💀' },
+  ];
+
+  return (
+    <div>
+      <div className="section-header">
+        <h1 className="section-title"><span className="icon">📜</span> Quest Tracker</h1>
+        <span className="section-count">{quests.filter(q=>q.status==='active').length} active</span>
+      </div>
+
+      {groups.map(g => {
+        const filtered = g.type === 'active'
+          ? quests.filter(q => q.type === 'active' && q.status === 'active')
+          : quests.filter(q => q.type === g.type);
+        if (filtered.length === 0) return null;
+        return (
+          <div key={g.type} style={{marginBottom:20}}>
+            <h3 style={{fontSize:'0.85rem',color:'var(--silver)',marginBottom:8,display:'flex',alignItems:'center',gap:6}}>
+              {g.icon} {g.label}
+            </h3>
+            {filtered.map(q => (
+              <QuestEntry key={q.id} quest={q} selected={sel===q.id}
+                onClick={() => dispatch({ type: 'SELECT_ITEM', category: 'quest', payload: q.id })} />
+            ))}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+
+// ═══════════════════════════════════════════════════════════════
+// PANEL: NPC ROSTER + RELATIONSHIP WEB
+// ═══════════════════════════════════════════════════════════════
+
+function RelationshipWeb() {
+  const svgRef = useRef(null);
+  const { state } = useGame();
+
+  useEffect(() => {
+    if (!svgRef.current || !window.d3) return;
+    const svg = d3.select(svgRef.current);
+    svg.selectAll('*').remove();
+    const width = 600, height = 400;
+    svg.attr('viewBox', `0 0 ${width} ${height}`);
+
+    const rels = state.gameData.npcRelationships;
+    const npcList = state.gameData.npcs;
+    const allNames = new Set();
+    rels.forEach(r => { allNames.add(r.source); allNames.add(r.target); });
+    const nodes = Array.from(allNames).map(name => {
+      const npc = npcList.find(n => n.name === name);
+      return { id: name, avatar: npc ? npc.avatar : '⚔️', relationship: npc ? npc.relationship : 'neutral', isPlayer: name === state.gameData.character.name };
+    });
+    const links = rels.map(r => ({ source: r.source, target: r.target, type: r.type }));
+
+    const sim = d3.forceSimulation(nodes)
+      .force('link', d3.forceLink(links).id(d => d.id).distance(100))
+      .force('charge', d3.forceManyBody().strength(-200))
+      .force('center', d3.forceCenter(width/2, height/2))
+      .force('collision', d3.forceCollide().radius(30));
+
+    const linkColors = { ally: '#4caf50', hostile: '#c62828', neutral: '#4fc3f7', unknown: '#3a3a55' };
+    const link = svg.append('g').selectAll('line').data(links).enter().append('line')
+      .attr('stroke', d => linkColors[d.type] || linkColors.neutral).attr('stroke-width', 1.5).attr('stroke-opacity', 0.5);
+
+    const nodeG = svg.append('g').selectAll('g').data(nodes).enter().append('g')
+      .call(d3.drag()
+        .on('start', (e,d) => { if(!e.active) sim.alphaTarget(0.3).restart(); d.fx=d.x; d.fy=d.y; })
+        .on('drag', (e,d) => { d.fx=e.x; d.fy=e.y; })
+        .on('end', (e,d) => { if(!e.active) sim.alphaTarget(0); d.fx=null; d.fy=null; })
+      );
+
+    const nodeColors = { ally: '#2e7d32', neutral: '#1a6b8a', hostile: '#8b1a1a', rumored: '#3a3a55' };
+    nodeG.append('circle').attr('r', d => d.isPlayer ? 22 : 16).attr('fill', '#1a1a2e')
+      .attr('stroke', d => d.isPlayer ? '#c9a84c' : nodeColors[d.relationship] || '#3a3a55').attr('stroke-width', d => d.isPlayer ? 3 : 2);
+    nodeG.append('text').text(d => d.avatar).attr('text-anchor', 'middle').attr('dy', '0.35em').attr('font-size', d => d.isPlayer ? '14px' : '11px');
+    nodeG.append('text').text(d => d.id.split(' ')[0]).attr('text-anchor', 'middle').attr('dy', d => d.isPlayer ? 36 : 28).attr('fill', '#9d9dba').attr('font-size', '9px');
+
+    sim.on('tick', () => {
+      link.attr('x1',d=>d.source.x).attr('y1',d=>d.source.y).attr('x2',d=>d.target.x).attr('y2',d=>d.target.y);
+      nodeG.attr('transform', d => `translate(${d.x},${d.y})`);
+    });
+  }, [state.gameData.npcRelationships, state.gameData.npcs]);
+
+  return <div className="relationship-web"><svg ref={svgRef} style={{width:'100%',height:400}} /></div>;
+}
+
+function NPCPanel() {
+  const { state, dispatch } = useGame();
+  const sel = state.selected.npc;
+  const [showWeb, setShowWeb] = useState(false);
+  const npcs = state.gameData.npcs;
+
+  const groups = [
+    { label: 'Allies', type: 'ally', icon: '💚' },
+    { label: 'Neutral', type: 'neutral', icon: '💙' },
+    { label: 'Hostile', type: 'hostile', icon: '❤️‍🔥' },
+    { label: 'Rumored', type: 'rumored', icon: '❓' },
+  ];
+
+  return (
+    <div>
+      <div className="section-header">
+        <h1 className="section-title"><span className="icon">👥</span> NPC Roster</h1>
+        <button className="demo-btn" onClick={() => setShowWeb(!showWeb)}>
+          {showWeb ? '📋 List View' : '🕸 Relationship Web'}
+        </button>
+      </div>
+
+      {showWeb ? <RelationshipWeb /> : (
+        <div>
+          {groups.map(g => {
+            const filtered = npcs.filter(n => n.relationship === g.type);
+            if (filtered.length === 0) return null;
+            return (
+              <div key={g.type} style={{marginBottom:20}}>
+                <h3 style={{fontSize:'0.85rem',color:'var(--silver)',marginBottom:8,display:'flex',alignItems:'center',gap:6}}>
+                  {g.icon} {g.label} <span style={{color:'var(--muted)',fontSize:'0.7rem'}}>({filtered.length})</span>
+                </h3>
+                {filtered.map(npc => (
+                  <div key={npc.name} className={`npc-card ${sel===npc.name?'selected':''}`}
+                    onClick={() => dispatch({ type: 'SELECT_ITEM', category: 'npc', payload: npc.name })}>
+                    <div className={`npc-avatar ${npc.relationship}`}>{npc.avatar}</div>
+                    <div className="npc-info">
+                      <div className="npc-name">{npc.name}</div>
+                      <div className="npc-role">{npc.role}</div>
+                      <div style={{marginTop:4}}><Stars count={npc.stars} /></div>
+                      <div className="npc-status" style={{color:'var(--silver)',marginTop:4}}>{npc.status}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+// ═══════════════════════════════════════════════════════════════
+// PANEL: COMBAT TRACKER
+// ═══════════════════════════════════════════════════════════════
+
+function CombatPanel() {
+  const { state, dispatch } = useGame();
+  const combat = state.gameData.combat;
+
+  if (!combat.active) {
+    return (
+      <div>
+        <div className="section-header">
+          <h1 className="section-title"><span className="icon">⚔️</span> Combat Tracker</h1>
+        </div>
+        <div className="card"><p style={{color:'var(--muted)',fontSize:'0.85rem',textAlign:'center',padding:20}}>No active combat. The DM will initiate combat when the narrative calls for it.</p></div>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div className="section-header">
+        <h1 className="section-title"><span className="icon">⚔️</span> Combat — Round {combat.round}</h1>
+        <span style={{fontFamily:"'Fira Code',monospace",fontSize:'0.75rem',color:'var(--amber)'}}>⚔ ACTIVE</span>
+      </div>
+      <p style={{fontSize:'0.78rem',color:'var(--muted)',marginBottom:16}}>{combat.location}</p>
+
+      <div className="combat-grid">
+        <div>
+          <h3 style={{fontSize:'0.85rem',marginBottom:10}}>Turn Order</h3>
+          <div className="turn-order">
+            {(combat.turnOrder||[]).map((t, i) => (
+              <div key={i} className={`turn-entry ${t.type === 'player' ? 'player' : 'enemy'} ${state.combatTurn === i ? 'current' : ''}`}>
+                <span className="turn-init">{t.initiative}</span>
+                <span className="turn-name" style={{color: t.type === 'player' ? 'var(--frost)' : 'var(--crimson-bright)'}}>
+                  {state.combatTurn === i && '▶ '}{t.name}
+                </span>
+                <span className="turn-hp" style={{color: t.hp < t.maxHp * 0.3 ? 'var(--crimson-bright)' : t.hp < t.maxHp * 0.6 ? 'var(--amber)' : 'var(--emerald-bright)'}}>
+                  {t.hp}/{t.maxHp}
+                </span>
+              </div>
+            ))}
+          </div>
+          <button className="demo-btn" style={{marginTop:12,width:'100%'}} onClick={() => dispatch({ type: 'NEXT_TURN' })}>Next Turn →</button>
+        </div>
+        <div>
+          <h3 style={{fontSize:'0.85rem',marginBottom:10}}>Combat Log</h3>
+          <div className="combat-log">
+            {(combat.log||[]).map((entry, i) => (
+              <div key={i} className={`log-entry ${entry.type}`}>{entry.text}</div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+// ═══════════════════════════════════════════════════════════════
+// PANEL: WORLD MAP
+// ═══════════════════════════════════════════════════════════════
+
+function MapPanel() {
+  const { state, dispatch } = useGame();
+  const sel = state.selected.map;
+  const locs = state.gameData.mapLocations;
+  const paths = state.gameData.mapPaths;
+
+  return (
+    <div>
+      <div className="section-header">
+        <h1 className="section-title"><span className="icon">🗺</span> The Shattered Reaches</h1>
+        <span className="section-count">{locs.filter(l=>l.status!=='unexplored').length}/{locs.length} discovered</span>
+      </div>
+
+      <div className="map-container" style={{height:480}}>
+        {paths.map((path, i) => {
+          const from = locs.find(l => l.id === path.from);
+          const to = locs.find(l => l.id === path.to);
+          if (!from || !to) return null;
+          const x1 = from.x * 5.4 + 28, y1 = from.y * 4.3 + 28;
+          const x2 = to.x * 5.4 + 28, y2 = to.y * 4.3 + 28;
+          const len = Math.sqrt((x2-x1)**2 + (y2-y1)**2);
+          const angle = Math.atan2(y2-y1, x2-x1) * 180 / Math.PI;
+          return <div key={i} className={`map-path ${path.traveled ? 'traveled' : ''}`} style={{left:x1,top:y1,width:len,transform:`rotate(${angle}deg)`}} />;
+        })}
+        {locs.map(loc => (
+          <div key={loc.id}
+            className={`map-node ${loc.status} ${loc.danger==='high'||loc.danger==='extreme' ? 'dangerous' : ''}`}
+            style={{ left: `${loc.x * 5.4}px`, top: `${loc.y * 4.3}px` }}
+            onClick={() => dispatch({ type: 'SELECT_ITEM', category: 'map', payload: loc.id })}
+          >
+            {loc.status === 'unexplored' ? '❓' : loc.icon}
+            <span className="map-node-label">{loc.status === 'unexplored' ? '???' : loc.name}</span>
+          </div>
+        ))}
+      </div>
+      <div style={{display:'flex',gap:16,marginTop:12,fontSize:'0.7rem',color:'var(--muted)'}}>
+        <span>🟡 Current</span><span>⚪ Explored</span><span>❓ Unexplored</span><span style={{color:'var(--crimson-bright)'}}>🔴 Dangerous</span>
+      </div>
+    </div>
+  );
+}
+
+
+// ═══════════════════════════════════════════════════════════════
+// PANEL: LORE CODEX
+// ═══════════════════════════════════════════════════════════════
+
+function CodexPanel() {
+  const { state, dispatch } = useGame();
+  const activeCategory = state.tabs.codex || 'Geography';
+  const sel = state.selected.codex;
+  const lore = state.gameData.lore;
+
+  const catIcons = { Geography: '🌍', Factions: '⚔️', Magic: '✨', Bestiary: '🐉', History: '📜', Pantheon: '🌟' };
+  const entries = lore.entries.filter(e => e.category === activeCategory);
+
+  return (
+    <div>
+      <div className="section-header">
+        <h1 className="section-title"><span className="icon">📖</span> Lore Codex</h1>
+        <span className="section-count">{lore.entries.filter(e=>e.discovered).length} discovered</span>
+      </div>
+
+      <div className="two-col">
+        <div className="codex-sidebar">
+          {lore.categories.map(cat => (
+            <div key={cat} className={`codex-category ${activeCategory===cat?'active':''}`}
+              onClick={() => dispatch({ type: 'SET_TAB', panel: 'codex', payload: cat })}>
+              <span>{catIcons[cat]}</span><span>{cat}</span>
+              <span style={{marginLeft:'auto',fontSize:'0.7rem',color:'var(--muted)'}}>
+                {lore.entries.filter(e=>e.category===cat && e.discovered).length}
+              </span>
+            </div>
+          ))}
+        </div>
+
+        <div>
+          {entries.map((entry, i) => (
+            <div key={i} className={`codex-entry ${sel===entry.title?'selected':''}`}
+              onClick={() => dispatch({ type: 'SELECT_ITEM', category: 'codex', payload: entry.title })}
+              style={{borderColor: sel===entry.title ? 'var(--gold)' : undefined}}>
+              <h3 style={{fontSize:'0.95rem',marginBottom:8,display:'flex',alignItems:'center',gap:8}}>
+                {entry.title}
+                {!entry.discovered && <span style={{fontSize:'0.65rem',color:'var(--crimson-bright)'}}>🔒 UNDISCOVERED</span>}
+              </h3>
+              <div className="codex-content">
+                <p>{entry.content}</p>
+                {entry.note && <p style={{color:'var(--amber)',fontStyle:'italic',fontSize:'0.8rem',marginTop:8}}>Note: {entry.note}</p>}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+// ═══════════════════════════════════════════════════════════════
+// PANEL: SESSION JOURNAL
+// ═══════════════════════════════════════════════════════════════
+
+function JournalPanel() {
+  const { state, dispatch } = useGame();
+  const sel = state.selected.session;
+  const sessions = state.gameData.sessions;
+  const campaign = state.gameData.campaign;
+  const cLog = state.gameData.consequenceLog;
+
+  const totalXP = sessions.reduce((a,s) => a + s.xp, 0);
+  const totalCombats = sessions.reduce((a,s) => a + s.combats, 0);
+  const totalDecisions = sessions.reduce((a,s) => a + s.decisions, 0);
+
+  return (
+    <div>
+      <div className="section-header">
+        <h1 className="section-title"><span className="icon">📓</span> Session Journal</h1>
+      </div>
+
+      <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:10,marginBottom:20}}>
+        {[
+          { label: 'Sessions', value: campaign.session, icon: '📅' },
+          { label: 'Total XP', value: totalXP, icon: '⭐' },
+          { label: 'Combats', value: totalCombats, icon: '⚔️' },
+          { label: 'Decisions', value: totalDecisions, icon: '🎯' },
+        ].map((s,i) => (
+          <div key={i} className="card" style={{textAlign:'center',padding:12}}>
+            <div style={{fontSize:'1.2rem',marginBottom:4}}>{s.icon}</div>
+            <div style={{fontFamily:"'Cinzel',serif",fontSize:'1.3rem',color:'var(--gold-bright)',fontWeight:700}}>{s.value}</div>
+            <div style={{fontSize:'0.65rem',color:'var(--muted)',textTransform:'uppercase',letterSpacing:'0.1em'}}>{s.label}</div>
+          </div>
+        ))}
+      </div>
+
+      <div className="card" style={{marginBottom:16}}>
+        <h4 style={{marginBottom:10}}>⚠ Consequence Ledger</h4>
+        <table style={{width:'100%',fontSize:'0.75rem',borderCollapse:'collapse'}}>
+          <thead>
+            <tr style={{color:'var(--muted)',textAlign:'left',borderBottom:'1px solid var(--border-dim)'}}>
+              <th style={{padding:'4px 8px'}}>Event</th>
+              <th style={{padding:'4px 8px'}}>Session</th>
+              <th style={{padding:'4px 8px'}}>Impact</th>
+            </tr>
+          </thead>
+          <tbody>
+            {cLog.map((c,i) => (
+              <tr key={i} style={{borderBottom:'1px solid var(--border-dim)'}}>
+                <td style={{padding:'6px 8px',color:'var(--parchment)'}}>{c.event}</td>
+                <td style={{padding:'6px 8px',color:'var(--gold-dim)',fontFamily:"'Fira Code',monospace"}}>S{c.session}</td>
+                <td style={{padding:'6px 8px',color:'var(--silver)'}}>{c.impact}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <h3 style={{fontSize:'0.85rem',marginBottom:10}}>Recent Sessions</h3>
+      {[...sessions].reverse().map(session => (
+        <div key={session.number} className={`session-card ${sel===session.number?'selected':''}`}
+          onClick={() => dispatch({ type: 'SELECT_ITEM', category: 'session', payload: session.number })}
+          style={{borderColor: sel===session.number ? 'var(--gold)' : undefined}}>
+          <div className="session-number">Session {session.number} · {session.date}</div>
+          <div className="session-title">{session.title}</div>
+          <p style={{fontSize:'0.8rem',color:'var(--silver)',lineHeight:1.5,marginBottom:10}}>{session.summary}</p>
+          <div className="session-stats">
+            <span>⭐ +{session.xp} XP</span>
+            <span style={{color: session.gold < 0 ? 'var(--crimson-bright)' : 'var(--gold)'}}>💰 {session.gold >= 0 ? '+' : ''}{session.gold}g</span>
+            <span>⚔ {session.combats} combat{session.combats !== 1 ? 's' : ''}</span>
+            <span>🎯 {session.decisions} decisions</span>
+          </div>
+          {session.keyMoment && (
+            <div style={{marginTop:10,padding:'8px 10px',background:'rgba(201,168,76,0.06)',borderRadius:4,fontSize:'0.78rem',color:'var(--gold)',border:'1px solid var(--border-dim)',fontStyle:'italic'}}>
+              Key Moment: "{session.keyMoment}"
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+
+// ═══════════════════════════════════════════════════════════════
+// PANEL: SETTINGS (enhanced with API config)
+// ═══════════════════════════════════════════════════════════════
+
+function SettingsPanel() {
+  const { state, dispatch } = useGame();
+  const [testStatus, setTestStatus] = useState('');
+  const [particles, setParticles] = useState(true);
+  const [notifications, setNotifications] = useState(true);
+
+  const testConnection = async () => {
+    if (!state.apiKey) { setTestStatus('No API key entered'); return; }
+    setTestStatus('Testing...');
+    dispatch({ type: 'SET_API_STATUS', payload: 'testing' });
+    try {
+      const resp = await fetch('/api/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ apiKey: state.apiKey, model: state.model }),
+      });
+      const data = await resp.json();
+      if (data.status === 'ok') {
+        setTestStatus('✓ Connected: ' + data.message);
+        dispatch({ type: 'SET_API_STATUS', payload: 'connected' });
+      } else {
+        setTestStatus('✗ Error: ' + data.message);
+        dispatch({ type: 'SET_API_STATUS', payload: 'error' });
+      }
+    } catch(e) {
+      setTestStatus('✗ Connection failed: ' + e.message);
+      dispatch({ type: 'SET_API_STATUS', payload: 'error' });
+    }
+  };
+
+  const clearChat = () => {
+    if (confirm('Clear all chat messages? Game state will be preserved.')) {
+      dispatch({ type: 'LOAD_GAME_STATE', payload: { chatMessages: [] } });
+      localStorage.removeItem('dnd-chat');
+    }
+  };
+
+  const newCampaign = () => {
+    if (confirm('Start a new campaign? This will reset ALL game data and chat history.')) {
+      dispatch({ type: 'LOAD_GAME_STATE', payload: { chatMessages: [], gameData: DEFAULT_GAME_DATA } });
+      localStorage.removeItem('dnd-chat');
+      localStorage.removeItem('dnd-gameData');
+    }
+  };
+
+  return (
+    <div>
+      <div className="section-header">
+        <h1 className="section-title"><span className="icon">⚙️</span> Settings</h1>
+      </div>
+
+      <div className="card">
+        <h4 style={{marginBottom:12}}>🔑 API Configuration</h4>
+        <div style={{marginBottom:12}}>
+          <label style={{fontSize:'0.78rem',color:'var(--muted)',display:'block',marginBottom:4}}>Anthropic API Key</label>
+          <input type="password" className="api-input"
+            placeholder="sk-ant-..."
+            value={state.apiKey}
+            onChange={e => dispatch({ type: 'SET_API_KEY', payload: e.target.value })}
+          />
+        </div>
+        <div style={{marginBottom:12}}>
+          <label style={{fontSize:'0.78rem',color:'var(--muted)',display:'block',marginBottom:4}}>Model</label>
+          <select className="api-select" value={state.model} onChange={e => dispatch({ type: 'SET_MODEL', payload: e.target.value })}>
+            <option value="claude-sonnet-4-20250514">Claude Sonnet 4</option>
+            <option value="claude-opus-4-20250514">Claude Opus 4</option>
+          </select>
+        </div>
+        <div style={{display:'flex',gap:8,alignItems:'center'}}>
+          <button className="demo-btn" onClick={testConnection}>Test Connection</button>
+          <div className={`api-status ${state.apiStatus}`}>
+            {state.apiStatus === 'connected' ? '● Connected' : state.apiStatus === 'testing' ? '◌ Testing...' : state.apiStatus === 'error' ? '✗ Error' : '○ Disconnected'}
+          </div>
+        </div>
+        {testStatus && <div style={{marginTop:8,fontSize:'0.75rem',color:'var(--silver)',fontFamily:"'Fira Code',monospace"}}>{testStatus}</div>}
+      </div>
+
+      <div className="card">
+        <h4 style={{marginBottom:12}}>Campaign Management</h4>
+        <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+          <button className="demo-btn" onClick={clearChat}>Clear Chat History</button>
+          <button className="demo-btn" onClick={newCampaign} style={{borderColor:'var(--crimson)'}}>New Campaign</button>
+        </div>
+      </div>
+
+      <div className="card">
+        <h4 style={{marginBottom:12}}>Display</h4>
+        <div className="setting-row">
+          <div>
+            <div className="setting-label">Particle Background</div>
+            <div className="setting-desc">Floating arcane runes in the background</div>
+          </div>
+          <div className={`toggle ${particles?'active':''}`} onClick={() => setParticles(!particles)} />
+        </div>
+        <div className="setting-row">
+          <div>
+            <div className="setting-label">System Notifications</div>
+            <div className="setting-desc">LitRPG-style stat change popups</div>
+          </div>
+          <div className={`toggle ${notifications?'active':''}`} onClick={() => setNotifications(!notifications)} />
+        </div>
+      </div>
+
+      <div className="card">
+        <h4 style={{marginBottom:12}}>Theme</h4>
+        <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:8}}>
+          {[
+            { name: 'Dark Fantasy', colors: ['#0a0a0f','#c9a84c','#8b1a1a'], active: true },
+            { name: 'High Magic', colors: ['#0d1b2a','#6a3de8','#4fc3f7'], active: false },
+            { name: 'Ancient Ruins', colors: ['#1a1c16','#8a7d3b','#4a6741'], active: false },
+            { name: 'Terminal', colors: ['#000000','#00ff41','#ff3333'], active: false },
+          ].map((theme, i) => (
+            <div key={i} style={{
+              padding:12,textAlign:'center',background:'var(--stone)',borderRadius:6,
+              border: theme.active ? '2px solid var(--gold)' : '1px solid var(--border-dim)',
+              cursor:'pointer', opacity: theme.active ? 1 : 0.5,
+            }}>
+              <div style={{display:'flex',gap:4,justifyContent:'center',marginBottom:6}}>
+                {theme.colors.map((c,j) => (
+                  <div key={j} style={{width:16,height:16,borderRadius:'50%',background:c,border:'1px solid rgba(255,255,255,0.1)'}} />
+                ))}
+              </div>
+              <div style={{fontSize:'0.7rem',color: theme.active ? 'var(--gold)' : 'var(--muted)'}}>{theme.name}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="card">
+        <h4 style={{marginBottom:12}}>About</h4>
+        <div style={{fontSize:'0.8rem',color:'var(--silver)',lineHeight:1.6}}>
+          <p>The Shattered Reaches Companion App</p>
+          <p style={{color:'var(--muted)',marginTop:4}}>Built for Chris's DM Engine V3</p>
+          <p style={{color:'var(--muted)',marginTop:4}}>Powered by Claude API — AI Dungeon Master</p>
+          <p style={{color:'var(--gold-dim)',marginTop:8,fontFamily:"'Fira Code',monospace",fontSize:'0.7rem'}}>v0.2.0 — The System sees you.</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+// ═══════════════════════════════════════════════════════════════
+// CHAT PANEL — Primary gameplay interface
+// ═══════════════════════════════════════════════════════════════
+
+function ChatPanel() {
+  const { state, dispatch } = useGame();
+  const [input, setInput] = useState('');
+  const messagesEndRef = useRef(null);
+  const textareaRef = useRef(null);
+
+  // Auto-scroll to bottom on new messages
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [state.chatMessages, state.isStreaming]);
+
+  const handleSend = () => {
+    const msg = input.trim();
+    if (!msg || state.isStreaming) return;
+    setInput('');
+    sendChatMessage(msg, state, dispatch);
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
+
+  return (
+    <div className="chat-panel">
+      <div className="chat-messages">
+        {state.chatMessages.length === 0 && (
+          <div className="chat-welcome">
+            <div style={{fontSize:'2rem',marginBottom:12}}>⚔️</div>
+            <h2 style={{fontFamily:"'Cinzel',serif",color:'var(--gold)',marginBottom:8}}>The Shattered Reaches</h2>
+            <p style={{color:'var(--silver)',fontSize:'0.85rem',lineHeight:1.6,maxWidth:400}}>
+              Your AI Dungeon Master awaits. Type a message to begin your adventure.
+            </p>
+            {state.apiStatus !== 'connected' && (
+              <p style={{color:'var(--amber)',fontSize:'0.78rem',marginTop:12,fontFamily:"'Fira Code',monospace"}}>
+                ⚙ Configure your API key in Settings to connect
+              </p>
+            )}
+            {state.apiStatus === 'connected' && (
+              <p style={{color:'var(--emerald-bright)',fontSize:'0.78rem',marginTop:12,fontFamily:"'Fira Code',monospace"}}>
+                ● Connected — Ready to play
+              </p>
+            )}
+          </div>
+        )}
+
+        {state.chatMessages.map((msg, i) => (
+          <div key={msg.id || i} className={`message-bubble ${msg.role === 'player' ? 'player' : msg.role === 'system' ? 'system-msg' : 'dm'}`}>
+            {msg.role === 'dm' && <div className="message-sender">The DM</div>}
+            {msg.role === 'player' && <div className="message-sender">You</div>}
+            {msg.role === 'system' && <div className="message-sender">System</div>}
+            <div className="message-content">{msg.content || (state.isStreaming && i === state.chatMessages.length - 1 ? '' : '')}</div>
+          </div>
+        ))}
+
+        {state.isStreaming && (
+          <div className="typing-indicator">
+            <span>The DM is writing</span>
+            <div className="typing-dots">
+              <span className="dot" />
+              <span className="dot" />
+              <span className="dot" />
+            </div>
+          </div>
+        )}
+
+        <div ref={messagesEndRef} />
+      </div>
+
+      <div className="chat-input-area">
+        <textarea
+          ref={textareaRef}
+          className="chat-textarea"
+          value={input}
+          onChange={e => setInput(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder={state.isStreaming ? 'Waiting for the DM...' : 'What do you do?'}
+          disabled={state.isStreaming}
+          rows={2}
+        />
+        <button className="chat-send-btn" onClick={handleSend} disabled={state.isStreaming || !input.trim()}>
+          ⚔
+        </button>
+      </div>
+    </div>
+  );
+}
+
+
+// ═══════════════════════════════════════════════════════════════
+// CONTEXT SIDEBAR (right side of companion panel)
+// ═══════════════════════════════════════════════════════════════
+
+function ContextPanel() {
+  const { state } = useGame();
+  const panel = state.activePanel;
+
+  return (
+    <aside className="context-panel">
+      {panel === 'dashboard' && <ContextDashboard />}
+      {panel === 'character' && <ContextCharacter />}
+      {panel === 'inventory' && <ContextInventory />}
+      {panel === 'quests' && <ContextQuest />}
+      {panel === 'npcs' && <ContextNPC />}
+      {panel === 'combat' && <ContextCombat />}
+      {panel === 'map' && <ContextMap />}
+      {panel === 'codex' && <ContextCodex />}
+      {panel === 'journal' && <ContextJournal />}
+      {panel === 'settings' && <ContextSettings />}
+    </aside>
+  );
+}
+
+function ContextDashboard() {
+  const { state } = useGame();
+  const ch = state.gameData.character;
+  return (
+    <div>
+      <h3>Campaign Overview</h3>
+      <div className="card">
+        <h4>EP Progress</h4>
+        <StatBar label={`Level ${ch.level} → ${ch.level+1}`} current={ch.ep.current} max={ch.ep.max} type="xp" />
+        <div style={{fontSize:'0.7rem',color:'var(--muted)',marginTop:4,fontFamily:"'Fira Code',monospace"}}>
+          {ch.ep.max - ch.ep.current} EP to next level
+        </div>
+      </div>
+      <div className="card">
+        <h4>Active Threats</h4>
+        <div style={{fontSize:'0.78rem',color:'var(--silver)',lineHeight:1.6}}>
+          {state.gameData.combat.active && <div style={{color:'var(--amber)',marginBottom:4}}>⚔ Combat Active</div>}
+          <div style={{color:'var(--arcane-bright)'}}>👁 World Awareness: Elevated</div>
+        </div>
+      </div>
+      <div className="card">
+        <h4>Hidden Tracker Hints</h4>
+        <div style={{fontSize:'0.75rem',lineHeight:1.6}}>
+          {Object.values(state.gameData.hiddenTrackers).map((t, i) => (
+            <div key={i} style={{color:'var(--silver)',fontStyle:'italic',marginBottom:4}}>"{t.hint}"</div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ContextCharacter() {
+  const { state } = useGame();
+  const ch = state.gameData.character;
+  return (
+    <div>
+      <h3>Character Details</h3>
+      <div className="card">
+        <h4>Vitals Summary</h4>
+        <div style={{fontFamily:"'Fira Code',monospace",fontSize:'0.75rem',color:'var(--silver)'}}>
+          <div>HP: {ch.hp.current}/{ch.hp.max}</div>
+          <div>EP: {ch.mp.current}/{ch.mp.max}</div>
+          <div>Sanity: {ch.sanity.current}/{ch.sanity.max}</div>
+        </div>
+      </div>
+      <div className="card">
+        <h4>Active Stats</h4>
+        <div style={{fontSize:'0.75rem',lineHeight:1.8}}>
+          {Object.entries(ch.stats).map(([k, v]) => (
+            <div key={k}>
+              {k}: {v.value} {v.trend === 'up' ? '↑' : v.trend === 'down' ? '↓' : '·'}
+              {v.trend !== 'stable' && <span style={{color:'var(--muted)'}}> (was {v.prevValue})</span>}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ContextInventory() {
+  const { state } = useGame();
+  const tab = state.tabs.inventory || 'equipped';
+  const sel = state.selected.inventory;
+  const inv = state.gameData.inventory;
+  const cats = { equipped: inv.equipped, consumables: inv.consumables, keyItems: inv.keyItems, materials: inv.materials };
+  const items = cats[tab] || [];
+  const item = sel !== null ? items[sel] : null;
+
+  if (!item) return (
+    <div>
+      <h3>Item Details</h3>
+      <div className="card"><p style={{color:'var(--muted)',fontSize:'0.8rem'}}>Select an item to view details</p></div>
+    </div>
+  );
+
+  return (
+    <div>
+      <h3>Item Details</h3>
+      <div className="card">
+        <div style={{textAlign:'center',marginBottom:12}}><span style={{fontSize:'2.5rem'}}>{item.icon}</span></div>
+        <h4 style={{textAlign:'center',marginBottom:4}}>{item.name}</h4>
+        <div style={{textAlign:'center',marginBottom:12}}><Badge rarity={item.rarity}>{item.rarity}</Badge></div>
+        <p style={{fontSize:'0.8rem',color:'var(--silver)',lineHeight:1.6,fontStyle:'italic'}}>{item.desc}</p>
+        {item.slot && <div style={{marginTop:8,fontSize:'0.75rem',color:'var(--muted)'}}>Slot: {item.slot}</div>}
+        {item.weight > 0 && <div style={{fontSize:'0.75rem',color:'var(--muted)'}}>Weight: {item.weight}</div>}
+        {item.qty && <div style={{fontSize:'0.75rem',color:'var(--muted)'}}>Quantity: {item.qty}</div>}
+      </div>
+    </div>
+  );
+}
+
+function ContextQuest() {
+  const { state } = useGame();
+  const sel = state.selected.quest;
+  const quest = state.gameData.quests.find(q => q.id === sel);
+
+  if (!quest) return (
+    <div>
+      <h3>Quest Details</h3>
+      <div className="card"><p style={{color:'var(--muted)',fontSize:'0.8rem'}}>Select a quest to view details</p></div>
+    </div>
+  );
+
+  return (
+    <div>
+      <h3>Quest Details</h3>
+      <div className="card">
+        <h4>{quest.title}</h4>
+        <p style={{fontSize:'0.8rem',color:'var(--silver)',lineHeight:1.6,marginTop:8}}>{quest.desc}</p>
+        {quest.deadline && <div style={{marginTop:8,color:'var(--amber)',fontSize:'0.78rem'}}>⏰ Deadline: {quest.deadline}</div>}
+        <div style={{marginTop:8,fontSize:'0.75rem',color:'var(--muted)'}}>Given by: {quest.giver}</div>
+      </div>
+    </div>
+  );
+}
+
+function ContextNPC() {
+  const { state } = useGame();
+  const sel = state.selected.npc;
+  const npc = state.gameData.npcs.find(n => n.name === sel);
+
+  if (!npc) return (
+    <div>
+      <h3>NPC Profile</h3>
+      <div className="card"><p style={{color:'var(--muted)',fontSize:'0.8rem'}}>Select an NPC to view profile</p></div>
+    </div>
+  );
+
+  return (
+    <div>
+      <h3>NPC Profile</h3>
+      <div className="card">
+        <div style={{textAlign:'center',marginBottom:8}}>
+          <div className={`npc-avatar ${npc.relationship}`} style={{margin:'0 auto',width:56,height:56,fontSize:'1.8rem'}}>{npc.avatar}</div>
+        </div>
+        <h4 style={{textAlign:'center'}}>{npc.name}</h4>
+        <div style={{textAlign:'center',fontSize:'0.78rem',color:'var(--muted)',marginBottom:8}}>{npc.role}</div>
+        <div style={{textAlign:'center',marginBottom:12}}><Stars count={npc.stars} /></div>
+        <p style={{fontSize:'0.8rem',color:'var(--silver)',lineHeight:1.6}}>{npc.desc}</p>
+        <div style={{marginTop:10,padding:'8px',background:'var(--obsidian)',borderRadius:4,fontSize:'0.75rem'}}>
+          <div style={{color:'var(--muted)',marginBottom:4}}>Motivation:</div>
+          <div style={{color:'var(--parchment)'}}>{npc.motivation}</div>
+        </div>
+        <div style={{marginTop:6,fontSize:'0.75rem',color:'var(--muted)'}}>Location: <span style={{color:'var(--parchment)'}}>{npc.location}</span></div>
+        <div style={{marginTop:4,fontSize:'0.75rem',color:'var(--muted)'}}>Loyalty: <span style={{color:'var(--gold)'}}>{npc.loyalty}/10</span></div>
+      </div>
+    </div>
+  );
+}
+
+function ContextCombat() {
+  const { state } = useGame();
+  const combat = state.gameData.combat;
+  if (!combat.active || !combat.turnOrder || combat.turnOrder.length === 0) {
+    return <div><h3>Combat Info</h3><div className="card"><p style={{color:'var(--muted)',fontSize:'0.8rem'}}>No active combat</p></div></div>;
+  }
+  const current = combat.turnOrder[state.combatTurn] || combat.turnOrder[0];
+
+  return (
+    <div>
+      <h3>Combat Info</h3>
+      <div className="card">
+        <h4>Current: {current.name}</h4>
+        <StatBar label="HP" current={current.hp} max={current.maxHp} type="hp" />
+        <div style={{fontSize:'0.75rem',color:'var(--muted)',marginTop:4}}>AC: {current.ac}</div>
+        {current.conditions && current.conditions.length > 0 && (
+          <div style={{marginTop:6}}>{current.conditions.map((c,i) => <span key={i} className="condition-tag buff">{c}</span>)}</div>
+        )}
+        {current.desc && <p style={{fontSize:'0.78rem',color:'var(--silver)',marginTop:8,fontStyle:'italic'}}>{current.desc}</p>}
+      </div>
+      <div className="card">
+        <h4>Battlefield</h4>
+        <p style={{fontSize:'0.78rem',color:'var(--silver)',lineHeight:1.5}}>{combat.location}</p>
+      </div>
+    </div>
+  );
+}
+
+function ContextMap() {
+  const { state } = useGame();
+  const sel = state.selected.map;
+  const loc = state.gameData.mapLocations.find(l => l.id === sel);
+
+  if (!loc) return (
+    <div>
+      <h3>Location Details</h3>
+      <div className="card"><p style={{color:'var(--muted)',fontSize:'0.8rem'}}>Select a location on the map</p></div>
+    </div>
+  );
+
+  const dangerColors = { low: 'var(--emerald-bright)', medium: 'var(--amber)', high: 'var(--crimson-bright)', extreme: 'var(--crimson-glow)', unknown: 'var(--muted)' };
+  return (
+    <div>
+      <h3>Location Details</h3>
+      <div className="card">
+        <div style={{fontSize:'1.5rem',textAlign:'center',marginBottom:8}}>{loc.icon}</div>
+        <h4 style={{textAlign:'center'}}>{loc.status === 'unexplored' ? '???' : loc.name}</h4>
+        <div style={{textAlign:'center',marginTop:4}}><span style={{fontSize:'0.7rem',color:dangerColors[loc.danger]}}>Danger: {loc.danger.toUpperCase()}</span></div>
+        <p style={{fontSize:'0.8rem',color:'var(--silver)',lineHeight:1.6,marginTop:10}}>{loc.desc}</p>
+        {loc.note && <p style={{fontSize:'0.78rem',color:'var(--amber)',fontStyle:'italic',marginTop:8}}>{loc.note}</p>}
+      </div>
+    </div>
+  );
+}
+
+function ContextCodex() {
+  const { state } = useGame();
+  const lore = state.gameData.lore;
+  return (
+    <div>
+      <h3>Codex Info</h3>
+      <div className="card">
+        <p style={{fontSize:'0.78rem',color:'var(--silver)',lineHeight:1.6}}>
+          Select a lore entry to read its full contents. Entries are unlocked through exploration and discovery.
+        </p>
+        <div style={{marginTop:8,fontSize:'0.75rem',color:'var(--muted)'}}>
+          {lore.entries.filter(e=>e.discovered).length} of {lore.entries.length} entries discovered
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ContextJournal() {
+  return (
+    <div>
+      <h3>Campaign Analytics</h3>
+      <div className="card">
+        <h4>Session Trends</h4>
+        <p style={{fontSize:'0.78rem',color:'var(--silver)',lineHeight:1.6}}>
+          Analytics update as you play through sessions with the AI DM.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function ContextSettings() {
+  return (
+    <div>
+      <h3>Help</h3>
+      <div className="card">
+        <p style={{fontSize:'0.78rem',color:'var(--silver)',lineHeight:1.6}}>
+          This companion app runs alongside Claude as your AI Dungeon Master. Configure your API key, then chat with the DM in the left panel. The companion panels update automatically.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+
+// ═══════════════════════════════════════════════════════════════
+// FOOTER
+// ═══════════════════════════════════════════════════════════════
+
+function Footer() {
+  const { state } = useGame();
+  const c = state.gameData.campaign;
+  return (
+    <footer className="app-footer">
+      <div className="footer-status">
+        <span className={`footer-api-dot ${state.apiStatus}`} />
+        <span>{state.apiStatus === 'connected' ? 'API Connected' : state.apiStatus === 'testing' ? 'Testing...' : 'API Disconnected'}</span>
+        <span style={{color:'var(--muted)',marginLeft:4}}>· {state.model}</span>
+      </div>
+      <span>Session {c.session} · Day {c.day} · {c.time}</span>
+      <span>The System sees you.</span>
+    </footer>
+  );
+}
+
+
+// ═══════════════════════════════════════════════════════════════
+// MAIN APP — Two-Screen Layout
+// ═══════════════════════════════════════════════════════════════
+
+function App() {
+  const { state } = useGame();
+
+  const panels = {
+    dashboard: DashboardPanel,
+    character: CharacterPanel,
+    inventory: InventoryPanel,
+    quests: QuestPanel,
+    npcs: NPCPanel,
+    combat: CombatPanel,
+    map: MapPanel,
+    codex: CodexPanel,
+    journal: JournalPanel,
+    settings: SettingsPanel,
+  };
+
+  const ActivePanel = panels[state.activePanel] || DashboardPanel;
+
+  return (
+    <React.Fragment>
+      <ParticleBackground />
+      <Header />
+      <div className="two-screen-layout">
+        <ChatPanel />
+        <Sidebar />
+        <div className="companion-wrapper">
+          <div className="companion-content">
+            <main className="companion-main">
+              <ActivePanel />
+            </main>
+            <ContextPanel />
+          </div>
+        </div>
+      </div>
+      <Footer />
+      <NotificationOverlay />
+      <LevelUpOverlay />
+    </React.Fragment>
+  );
+}
+
+// ═══ MOUNT ═══
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(
+  React.createElement(GameProvider, null,
+    React.createElement(App)
+  )
+);
+</script>
+</body>
+</html>
