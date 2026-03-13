@@ -315,7 +315,7 @@ h4 { font-size: 0.9rem; font-weight: 500; color: var(--gold-bright); }
   border-image-slice: 24 fill;
   border-image-repeat: stretch;
   border-radius: 0;
-  padding: 12px;
+  padding: 20px;
   margin-bottom: 12px;
   transition: filter 0.2s, box-shadow 0.2s;
 }
@@ -2146,7 +2146,7 @@ h4 { font-size: 0.9rem; font-weight: 500; color: var(--gold-bright); }
   border-image-source: var(--wc-input-frame);
   border-image-slice: 16 fill;
   border-width: 16px;
-  padding: 0;
+  padding: 8px 12px;
   color: var(--parchment);
   font-family: 'Inter', sans-serif;
   font-size: 0.9rem;

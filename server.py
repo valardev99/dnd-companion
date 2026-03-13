@@ -15,6 +15,7 @@ import urllib.error
 
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 PORT = int(os.environ.get("PORT", 3000))
+ALLOWED_ORIGIN = f"http://localhost:{PORT}"
 ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages"
 
 
@@ -24,7 +25,7 @@ class CompanionHandler(http.server.SimpleHTTPRequestHandler):
     def do_OPTIONS(self):
         """Handle CORS preflight."""
         self.send_response(200)
-        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Origin", ALLOWED_ORIGIN)
         self.send_header("Access-Control-Allow-Methods", "POST, GET, OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "Content-Type")
         self.end_headers()
@@ -136,7 +137,7 @@ class CompanionHandler(http.server.SimpleHTTPRequestHandler):
             self.send_header("Content-Type", "text/event-stream")
             self.send_header("Cache-Control", "no-cache")
             self.send_header("Connection", "keep-alive")
-            self.send_header("Access-Control-Allow-Origin", "*")
+            self.send_header("Access-Control-Allow-Origin", ALLOWED_ORIGIN)
             self.end_headers()
 
             try:
@@ -183,7 +184,7 @@ class CompanionHandler(http.server.SimpleHTTPRequestHandler):
         body = json.dumps(data).encode("utf-8")
         self.send_response(200)
         self.send_header("Content-Type", "application/json")
-        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Origin", ALLOWED_ORIGIN)
         self.send_header("Content-Length", len(body))
         self.end_headers()
         self.wfile.write(body)
@@ -192,7 +193,7 @@ class CompanionHandler(http.server.SimpleHTTPRequestHandler):
         body = json.dumps({"status": "error", "message": message}).encode("utf-8")
         self.send_response(code)
         self.send_header("Content-Type", "application/json")
-        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Origin", ALLOWED_ORIGIN)
         self.send_header("Content-Length", len(body))
         self.end_headers()
         self.wfile.write(body)
