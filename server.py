@@ -23,6 +23,16 @@ ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages"
 class CompanionHandler(http.server.SimpleHTTPRequestHandler):
     """Handles static files + API proxy."""
 
+    def do_GET(self):
+        """Handle GET — health check + static files."""
+        if self.path == "/health":
+            self.send_response(200)
+            self.send_header("Content-Type", "text/plain")
+            self.end_headers()
+            self.wfile.write(b"ok")
+            return
+        super().do_GET()
+
     def do_OPTIONS(self):
         """Handle CORS preflight."""
         self.send_response(200)
@@ -206,15 +216,13 @@ class CompanionHandler(http.server.SimpleHTTPRequestHandler):
 
 
 class ReusableTCPServer(socketserver.ThreadingTCPServer):
-    address_family = socket.AF_INET6
     allow_reuse_address = True
 
 
 if __name__ == "__main__":
-    with ReusableTCPServer(("::", PORT), CompanionHandler) as httpd:
-        print(f"\n  ╔══════════════════════════════════════════╗")
-        print(f"  ║  D&D Companion — Server Ready             ║")
-        print(f"  ║  http://[::]:{PORT}                        ║")
-        print(f"  ║  Static files + Claude API proxy           ║")
-        print(f"  ╚══════════════════════════════════════════╝\n")
+    host = "0.0.0.0"
+    with ReusableTCPServer((host, PORT), CompanionHandler) as httpd:
+        print(f"\n  D&D Companion — Server Ready")
+        print(f"  Listening on {host}:{PORT}")
+        print(f"  Static files + Claude API proxy\n", flush=True)
         httpd.serve_forever()
