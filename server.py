@@ -15,7 +15,7 @@ import urllib.error
 
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 PORT = int(os.environ.get("PORT", 3000))
-ALLOWED_ORIGIN = f"http://localhost:{PORT}"
+ALLOWED_ORIGIN = os.environ.get("ALLOWED_ORIGIN", "*")
 ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages"
 
 
