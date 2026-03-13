@@ -2,7 +2,7 @@
    THE SHATTERED REACHES — Warcraft III Companion App Theme
    ═══════════════════════════════════════════════════════════════ */
 
-@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700;800;900&family=Cinzel+Decorative:wght@400;700;900&family=Fira+Code:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700;800;900&family=Cinzel+Decorative:wght@400;700;900&family=Crimson+Text:ital,wght@0,400;0,600;0,700;1,400&family=Fira+Code:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
 
 :root {
   /* Core palette — warm leather & stone */
@@ -1540,9 +1540,9 @@ h4 { font-size: 0.9rem; font-weight: 500; color: var(--gold-bright); }
   align-self: flex-start;
   background: linear-gradient(135deg, #2a1f10, rgba(42, 31, 16, 0.95));
   border: 2px solid var(--gold-dim);
-  color: var(--parchment-light);
-  font-family: 'Cinzel', serif;
-  font-size: 0.85rem;
+  color: #f0e6d0;
+  font-family: 'Crimson Text', Georgia, serif;
+  font-size: 0.95rem;
   border-bottom-left-radius: 4px;
   box-shadow: inset 0 1px 0 rgba(201, 168, 76, 0.08), inset 0 -1px 0 rgba(0, 0, 0, 0.3), 0 4px 12px rgba(0, 0, 0, 0.5);
 }
@@ -1596,6 +1596,48 @@ h4 { font-size: 0.9rem; font-weight: 500; color: var(--gold-bright); }
 
 .message-bubble.dm .dm-text {
   white-space: pre-wrap;
+}
+
+.message-bubble.dm .message-content {
+  max-width: 720px;
+  line-height: 1.75;
+}
+
+.message-bubble.dm .message-content p {
+  margin: 0 0 0.8em 0;
+}
+
+.message-bubble.dm .message-content p:last-child {
+  margin-bottom: 0;
+}
+
+.combat-status {
+  font-family: 'Fira Code', monospace;
+  font-size: 0.8rem;
+  background: rgba(0, 0, 0, 0.3);
+  border-left: 3px solid var(--gold-dim);
+  padding: 10px 14px;
+  margin: 0.8em 0;
+  border-radius: 0 4px 4px 0;
+  line-height: 1.6;
+}
+
+.combat-status:last-child {
+  margin-bottom: 0;
+}
+
+.combat-status .combat-header {
+  font-weight: 700;
+  color: var(--gold);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+}
+
+.combat-status .combat-line {
+  color: var(--parchment-light);
+  padding: 2px 0;
 }
 
 /* ═══ STREAMING INDICATOR ═══ */

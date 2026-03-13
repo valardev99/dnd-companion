@@ -319,6 +319,7 @@ function gameReducer(state, action) {
     // ─── API config ───
     case 'SET_API_KEY': return { ...state, apiKey: action.payload };
     case 'SET_MODEL': return { ...state, model: action.payload };
+    case 'SET_API_PROVIDER': return { ...state, apiProvider: action.payload };
     case 'SET_REMEMBER_KEY': return { ...state, rememberKey: action.payload };
     case 'SET_API_STATUS': return { ...state, apiStatus: action.payload };
     case 'SET_DM_ENGINE': return { ...state, dmEngine: action.payload };
@@ -426,6 +427,7 @@ const initialState = {
   isStreaming: false,
   apiKey: '',
   model: 'claude-sonnet-4-20250514',
+  apiProvider: 'anthropic', // anthropic | openrouter
   apiStatus: 'disconnected', // disconnected | connected | testing | error
   dmEngine: '',
   gameData: DEFAULT_GAME_DATA,
@@ -445,12 +447,14 @@ function GameProvider({ children }) {
       const savedRemember = localStorage.getItem('dnd-rememberKey') === 'true';
       const savedKey = savedRemember ? localStorage.getItem('dnd-apiKey') : sessionStorage.getItem('dnd-apiKey');
       const savedModel = localStorage.getItem('dnd-model');
+      const savedProvider = localStorage.getItem('dnd-apiProvider');
       const savedChat = localStorage.getItem('dnd-chat');
       const savedGameData = localStorage.getItem('dnd-gameData');
       const savedWorldBible = localStorage.getItem('dnd-worldBible');
       if (savedRemember) dispatch({ type: 'SET_REMEMBER_KEY', payload: true });
       if (savedKey) dispatch({ type: 'SET_API_KEY', payload: savedKey });
       if (savedModel) dispatch({ type: 'SET_MODEL', payload: savedModel });
+      if (savedProvider) dispatch({ type: 'SET_API_PROVIDER', payload: savedProvider });
       if (savedChat) {
         try { const msgs = JSON.parse(savedChat); msgs.forEach(m => dispatch({ type: 'ADD_CHAT_MESSAGE', payload: m })); } catch(e) {}
       }
@@ -483,6 +487,7 @@ function GameProvider({ children }) {
         }
         localStorage.setItem('dnd-rememberKey', state.rememberKey.toString());
         if (state.model) localStorage.setItem('dnd-model', state.model);
+        localStorage.setItem('dnd-apiProvider', state.apiProvider);
         // Save last 50 messages
         const trimmed = state.chatMessages.slice(-50);
         localStorage.setItem('dnd-chat', JSON.stringify(trimmed));
@@ -491,7 +496,7 @@ function GameProvider({ children }) {
       } catch(e) {}
     }, 2000);
     return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
-  }, [state.chatMessages, state.gameData, state.apiKey, state.model, state.worldBible, state.rememberKey]);
+  }, [state.chatMessages, state.gameData, state.apiKey, state.model, state.apiProvider, state.worldBible, state.rememberKey]);
 
   return React.createElement(GameContext.Provider, { value: { state, dispatch } }, children);
 }
@@ -595,6 +600,151 @@ function dispatchTagActions(tags, dispatch) {
         break;
     }
   }
+}
+
+
+// ═══════════════════════════════════════════════════════════════
+// DM TEXT FORMATTER — paragraphs, bold, combat blocks
+// ═══════════════════════════════════════════════════════════════
+
+function formatDMText(text) {
+  if (!text) return null;
+
+  // Helper: convert **bold** markers to <strong> within a string
+  function parseBold(str) {
+    const parts = str.split(/\*\*(.+?)\*\*/g);
+    if (parts.length === 1) return str;
+    return parts.map((part, i) =>
+      i % 2 === 1 ? React.createElement('strong', { key: i }, part) : part
+    );
+  }
+
+  // Helper: detect decorative separator lines (═══, ───, ***, ---, etc.)
+  function isSeparator(line) {
+    const t = line.trim();
+    return /^[═─━\-*_~]{3,}$/.test(t);
+  }
+
+  // Split text into lines for processing
+  const lines = text.split('\n');
+  const sections = [];
+  let currentNarrative = [];
+  let currentCombat = [];
+  let inCombat = false;
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+
+    // Skip decorative separator lines (═══, ───, etc.)
+    if (isSeparator(trimmed)) {
+      // If we're in combat, just skip it (it's a border around the block)
+      // If not in combat, also skip — it's a pre-combat separator
+      continue;
+    }
+
+    // Detect combat status block start
+    if (/^\*{0,2}\*?COMBAT STATUS/i.test(trimmed)) {
+      // Flush any narrative before combat
+      if (currentNarrative.length > 0) {
+        sections.push({ type: 'narrative', text: currentNarrative.join('\n') });
+        currentNarrative = [];
+      }
+      inCombat = true;
+      currentCombat = [trimmed];
+      continue;
+    }
+
+    if (inCombat) {
+      if (trimmed === '') {
+        // Empty line ends combat block
+        sections.push({ type: 'combat', lines: currentCombat });
+        currentCombat = [];
+        inCombat = false;
+      } else {
+        currentCombat.push(trimmed);
+      }
+    } else {
+      currentNarrative.push(line);
+    }
+  }
+
+  // Flush remaining
+  if (inCombat && currentCombat.length > 0) {
+    sections.push({ type: 'combat', lines: currentCombat });
+  }
+  if (currentNarrative.length > 0) {
+    sections.push({ type: 'narrative', text: currentNarrative.join('\n') });
+  }
+
+  // If no sections parsed, treat whole text as narrative
+  if (sections.length === 0) {
+    sections.push({ type: 'narrative', text });
+  }
+
+  const elements = [];
+  let key = 0;
+
+  for (const section of sections) {
+    if (section.type === 'combat') {
+      // Render combat status as structured block
+      const header = section.lines[0].replace(/\*+/g, '').trim();
+      const dataLines = section.lines.slice(1);
+
+      elements.push(
+        React.createElement('div', { className: 'combat-status', key: key++ },
+          React.createElement('div', { className: 'combat-header' }, header),
+          ...dataLines.map((ln, j) => {
+            // Clean up: strip bold markers, fix [Name]: bracket patterns
+            let clean = ln.replace(/\*+/g, '').trim();
+            // Convert [Guardian A (Right)]: Action → Guardian A (Right): Action
+            clean = clean.replace(/^\[([^\]]+)\]:\s*/g, '$1: ');
+            // Also handle [Distance]: pattern
+            clean = clean.replace(/^\[([^\]]+)\]\s*/g, '$1 ');
+            return React.createElement('div', { className: 'combat-line', key: j },
+              /^(distance|range)/i.test(clean) ? '📏 ' + clean : '⚔ ' + clean
+            );
+          })
+        )
+      );
+    } else {
+      // Split narrative into paragraphs
+      let paragraphs = section.text.split(/\n\n+/);
+
+      // Smart-split long single paragraphs (>3 sentences)
+      const expanded = [];
+      for (const para of paragraphs) {
+        const trimmedPara = para.trim();
+        if (!trimmedPara) continue;
+
+        // Count sentences (rough: split on ". " followed by uppercase or end)
+        const sentences = trimmedPara.split(/(?<=[.!?])\s+(?=[A-Z"'"])/);
+        if (sentences.length > 4) {
+          // Split into chunks of ~3 sentences
+          let chunk = [];
+          for (let i = 0; i < sentences.length; i++) {
+            chunk.push(sentences[i]);
+            if (chunk.length >= 3 && i < sentences.length - 1) {
+              expanded.push(chunk.join(' '));
+              chunk = [];
+            }
+          }
+          if (chunk.length > 0) expanded.push(chunk.join(' '));
+        } else {
+          expanded.push(trimmedPara);
+        }
+      }
+
+      for (const para of expanded) {
+        if (para.trim()) {
+          elements.push(
+            React.createElement('p', { key: key++ }, parseBold(para.trim()))
+          );
+        }
+      }
+    }
+  }
+
+  return elements;
 }
 
 
@@ -703,6 +853,7 @@ async function sendChatMessage(message, state, dispatch) {
       body: JSON.stringify({
         apiKey: state.apiKey,
         model: state.model,
+        provider: state.apiProvider || 'anthropic',
         messages: recentMessages,
         systemPrompt,
         maxTokens: 4096,
@@ -720,10 +871,11 @@ async function sendChatMessage(message, state, dispatch) {
     const decoder = new TextDecoder();
     let fullText = '';
     let buffer = '';
+    let streamDone = false;
 
     while (true) {
       const { done, value } = await reader.read();
-      if (done) break;
+      if (done || streamDone) break;
 
       buffer += decoder.decode(value, { stream: true });
       const lines = buffer.split('\n');
@@ -732,21 +884,22 @@ async function sendChatMessage(message, state, dispatch) {
       for (const line of lines) {
         if (!line.startsWith('data: ')) continue;
         const data = line.slice(6).trim();
-        if (data === '[DONE]') continue;
+        if (data === '[DONE]') { streamDone = true; break; }
 
         try {
           const event = JSON.parse(data);
+          if (event.type === 'message_stop') { streamDone = true; break; }
           if (event.type === 'content_block_delta' && event.delta?.text) {
             fullText += event.delta.text;
-            // Parse and strip tags from display, but show clean text
             const { cleanText } = parseMetadataTags(fullText);
             dispatch({ type: 'UPDATE_STREAM_TEXT', payload: cleanText });
           }
           if (event.type === 'error') {
             dispatch({ type: 'UPDATE_STREAM_TEXT', payload: `⚠ ${event.error?.message || 'Stream error'}` });
           }
-        } catch(e) { /* skip non-JSON lines */ }
+        } catch(e) { /* skip unparseable SSE lines */ }
       }
+      if (streamDone) break;
     }
 
     // Final parse — dispatch metadata tags
@@ -2161,16 +2314,19 @@ function SettingsPanel() {
   const [particles, setParticles] = useState(true);
   const [notifications, setNotifications] = useState(true);
 
+  const isOpenRouter = (state.apiProvider || 'anthropic') === 'openrouter';
+  const keyPrefix = isOpenRouter ? 'sk-or-' : 'sk-ant-';
+
   const testConnection = async () => {
     if (!state.apiKey) { setTestStatus('No API key entered'); return; }
-    if (!state.apiKey.startsWith('sk-ant-')) { setTestStatus('Invalid key format — must start with sk-ant-'); return; }
+    if (!state.apiKey.startsWith(keyPrefix)) { setTestStatus(`Invalid key format — must start with ${keyPrefix}`); return; }
     setTestStatus('Testing...');
     dispatch({ type: 'SET_API_STATUS', payload: 'testing' });
     try {
       const resp = await fetch('/api/test', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ apiKey: state.apiKey, model: state.model }),
+        body: JSON.stringify({ apiKey: state.apiKey, model: state.model, provider: state.apiProvider || 'anthropic' }),
       });
       const data = await resp.json();
       if (data.status === 'ok') {
@@ -2184,6 +2340,14 @@ function SettingsPanel() {
       setTestStatus('✗ Connection failed: ' + e.message);
       dispatch({ type: 'SET_API_STATUS', payload: 'error' });
     }
+  };
+
+  const switchProvider = (provider) => {
+    dispatch({ type: 'SET_API_PROVIDER', payload: provider });
+    dispatch({ type: 'SET_API_KEY', payload: '' });
+    dispatch({ type: 'SET_API_STATUS', payload: 'disconnected' });
+    dispatch({ type: 'SET_MODEL', payload: provider === 'openrouter' ? 'google/gemini-3-flash-preview' : 'claude-sonnet-4-20250514' });
+    setTestStatus('');
   };
 
   const clearChat = () => {
@@ -2205,16 +2369,50 @@ function SettingsPanel() {
 
       <div className="card">
         <h4 style={{marginBottom:12}}>🔑 API Configuration</h4>
+
+        {/* Provider selector */}
+        <div style={{marginBottom:14}}>
+          <label style={{fontSize:'0.78rem',color:'var(--muted)',display:'block',marginBottom:6}}>Provider</label>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
+            <div onClick={() => switchProvider('anthropic')} style={{
+              padding:'10px 12px',borderRadius:6,cursor:'pointer',textAlign:'center',
+              background: !isOpenRouter ? 'rgba(201,168,76,0.1)' : 'var(--stone)',
+              border: !isOpenRouter ? '1.5px solid var(--gold)' : '1px solid var(--border-dim)',
+              transition: 'all 0.2s ease',
+            }}>
+              <div style={{fontSize:'0.82rem',fontWeight:600,color: !isOpenRouter ? 'var(--gold)' : 'var(--silver)'}}>🔑 Anthropic</div>
+              <div style={{fontSize:'0.65rem',color:'var(--muted)',marginTop:2}}>Direct API key</div>
+            </div>
+            <div onClick={() => switchProvider('openrouter')} style={{
+              padding:'10px 12px',borderRadius:6,cursor:'pointer',textAlign:'center',
+              background: isOpenRouter ? 'rgba(201,168,76,0.1)' : 'var(--stone)',
+              border: isOpenRouter ? '1.5px solid var(--gold)' : '1px solid var(--border-dim)',
+              transition: 'all 0.2s ease',
+            }}>
+              <div style={{fontSize:'0.82rem',fontWeight:600,color: isOpenRouter ? 'var(--gold)' : 'var(--silver)'}}>🌐 OpenRouter</div>
+              <div style={{fontSize:'0.65rem',color:'var(--muted)',marginTop:2}}>Works with Claude Max</div>
+            </div>
+          </div>
+        </div>
+
+        {/* API Key input */}
         <div style={{marginBottom:12}}>
-          <label style={{fontSize:'0.78rem',color:'var(--muted)',display:'block',marginBottom:4}}>Anthropic API Key</label>
+          <label style={{fontSize:'0.78rem',color:'var(--muted)',display:'block',marginBottom:4}}>
+            {isOpenRouter ? 'OpenRouter API Key' : 'Anthropic API Key'}
+          </label>
           <input type="password" className="api-input"
-            placeholder="sk-ant-..."
+            placeholder={isOpenRouter ? 'sk-or-...' : 'sk-ant-...'}
             value={state.apiKey}
             onChange={e => dispatch({ type: 'SET_API_KEY', payload: e.target.value })}
           />
-          {state.apiKey && !state.apiKey.startsWith('sk-ant-') && (
+          {state.apiKey && !state.apiKey.startsWith(keyPrefix) && (
             <div style={{fontSize:'0.7rem',color:'var(--crimson-bright)',marginTop:4,fontFamily:"'Fira Code',monospace"}}>
-              Key should start with "sk-ant-"
+              Key should start with "{keyPrefix}"
+            </div>
+          )}
+          {isOpenRouter && (
+            <div style={{fontSize:'0.68rem',color:'var(--muted)',marginTop:6,lineHeight:1.4}}>
+              Get a key at <span style={{color:'var(--gold-dim)',fontFamily:"'Fira Code',monospace"}}>openrouter.ai/keys</span> — no Anthropic Console needed
             </div>
           )}
           <label style={{fontSize:'0.72rem',color:'var(--muted)',display:'flex',alignItems:'center',gap:6,marginTop:8,cursor:'pointer'}}>
@@ -2223,13 +2421,28 @@ function SettingsPanel() {
             Remember API key across sessions
           </label>
         </div>
+
+        {/* Model dropdown */}
         <div style={{marginBottom:12}}>
           <label style={{fontSize:'0.78rem',color:'var(--muted)',display:'block',marginBottom:4}}>Model</label>
           <select className="api-select" value={state.model} onChange={e => dispatch({ type: 'SET_MODEL', payload: e.target.value })}>
-            <option value="claude-sonnet-4-20250514">Claude Sonnet 4</option>
-            <option value="claude-opus-4-20250514">Claude Opus 4</option>
+            {isOpenRouter ? (
+              <>
+                <option value="google/gemini-3-flash-preview">Gemini 3 Flash Preview</option>
+                <option value="anthropic/claude-sonnet-4">Claude Sonnet 4</option>
+                <option value="anthropic/claude-opus-4">Claude Opus 4</option>
+                <option value="anthropic/claude-haiku-3.5">Claude Haiku 3.5</option>
+              </>
+            ) : (
+              <>
+                <option value="claude-sonnet-4-20250514">Claude Sonnet 4</option>
+                <option value="claude-opus-4-20250514">Claude Opus 4</option>
+              </>
+            )}
           </select>
         </div>
+
+        {/* Test connection */}
         <div style={{display:'flex',gap:8,alignItems:'center'}}>
           <button className="demo-btn" onClick={testConnection}>Test Connection</button>
           <div className={`api-status ${state.apiStatus}`}>
@@ -2237,9 +2450,11 @@ function SettingsPanel() {
           </div>
         </div>
         {testStatus && <div style={{marginTop:8,fontSize:'0.75rem',color:'var(--silver)',fontFamily:"'Fira Code',monospace"}}>{testStatus}</div>}
+
+        {/* Security note */}
         <div style={{marginTop:12,padding:10,background:'rgba(201,168,76,0.05)',border:'1px solid var(--gold-dim)',borderRadius:4}}>
           <div style={{fontSize:'0.7rem',color:'var(--silver)',lineHeight:1.5}}>
-            <strong style={{color:'var(--gold)'}}>🔒 Security</strong> — Your key is sent only to Anthropic's API via HTTPS.
+            <strong style={{color:'var(--gold)'}}>🔒 Security</strong> — Your key is sent only to {isOpenRouter ? "OpenRouter's API" : "Anthropic's API"} via HTTPS.
             It is {state.rememberKey ? 'stored in localStorage (persists across sessions)' : 'stored in sessionStorage (cleared when you close this tab)'}.
             Never logged or sent to third parties.
           </div>
@@ -2368,7 +2583,7 @@ function ChatPanel() {
             {msg.role === 'dm' && <div className="message-sender">The DM</div>}
             {msg.role === 'player' && <div className="message-sender">You</div>}
             {msg.role === 'system' && <div className="message-sender">System</div>}
-            <div className="message-content">{msg.content || (state.isStreaming && i === state.chatMessages.length - 1 ? '' : '')}</div>
+            <div className="message-content">{msg.role === 'dm' ? formatDMText(msg.content) : (msg.content || (state.isStreaming && i === state.chatMessages.length - 1 ? '' : ''))}</div>
           </div>
         ))}
 
