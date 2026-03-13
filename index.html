@@ -387,6 +387,28 @@ function gameReducer(state, action) {
     case 'COMBAT_END': {
       return { ...state, gameData: { ...state.gameData, combat: { ...state.gameData.combat, active: false } } };
     }
+    case 'ADD_XP': {
+      const amount = parseInt(action.payload.amount) || 0;
+      const ep = { ...state.gameData.character.ep };
+      ep.current = ep.current + amount;
+      // Handle level-up if current >= max
+      let ch = { ...state.gameData.character, ep };
+      if (ep.current >= ep.max && ep.max > 0) {
+        ch.level = (ch.level || 1) + 1;
+        ep.current = ep.current - ep.max;
+        ep.max = Math.floor(ep.max * 1.4); // Scale XP needed for next level
+        ch.ep = ep;
+      }
+      return { ...state, gameData: { ...state.gameData, character: ch } };
+    }
+    case 'ADD_ABILITY': {
+      const abilities = [...(state.gameData.character.abilities || [])];
+      // Don't add duplicates
+      if (!abilities.some(a => a.name === action.payload.name)) {
+        abilities.push(action.payload);
+      }
+      return { ...state, gameData: { ...state.gameData, character: { ...state.gameData.character, abilities } } };
+    }
     case 'ADD_LORE': {
       const entries = [...state.gameData.lore.entries, { ...action.payload, discovered: true }];
       return { ...state, gameData: { ...state.gameData, lore: { ...state.gameData.lore, entries } } };
@@ -406,6 +428,9 @@ function gameReducer(state, action) {
     case 'START_NEW_CAMPAIGN': {
       return { ...state, gameData: action.payload.gameData, worldBible: action.payload.worldBible, chatMessages: [], showCampaignWizard: false };
     }
+
+    case 'SET_PENDING_OPENING': return { ...state, pendingOpening: action.payload };
+    case 'SET_CHAT_TEXT_SIZE': return { ...state, chatTextSize: action.payload };
 
     // ─── Persistence ───
     case 'LOAD_GAME_STATE': return { ...state, ...action.payload };
@@ -436,6 +461,8 @@ const initialState = {
   showCampaignWizard: false,
   // Security
   rememberKey: false,
+  // Opening scene trigger
+  pendingOpening: false,
 };
 
 function GameProvider({ children }) {
@@ -462,6 +489,8 @@ function GameProvider({ children }) {
         try { dispatch({ type: 'SET_GAME_DATA', payload: JSON.parse(savedGameData) }); } catch(e) {}
       }
       if (savedWorldBible) dispatch({ type: 'SET_WORLD_BIBLE', payload: savedWorldBible });
+      const savedTextSize = localStorage.getItem('dnd-chatTextSize');
+      if (savedTextSize) dispatch({ type: 'SET_CHAT_TEXT_SIZE', payload: savedTextSize });
     } catch(e) {}
 
     // Load DM Engine
@@ -544,7 +573,10 @@ function dispatchTagActions(tags, dispatch) {
         break;
       case 'STAT_CHANGE':
         dispatch({ type: 'UPDATE_STAT', payload: { stat: p.stat, value: p.new || p.value, prevValue: p.old } });
-        dispatch({ type: 'ADD_NOTIFICATION', payload: { title: `${p.stat} ${(p.new||0) > (p.old||0) ? 'INCREASED' : 'DECREASED'}`, body: p.reason || '', statChanges: [{ stat: p.stat, from: p.old, to: p.new || p.value, dir: (p.new||0) > (p.old||0) ? 'increase' : 'decrease' }] } });
+        // Only show notification if value actually changed
+        if (parseInt(p.new || p.value) !== parseInt(p.old)) {
+          dispatch({ type: 'ADD_NOTIFICATION', payload: { title: `${p.stat} ${(p.new||0) > (p.old||0) ? 'INCREASED' : 'DECREASED'}`, body: p.reason || '', statChanges: [{ stat: p.stat, from: p.old, to: p.new || p.value, dir: (p.new||0) > (p.old||0) ? 'increase' : 'decrease' }] } });
+        }
         break;
       case 'HP_CHANGE':
         dispatch({ type: 'UPDATE_VITALS', payload: { hp: p.new || p.value } });
@@ -554,6 +586,7 @@ function dispatchTagActions(tags, dispatch) {
         dispatch({ type: 'UPDATE_VITALS', payload: { mp: p.new || p.value } });
         break;
       case 'XP_GAIN':
+        dispatch({ type: 'ADD_XP', payload: { amount: parseInt(p.amount) || 0 } });
         dispatch({ type: 'ADD_NOTIFICATION', payload: { title: 'EXPERIENCE GAINED', body: `+${p.amount} XP — ${p.reason || p.source || ''}`, style: 'success' } });
         break;
       case 'ITEM_ACQUIRED':
@@ -597,6 +630,10 @@ function dispatchTagActions(tags, dispatch) {
       case 'REVEAL_VITAL':
         dispatch({ type: 'REVEAL_VITAL', payload: { vital: p.vital, label: p.label, fullLabel: p.fullLabel, icon: p.icon } });
         dispatch({ type: 'ADD_NOTIFICATION', payload: { title: 'VITAL REVEALED', body: `${p.label || p.vital} has been unlocked!`, style: 'arcane' } });
+        break;
+      case 'ABILITY_ADD':
+        dispatch({ type: 'ADD_ABILITY', payload: { name: p.name, type: p.type || 'Active', desc: p.desc || '', cost: p.cost || '', cooldown: p.cooldown || '', icon: p.type === 'Passive' ? '🛡' : p.type === 'Reaction' ? '⚡' : '✨' } });
+        dispatch({ type: 'ADD_NOTIFICATION', payload: { title: 'NEW ABILITY UNLOCKED', body: `${p.name} (${p.type || 'Active'}) — ${p.desc || ''}`, style: 'arcane' } });
         break;
     }
   }
@@ -781,9 +818,10 @@ function buildSystemPrompt(dmEngine, gameData, worldBible) {
 
   const tagInstructions = `
 
-METADATA TAG INSTRUCTIONS:
-After EVERY response, include metadata tags for any state changes.
-Tags are parsed silently by the companion app — the player never sees them.
+CRITICAL — METADATA TAG INSTRUCTIONS:
+You MUST include metadata tags after EVERY response. The companion app ONLY updates through these tags. If you don't emit tags, the player's stats, inventory, quests, and abilities will NOT update. This is CRITICAL — the companion app is DEAD without your tags.
+
+Tags are parsed silently — the player never sees them.
 Format: [TAG_TYPE: key=value, key=value]
 
 Available tags:
@@ -804,10 +842,18 @@ Available tags:
 [CONDITION_REMOVE: name="..."]
 [LORE_UNLOCK: category="...", title="...", content="..."]
 [REVEAL_VITAL: vital="mp|sanity", label="...", fullLabel="...", icon="..."]
+[ABILITY_ADD: name="...", type="Active|Passive|Reaction", desc="...", cost="...", cooldown="..."]
 
-Note: vitalsConfig in world state shows which vitals are currently visible. Use REVEAL_VITAL to unlock hidden vitals when narratively appropriate (e.g., a character discovers magical abilities, or sanity becomes relevant). Only reveal vitals that are currently hidden (visible: false).
+IMPORTANT RULES FOR TAGS:
+- ALWAYS emit [NPC_UPDATE] the FIRST time the player meets any named NPC.
+- ALWAYS emit [ABILITY_ADD] when the player discovers or unlocks a new ability.
+- ALWAYS emit [XP_GAIN] when the player earns experience. This MUST include the amount.
+- Use [STAT_CHANGE] ONLY when a stat value actually changes — do not re-emit current values.
+- In your FIRST response of a new campaign, emit [STAT_CHANGE] for all 5 core stats, [HP_CHANGE], and [XP_GAIN] to initialize the companion app.
 
-ALWAYS include relevant tags at the END of your response. Include ALL state changes. The companion app depends on these tags to keep the player's dashboard updated.`;
+Note: vitalsConfig in world state shows which vitals are currently visible. Use REVEAL_VITAL to unlock hidden vitals when narratively appropriate. Only reveal vitals that are currently hidden (visible: false).
+
+ALWAYS include relevant tags at the END of your response. The companion app depends entirely on these tags.`;
 
   // Replace [YOUR WORLD] placeholders with actual world name
   let processedEngine = dmEngine;
@@ -993,8 +1039,16 @@ function generateWorldBible(w) {
 function CampaignWizard() {
   const { state, dispatch } = useGame();
   const [step, setStep] = useState(-1);
-  const [wizardMode, setWizardMode] = useState(null); // 'quick' or 'builder'
+  const [wizardMode, setWizardMode] = useState(null); // 'quick' or 'builder' or 'preset'
   const [quickStartText, setQuickStartText] = useState('');
+  const [selectedPreset, setSelectedPreset] = useState(null);
+
+  const PRESETS = [
+    { id: 'crypt', icon: '💀', name: 'The Sunken Crypt', desc: 'Classic dungeon crawl — undead, traps, treasure', worldName: 'The Sunken Crypt', premise: 'An ancient crypt beneath a forgotten temple has awakened. Undead stir in its depths, traps guard forgotten treasures, and a lich lord consolidates power in the deepest chamber.', tone: 'dark', magicLevel: 'high', sentient: 'partially', worldAge: 'dying' },
+    { id: 'city', icon: '🏰', name: 'The Last City', desc: 'Political intrigue, factions, betrayal', worldName: 'Valdris', premise: 'The last great city stands against encroaching darkness. Inside its walls, noble houses scheme for control, spy networks war in the shadows, and the ruling council hides a terrible secret.', tone: 'political', magicLevel: 'moderate', sentient: 'no', worldAge: 'standard' },
+    { id: 'void', icon: '🌀', name: 'The Void Between', desc: 'Cosmic horror, sanity-focused, alien threats', worldName: 'The Threshold', premise: 'Reality is thinning. Something vast and incomprehensible presses against the membrane of the world. Those who perceive it lose their minds. Those who don\'t are consumed.', tone: 'horror', magicLevel: 'extreme', sentient: 'yes', worldAge: 'dying' },
+    { id: 'road', icon: '🗺️', name: "The Merchant's Road", desc: 'Open world, trade, bandits, exploration', worldName: 'The Amber Road', premise: 'A vast trade route spanning three kingdoms. Merchant caravans, bandit lords, hidden ruins, and frontier towns. Fortune favors the bold — and the cunning.', tone: 'adventure', magicLevel: 'low', sentient: 'no', worldAge: 'standard' },
+  ];
   const [wizardData, setWizardData] = useState({
     worldName: '', premise: '', sentient: 'partially', worldAge: 'standard',
     darkness: 65, horror: 'creeping', comedy: 'dry', inspirations: [],
@@ -1014,7 +1068,7 @@ function CampaignWizard() {
     });
   };
 
-  const canProceed = step === 0 ? wizardData.worldName.trim().length > 0 : step === -1 ? wizardMode !== null : true;
+  const canProceed = step === 0 ? wizardData.worldName.trim().length > 0 : step === -1 ? (wizardMode !== null && (wizardMode !== 'preset' || selectedPreset !== null)) : true;
   const stepTitles = ['Forge Your World', 'Set the Tone', 'Shape the Magic', 'The Opening Chapter', 'Your Character'];
   const stepIcons = ['🌍', '🎭', '✨', '📖', '⚔️'];
 
@@ -1025,6 +1079,8 @@ function CampaignWizard() {
     localStorage.removeItem('dnd-chat');
     localStorage.removeItem('dnd-gameData');
     localStorage.removeItem('dnd-worldBible');
+    // Set flag to auto-send opening message after state updates
+    dispatch({ type: 'SET_PENDING_OPENING', payload: true });
   };
 
   const beginQuickStart = () => {
@@ -1046,6 +1102,20 @@ function CampaignWizard() {
     }, 100);
   };
 
+  const beginPreset = () => {
+    if (!selectedPreset) return;
+    const preset = PRESETS.find(p => p.id === selectedPreset);
+    if (!preset) return;
+    const presetWizardData = { worldName: preset.worldName, premise: preset.premise, sentient: preset.sentient, worldAge: preset.worldAge, characterName: '', playerName: 'Chris' };
+    const gameData = createBlankGameData(presetWizardData);
+    const worldBible = `# ${preset.worldName} — Preset Campaign\n\n## Core Premise\n${preset.premise}\n\n## Tone\n${preset.tone}\n\n## Magic Level\n${preset.magicLevel}\n\nThis is a preset campaign. Build the world, NPCs, factions, conflicts, and magic system from this premise. Create a rich, living world. Assign the player a class and starting stats that fit this setting. Begin with character creation, then launch into the opening scene.\n`;
+    dispatch({ type: 'START_NEW_CAMPAIGN', payload: { gameData, worldBible } });
+    localStorage.removeItem('dnd-chat');
+    localStorage.removeItem('dnd-gameData');
+    localStorage.removeItem('dnd-worldBible');
+    dispatch({ type: 'SET_PENDING_OPENING', payload: true });
+  };
+
   const OptionCard = ({ value, current, onSelect, icon, label, desc }) => (
     <div className={`wizard-option-card ${current === value ? 'selected' : ''}`} onClick={() => onSelect(value)}>
       {icon && <span className="wizard-option-icon">{icon}</span>}
@@ -1061,16 +1131,21 @@ function CampaignWizard() {
           <p style={{textAlign:'center',fontSize:'0.85rem',color:'var(--silver)',marginBottom:20,lineHeight:1.6}}>
             How would you like to create your campaign?
           </p>
-          <div className="wizard-option-grid cols-2" style={{marginBottom:20}}>
+          <div className="wizard-option-grid cols-3" style={{marginBottom:20}}>
             <div className={`wizard-option-card ${wizardMode === 'quick' ? 'selected' : ''}`} onClick={() => setWizardMode('quick')} style={{padding:'20px 16px'}}>
               <span className="wizard-option-icon">⚡</span>
               <span className="wizard-option-label">Quick Start</span>
-              <span className="wizard-option-desc">Describe your world and the DM handles the rest</span>
+              <span className="wizard-option-desc">Describe your world freely</span>
             </div>
             <div className={`wizard-option-card ${wizardMode === 'builder' ? 'selected' : ''}`} onClick={() => setWizardMode('builder')} style={{padding:'20px 16px'}}>
               <span className="wizard-option-icon">🔨</span>
               <span className="wizard-option-label">World Builder</span>
-              <span className="wizard-option-desc">Craft every detail through the step-by-step forge</span>
+              <span className="wizard-option-desc">Step-by-step forge</span>
+            </div>
+            <div className={`wizard-option-card ${wizardMode === 'preset' ? 'selected' : ''}`} onClick={() => setWizardMode('preset')} style={{padding:'20px 16px'}}>
+              <span className="wizard-option-icon">📜</span>
+              <span className="wizard-option-label">Presets</span>
+              <span className="wizard-option-desc">Ready-made campaigns</span>
             </div>
           </div>
           {wizardMode === 'quick' && (
@@ -1082,6 +1157,20 @@ function CampaignWizard() {
               <p style={{fontSize:'0.68rem',color:'var(--muted)',marginTop:6,fontStyle:'italic'}}>
                 Include anything — setting, tone, character ideas, magic systems, themes. The DM will build everything from your vision.
               </p>
+            </div>
+          )}
+          {wizardMode === 'preset' && (
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginTop:8}}>
+              {PRESETS.map(p => (
+                <div key={p.id} className={`wizard-option-card ${selectedPreset === p.id ? 'selected' : ''}`} onClick={() => setSelectedPreset(p.id)}
+                  style={{padding:'16px',textAlign:'left',cursor:'pointer'}}>
+                  <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:6}}>
+                    <span style={{fontSize:'1.3rem'}}>{p.icon}</span>
+                    <span style={{fontFamily:"'Cinzel',serif",fontWeight:700,fontSize:'0.9rem',color:'var(--gold-bright)'}}>{p.name}</span>
+                  </div>
+                  <span className="wizard-option-desc" style={{fontSize:'0.75rem',lineHeight:1.4}}>{p.desc}</span>
+                </div>
+              ))}
             </div>
           )}
         </div>
@@ -1186,8 +1275,9 @@ function CampaignWizard() {
           </div>
           <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16}}>
             <div className="wizard-field">
-              <label className="wizard-label">Energy Resource Name <span className="wizard-hint">(optional)</span></label>
-              <input className="wizard-input" type="text" value={wizardData.essenceLabel} onChange={e => update('essenceLabel', e.target.value)} placeholder="EP, Mana, Essence, Chi..." />
+              <label className="wizard-label">Energy Resource Name <span className="wizard-hint">(1-2 words)</span></label>
+              <input className="wizard-input" type="text" value={wizardData.essenceLabel} onChange={e => update('essenceLabel', e.target.value)} placeholder="Mana, Chi, Essence, Flux..." />
+              <span style={{fontSize:'0.65rem',color:'var(--muted)',marginTop:2,display:'block'}}>Keep it short — enter a name, not a description.</span>
               <label style={{fontSize:'0.7rem',color:'var(--muted)',display:'flex',alignItems:'center',gap:6,marginTop:6,cursor:'pointer'}}>
                 <input type="checkbox" checked={wizardData.essenceVisible} onChange={e => update('essenceVisible', e.target.checked)} />
                 Show from start
@@ -1239,10 +1329,6 @@ function CampaignWizard() {
 
       case 4: return (
         <div className="wizard-step-content">
-          <div className="wizard-field">
-            <label className="wizard-label">Player Name</label>
-            <input className="wizard-input" type="text" value={wizardData.playerName} onChange={e => update('playerName', e.target.value)} placeholder="Your real name" />
-          </div>
           <div className="wizard-field">
             <label className="wizard-label">Character Name <span className="wizard-hint">(leave blank to choose in chat)</span></label>
             <input className="wizard-input" type="text" value={wizardData.characterName} onChange={e => update('characterName', e.target.value)} placeholder="Kaelen, Sera, Moth..." />
@@ -1303,6 +1389,8 @@ function CampaignWizard() {
           <div style={{flex:1}} />
           {step === -1 && wizardMode === 'quick' ? (
             <button className="wizard-btn wizard-btn-begin" onClick={beginQuickStart} disabled={!quickStartText.trim()}>⚡ Begin Adventure</button>
+          ) : step === -1 && wizardMode === 'preset' ? (
+            <button className="wizard-btn wizard-btn-begin" onClick={beginPreset} disabled={!selectedPreset}>⚔️ Launch Campaign</button>
           ) : step === -1 && wizardMode === 'builder' ? (
             <button className="wizard-btn wizard-btn-next" onClick={() => setStep(0)}>Next →</button>
           ) : step < 4 ? (
@@ -2332,6 +2420,10 @@ function SettingsPanel() {
       if (data.status === 'ok') {
         setTestStatus('✓ Connected: ' + data.message);
         dispatch({ type: 'SET_API_STATUS', payload: 'connected' });
+        // Auto-navigate to wizard if no world exists yet
+        if (!state.worldBible) {
+          dispatch({ type: 'SHOW_CAMPAIGN_WIZARD', payload: true });
+        }
       } else {
         setTestStatus('✗ Error: ' + data.message);
         dispatch({ type: 'SET_API_STATUS', payload: 'error' });
@@ -2485,6 +2577,21 @@ function SettingsPanel() {
           </div>
           <div className={`toggle ${notifications?'active':''}`} onClick={() => setNotifications(!notifications)} />
         </div>
+        <div className="setting-row">
+          <div>
+            <div className="setting-label">Chat Text Size</div>
+            <div className="setting-desc">Adjust DM response text size</div>
+          </div>
+          <select className="api-select" style={{width:'auto',minWidth:100}} value={state.chatTextSize || 'medium'} onChange={e => {
+            dispatch({ type: 'SET_CHAT_TEXT_SIZE', payload: e.target.value });
+            localStorage.setItem('dnd-chatTextSize', e.target.value);
+          }}>
+            <option value="small">Small</option>
+            <option value="medium">Medium</option>
+            <option value="large">Large</option>
+            <option value="xl">X-Large</option>
+          </select>
+        </div>
       </div>
 
       <div className="card">
@@ -2541,6 +2648,16 @@ function ChatPanel() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [state.chatMessages, state.isStreaming]);
 
+  // Auto-send opening scene message when a new campaign starts
+  useEffect(() => {
+    if (state.pendingOpening && state.apiKey && state.worldBible && !state.isStreaming) {
+      dispatch({ type: 'SET_PENDING_OPENING', payload: false });
+      const worldName = state.gameData.campaign.name || 'this world';
+      const openingMsg = `[SYSTEM] A new campaign in ${worldName} has begun. Welcome the player, set the opening scene, establish initial character stats via metadata tags, and ask the player what they want to do.`;
+      sendChatMessage(openingMsg, state, dispatch);
+    }
+  }, [state.pendingOpening, state.apiKey, state.worldBible]);
+
   const handleSend = () => {
     const msg = input.trim();
     if (!msg || state.isStreaming) return;
@@ -2555,8 +2672,11 @@ function ChatPanel() {
     }
   };
 
+  const textSizeMap = { small: '0.85rem', medium: '0.95rem', large: '1.1rem', xl: '1.25rem' };
+  const chatTextVar = textSizeMap[state.chatTextSize || 'medium'] || '0.95rem';
+
   return (
-    <div className="chat-panel">
+    <div className="chat-panel" style={{ '--chat-text-size': chatTextVar }}>
       <div className="chat-messages">
         {state.chatMessages.length === 0 && (
           <div className="chat-welcome">
@@ -2601,21 +2721,28 @@ function ChatPanel() {
         <div ref={messagesEndRef} />
       </div>
 
-      <div className="chat-input-area">
-        <textarea
-          ref={textareaRef}
-          className="chat-textarea"
-          value={input}
-          onChange={e => setInput(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder={state.isStreaming ? 'Waiting for the DM...' : 'What do you do?'}
-          disabled={state.isStreaming}
-          rows={2}
-        />
-        <button className="chat-send-btn" onClick={handleSend} disabled={state.isStreaming || !input.trim()}>
-          ⚔
-        </button>
-      </div>
+      {state.apiStatus !== 'connected' ? (
+        <div className="chat-disconnected-overlay">
+          <span className="disconnected-icon">🔑</span>
+          <span>Connect your API key in <strong>Settings</strong> to begin</span>
+        </div>
+      ) : (
+        <div className="chat-input-area">
+          <textarea
+            ref={textareaRef}
+            className="chat-textarea"
+            value={input}
+            onChange={e => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder={state.isStreaming ? 'Waiting for the DM...' : 'What do you do?'}
+            disabled={state.isStreaming}
+            rows={2}
+          />
+          <button className="chat-send-btn" onClick={handleSend} disabled={state.isStreaming || !input.trim()}>
+            ⚔
+          </button>
+        </div>
+      )}
     </div>
   );
 }
