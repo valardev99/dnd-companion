@@ -240,7 +240,7 @@ h4 { font-size: 0.9rem; font-weight: 500; color: var(--gold-bright); }
   height: 48px;
   cursor: pointer;
   color: var(--muted);
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
   position: relative;
   border-left: 2px solid transparent;
 }
@@ -248,6 +248,9 @@ h4 { font-size: 0.9rem; font-weight: 500; color: var(--gold-bright); }
 .sidebar-item:hover {
   color: var(--gold);
   background: rgba(201, 168, 76, 0.05);
+  transform: scale(1.12);
+  text-shadow: 0 0 12px rgba(201, 168, 76, 0.5);
+  filter: drop-shadow(0 0 6px rgba(201, 168, 76, 0.3));
 }
 
 .sidebar-item.active {
@@ -317,7 +320,7 @@ h4 { font-size: 0.9rem; font-weight: 500; color: var(--gold-bright); }
   border-radius: 0;
   padding: 20px;
   margin-bottom: 12px;
-  transition: filter 0.2s, box-shadow 0.2s;
+  transition: filter 0.4s ease, box-shadow 0.4s ease, transform 0.4s ease;
   min-width: 0;
   overflow: hidden;
 }
@@ -325,6 +328,7 @@ h4 { font-size: 0.9rem; font-weight: 500; color: var(--gold-bright); }
 .card:hover {
   filter: brightness(1.1);
   box-shadow: 0 0 20px rgba(201, 168, 76, 0.2);
+  transform: translateY(-2px);
 }
 
 .card-header {
@@ -378,7 +382,7 @@ h4 { font-size: 0.9rem; font-weight: 500; color: var(--gold-bright); }
 .stat-bar-fill {
   height: 100%;
   border-radius: 0;
-  transition: width 0.8s ease;
+  transition: width 0.9s cubic-bezier(0.34, 1.56, 0.64, 1);
   position: relative;
 }
 
@@ -777,6 +781,12 @@ h4 { font-size: 0.9rem; font-weight: 500; color: var(--gold-bright); }
   transition: all 0.3s;
   border: 2px solid;
   z-index: 2;
+  animation: map-node-reveal 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@keyframes map-node-reveal {
+  from { opacity: 0; transform: scale(0); }
+  to { opacity: 1; transform: scale(1); }
 }
 
 .map-node:hover { transform: scale(1.15); z-index: 3; }
@@ -823,9 +833,24 @@ h4 { font-size: 0.9rem; font-weight: 500; color: var(--gold-bright); }
   transform-origin: left center;
   z-index: 1;
   opacity: 0.4;
+  animation: path-draw 0.5s ease-out forwards;
 }
 
-.map-path.traveled { background: var(--gold-dim); opacity: 0.7; }
+@keyframes path-draw {
+  from { clip-path: inset(0 100% 0 0); opacity: 0; }
+  to { clip-path: inset(0 0% 0 0); opacity: 0.4; }
+}
+
+.map-path.traveled {
+  background: var(--gold-dim);
+  opacity: 0.7;
+  animation: path-draw-traveled 0.5s ease-out forwards;
+}
+
+@keyframes path-draw-traveled {
+  from { clip-path: inset(0 100% 0 0); opacity: 0; }
+  to { clip-path: inset(0 0% 0 0); opacity: 0.7; }
+}
 
 /* ═══ LORE CODEX ═══ */
 .codex-sidebar {
@@ -933,7 +958,7 @@ h4 { font-size: 0.9rem; font-weight: 500; color: var(--gold-bright); }
   line-height: 1.5;
   color: var(--parchment);
   pointer-events: auto;
-  animation: notification-enter 0.4s ease-out;
+  /* Phase controlled by JS classes */
   position: relative;
   overflow: hidden;
 }
@@ -1109,6 +1134,26 @@ h4 { font-size: 0.9rem; font-weight: 500; color: var(--gold-bright); }
   color: var(--muted);
   font-family: 'Fira Code', monospace;
   z-index: 50;
+  position: relative;
+  overflow: hidden;
+}
+
+.app-footer::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(201, 168, 76, 0.03) 30%, rgba(201, 168, 76, 0.06) 50%, rgba(201, 168, 76, 0.03) 70%, transparent 100%);
+  background-size: 200% 100%;
+  animation: footer-breathe 8s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes footer-breathe {
+  0%, 100% { background-position: 200% center; opacity: 0; }
+  50% { background-position: 0% center; opacity: 1; }
 }
 
 .footer-status { display: flex; align-items: center; gap: 6px; }
@@ -1391,17 +1436,19 @@ h4 { font-size: 0.9rem; font-weight: 500; color: var(--gold-bright); }
 }
 
 /* ═══ ANIMATIONS ═══ */
-@keyframes notification-enter {
-  from { opacity: 0; transform: translateX(30px); }
-  to { opacity: 1; transform: translateX(0); }
+@keyframes notif-phase-in {
+  from { opacity: 0; transform: translateX(40px) scale(0.95); }
+  to { opacity: 1; transform: translateX(0) scale(1); }
 }
 
-@keyframes notification-exit {
-  from { opacity: 1; transform: translateX(0); }
-  to { opacity: 0; transform: translateX(30px); }
+@keyframes notif-phase-out {
+  from { opacity: 1; transform: translateX(0) scale(1); }
+  to { opacity: 0; transform: translateX(40px) scale(0.95); }
 }
 
-.notification-exit { animation: notification-exit 0.3s ease-in forwards; }
+.notif-entering { animation: notif-phase-in 1.5s ease-out forwards; }
+.notif-visible { opacity: 1; transform: translateX(0) scale(1); }
+.notif-exiting { animation: notif-phase-out 1.5s ease-in forwards; }
 
 @keyframes fade-in {
   from { opacity: 0; }
@@ -1437,6 +1484,31 @@ h4 { font-size: 0.9rem; font-weight: 500; color: var(--gold-bright); }
 @keyframes rune-pulse {
   0%, 100% { opacity: 0.15; }
   50% { opacity: 0.35; }
+}
+
+/* ═══ PANEL CROSSFADE ═══ */
+.companion-main.panel-active { opacity: 1; transform: translateY(0); }
+.companion-main.panel-exiting { opacity: 0; transform: translateY(6px); transition: opacity 0.2s ease-in, transform 0.2s ease-in; }
+.companion-main.panel-entering { opacity: 1; transform: translateY(0); transition: opacity 0.25s ease-out, transform 0.25s ease-out; }
+
+/* ═══ CONTEXT PANEL SLIDE ═══ */
+.context-panel.ctx-active { opacity: 1; transform: translateX(0); }
+.context-panel.ctx-exiting { opacity: 0; transform: translateX(12px); transition: opacity 0.2s ease-in, transform 0.2s ease-in; }
+.context-panel.ctx-entering { opacity: 1; transform: translateX(0); transition: opacity 0.25s ease-out, transform 0.25s ease-out; }
+
+/* ═══ COMBAT MODE VISUAL SHIFT ═══ */
+.two-screen-layout.combat-active {
+  box-shadow: inset 0 0 100px rgba(198, 40, 40, 0.12), inset 0 0 200px rgba(198, 40, 40, 0.06);
+  animation: combat-vignette-pulse 3s ease-in-out infinite;
+}
+
+.two-screen-layout.combat-active .center-sidebar {
+  border-color: rgba(198, 40, 40, 0.25);
+}
+
+@keyframes combat-vignette-pulse {
+  0%, 100% { box-shadow: inset 0 0 100px rgba(198, 40, 40, 0.1), inset 0 0 200px rgba(198, 40, 40, 0.04); }
+  50% { box-shadow: inset 0 0 120px rgba(198, 40, 40, 0.18), inset 0 0 250px rgba(198, 40, 40, 0.08); }
 }
 
 /* ═══ UTILITY ═══ */
@@ -1506,6 +1578,7 @@ h4 { font-size: 0.9rem; font-weight: 500; color: var(--gold-bright); }
   overflow: hidden;
   background: var(--obsidian);
   border-right: 1px solid var(--border-dim);
+  position: relative;
 }
 
 .chat-messages {
@@ -1516,6 +1589,61 @@ h4 { font-size: 0.9rem; font-weight: 500; color: var(--gold-bright); }
   flex-direction: column;
   gap: 16px;
   scroll-behavior: smooth;
+  position: relative;
+}
+
+/* Ambient dust motes floating in chat */
+.chat-messages::before,
+.chat-messages::after {
+  content: '';
+  position: fixed;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: rgba(201, 168, 76, 0.2);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.chat-messages::before {
+  top: 30%;
+  left: 12%;
+  box-shadow:
+    60px -40px 0 0 rgba(201, 168, 76, 0.08),
+    120px 80px 0 1px rgba(201, 168, 76, 0.05),
+    30px 160px 0 0 rgba(201, 168, 76, 0.1),
+    180px 40px 0 0 rgba(201, 168, 76, 0.06),
+    90px 240px 0 1px rgba(201, 168, 76, 0.04),
+    200px 180px 0 0 rgba(201, 168, 76, 0.07),
+    150px -20px 0 0 rgba(201, 168, 76, 0.05),
+    50px 300px 0 1px rgba(201, 168, 76, 0.06);
+  animation: dust-drift-1 20s ease-in-out infinite;
+}
+
+.chat-messages::after {
+  top: 50%;
+  left: 25%;
+  box-shadow:
+    40px 30px 0 0 rgba(201, 168, 76, 0.06),
+    160px -60px 0 1px rgba(201, 168, 76, 0.04),
+    80px 120px 0 0 rgba(201, 168, 76, 0.08),
+    220px 200px 0 0 rgba(201, 168, 76, 0.05),
+    10px 260px 0 1px rgba(201, 168, 76, 0.03),
+    130px 100px 0 0 rgba(201, 168, 76, 0.07);
+  animation: dust-drift-2 25s ease-in-out infinite;
+}
+
+@keyframes dust-drift-1 {
+  0%, 100% { transform: translate(0, 0); opacity: 0.4; }
+  25% { transform: translate(8px, -12px); opacity: 0.7; }
+  50% { transform: translate(-5px, -20px); opacity: 0.5; }
+  75% { transform: translate(12px, -8px); opacity: 0.8; }
+}
+
+@keyframes dust-drift-2 {
+  0%, 100% { transform: translate(0, 0); opacity: 0.3; }
+  33% { transform: translate(-10px, -15px); opacity: 0.6; }
+  66% { transform: translate(6px, -25px); opacity: 0.4; }
 }
 
 .chat-messages::-webkit-scrollbar { width: 6px; }
@@ -1538,6 +1666,12 @@ h4 { font-size: 0.9rem; font-weight: 500; color: var(--gold-bright); }
   to { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes dm-message-appear {
+  from { opacity: 0; transform: translateY(12px); }
+  40% { opacity: 0.6; }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 .message-bubble.dm {
   align-self: flex-start;
   background: linear-gradient(135deg, #2a1f10, rgba(42, 31, 16, 0.95));
@@ -1547,6 +1681,7 @@ h4 { font-size: 0.9rem; font-weight: 500; color: var(--gold-bright); }
   font-size: var(--chat-text-size, 0.95rem);
   border-bottom-left-radius: 4px;
   box-shadow: inset 0 1px 0 rgba(201, 168, 76, 0.08), inset 0 -1px 0 rgba(0, 0, 0, 0.3), 0 4px 12px rgba(0, 0, 0, 0.5);
+  animation: dm-message-appear 0.6s ease-out;
 }
 
 .message-bubble.dm::before {
@@ -1687,6 +1822,36 @@ h4 { font-size: 0.9rem; font-weight: 500; color: var(--gold-bright); }
 @keyframes typing-bounce {
   0%, 80%, 100% { transform: translateY(0); opacity: 0.4; }
   40% { transform: translateY(-6px); opacity: 1; }
+}
+
+/* ═══ SCROLL TO BOTTOM ═══ */
+.scroll-to-bottom {
+  position: absolute;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(42, 31, 16, 0.95);
+  border: 1px solid var(--gold-dim);
+  color: var(--gold);
+  font-family: 'Fira Code', monospace;
+  font-size: 0.7rem;
+  padding: 6px 16px;
+  border-radius: 20px;
+  cursor: pointer;
+  z-index: 10;
+  animation: scroll-btn-appear 0.3s ease-out;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.5), 0 0 8px rgba(201, 168, 76, 0.15);
+  transition: all 0.2s;
+}
+
+.scroll-to-bottom:hover {
+  background: rgba(201, 168, 76, 0.15);
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.6), 0 0 12px rgba(201, 168, 76, 0.3);
+}
+
+@keyframes scroll-btn-appear {
+  from { opacity: 0; transform: translateX(-50%) translateY(10px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
 
 /* ═══ CHAT INPUT ═══ */
