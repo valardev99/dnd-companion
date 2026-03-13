@@ -204,15 +204,15 @@ class CompanionHandler(http.server.SimpleHTTPRequestHandler):
             print(f"[API] {args[0]}")
 
 
-class ReusableTCPServer(socketserver.TCPServer):
+class ReusableTCPServer(socketserver.ThreadingTCPServer):
     allow_reuse_address = True
 
 
 if __name__ == "__main__":
-    with ReusableTCPServer(("", PORT), CompanionHandler) as httpd:
+    with ReusableTCPServer(("0.0.0.0", PORT), CompanionHandler) as httpd:
         print(f"\n  ╔══════════════════════════════════════════╗")
         print(f"  ║  D&D Companion — Server Ready             ║")
-        print(f"  ║  http://localhost:{PORT}                    ║")
+        print(f"  ║  http://0.0.0.0:{PORT}                     ║")
         print(f"  ║  Static files + Claude API proxy           ║")
         print(f"  ╚══════════════════════════════════════════╝\n")
         httpd.serve_forever()
