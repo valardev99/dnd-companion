@@ -363,8 +363,15 @@ function gameReducer(state, action) {
       return { ...state, gameData: { ...state.gameData, inventory: inv } };
     }
     case 'UPDATE_QUEST': {
-      const quests = state.gameData.quests.map(q => q.id === action.payload.id ? { ...q, ...action.payload } : q);
-      return { ...state, gameData: { ...state.gameData, quests: quests } };
+      const exists = state.gameData.quests.some(q => q.id === action.payload.id);
+      if (exists) {
+        const quests = state.gameData.quests.map(q => q.id === action.payload.id ? { ...q, ...action.payload } : q);
+        return { ...state, gameData: { ...state.gameData, quests } };
+      } else {
+        // Auto-create new quest if it doesn't exist
+        const newQuest = { id: action.payload.id, title: action.payload.objective || action.payload.id, type: action.payload.type || 'active', status: action.payload.status || 'active', progress: parseInt(action.payload.progress) || 0, objective: action.payload.objective || '', steps: [] };
+        return { ...state, gameData: { ...state.gameData, quests: [...state.gameData.quests, newQuest] } };
+      }
     }
     case 'ADD_QUEST': {
       return { ...state, gameData: { ...state.gameData, quests: [...state.gameData.quests, action.payload] } };
@@ -380,6 +387,39 @@ function gameReducer(state, action) {
         trackers[action.payload.tracker] = { ...trackers[action.payload.tracker], value: action.payload.value, hint: action.payload.hint || trackers[action.payload.tracker].hint };
       }
       return { ...state, gameData: { ...state.gameData, hiddenTrackers: trackers } };
+    }
+    case 'ADD_MAP_LOCATION': {
+      const locs = state.gameData.mapLocations || [];
+      const locId = action.payload.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+      const exists = locs.some(l => l.id === locId);
+      if (exists) {
+        // Mark existing location as current, demote previous current to explored
+        const updated = locs.map(l => ({
+          ...l,
+          status: l.id === locId ? 'current' : (l.status === 'current' ? 'explored' : l.status),
+        }));
+        return { ...state, gameData: { ...state.gameData, mapLocations: updated } };
+      }
+      // Add new location — place it in a grid pattern based on how many exist
+      const count = locs.length;
+      const col = count % 4;
+      const row = Math.floor(count / 4);
+      const x = 10 + col * 22 + (row % 2 ? 11 : 0); // stagger rows
+      const y = 15 + row * 20;
+      const moodToDanger = { 'Lethal': 'high', 'Hostile': 'high', 'Combat': 'high', 'Ominous': 'medium', 'Tense': 'medium', 'Eerie': 'medium' };
+      const danger = moodToDanger[action.payload.mood] || 'low';
+      const icons = ['🏚', '🏛', '⛪', '🕯', '⚔', '🌀', '🕳', '🏰', '🗿', '🌿'];
+      const icon = icons[count % icons.length];
+      // Demote old current to explored
+      const updatedLocs = locs.map(l => ({ ...l, status: l.status === 'current' ? 'explored' : l.status }));
+      const newLoc = { id: locId, name: action.payload.name, icon, x, y, status: 'current', danger, desc: '' };
+      // Add path from previous current location
+      const prevCurrent = locs.find(l => l.status === 'current');
+      const paths = [...(state.gameData.mapPaths || [])];
+      if (prevCurrent) {
+        paths.push({ from: prevCurrent.id, to: locId, traveled: true });
+      }
+      return { ...state, gameData: { ...state.gameData, mapLocations: [...updatedLocs, newLoc], mapPaths: paths } };
     }
     case 'COMBAT_START': {
       return { ...state, gameData: { ...state.gameData, combat: { active: true, round: 1, location: action.payload.environment || '', turnOrder: [], currentTurn: 0, log: [{ text: '═══ COMBAT BEGINS ═══', type: 'system' }] } } };
@@ -452,7 +492,7 @@ const initialState = {
   isStreaming: false,
   apiKey: '',
   model: 'claude-sonnet-4-20250514',
-  apiProvider: 'anthropic', // anthropic | openrouter
+  apiProvider: 'openrouter',
   apiStatus: 'disconnected', // disconnected | connected | testing | error
   dmEngine: '',
   gameData: DEFAULT_GAME_DATA,
@@ -474,14 +514,12 @@ function GameProvider({ children }) {
       const savedRemember = localStorage.getItem('dnd-rememberKey') === 'true';
       const savedKey = savedRemember ? localStorage.getItem('dnd-apiKey') : sessionStorage.getItem('dnd-apiKey');
       const savedModel = localStorage.getItem('dnd-model');
-      const savedProvider = localStorage.getItem('dnd-apiProvider');
       const savedChat = localStorage.getItem('dnd-chat');
       const savedGameData = localStorage.getItem('dnd-gameData');
       const savedWorldBible = localStorage.getItem('dnd-worldBible');
       if (savedRemember) dispatch({ type: 'SET_REMEMBER_KEY', payload: true });
       if (savedKey) dispatch({ type: 'SET_API_KEY', payload: savedKey });
       if (savedModel) dispatch({ type: 'SET_MODEL', payload: savedModel });
-      if (savedProvider) dispatch({ type: 'SET_API_PROVIDER', payload: savedProvider });
       if (savedChat) {
         try { const msgs = JSON.parse(savedChat); msgs.forEach(m => dispatch({ type: 'ADD_CHAT_MESSAGE', payload: m })); } catch(e) {}
       }
@@ -570,6 +608,10 @@ function dispatchTagActions(tags, dispatch) {
     switch (tag.type) {
       case 'SCENE_UPDATE':
         dispatch({ type: 'UPDATE_CAMPAIGN', payload: { location: p.location, time: p.time, day: p.day, mood: p.mood } });
+        // Auto-add location to map if it doesn't exist yet
+        if (p.location) {
+          dispatch({ type: 'ADD_MAP_LOCATION', payload: { name: p.location, mood: p.mood } });
+        }
         break;
       case 'STAT_CHANGE':
         dispatch({ type: 'UPDATE_STAT', payload: { stat: p.stat, value: p.new || p.value, prevValue: p.old } });
@@ -589,10 +631,23 @@ function dispatchTagActions(tags, dispatch) {
         dispatch({ type: 'ADD_XP', payload: { amount: parseInt(p.amount) || 0 } });
         dispatch({ type: 'ADD_NOTIFICATION', payload: { title: 'EXPERIENCE GAINED', body: `+${p.amount} XP — ${p.reason || p.source || ''}`, style: 'success' } });
         break;
-      case 'ITEM_ACQUIRED':
-        dispatch({ type: 'ADD_ITEM', payload: { category: p.type === 'consumable' ? 'consumables' : p.type === 'material' ? 'materials' : 'keyItems', item: { name: p.name, rarity: p.rarity || 'common', icon: '🔮', desc: p.desc || '', qty: 1, weight: 0 } } });
+      case 'ITEM_ACQUIRED': {
+        const itemType = (p.type || '').toLowerCase();
+        const equipTypes = ['weapon', 'armor', 'shield', 'accessory', 'ring', 'amulet', 'helmet', 'boots', 'gloves'];
+        const consumeTypes = ['consumable', 'potion', 'scroll', 'food', 'drink'];
+        const materialTypes = ['material', 'reagent', 'ingredient', 'ore', 'gem'];
+        const keyTypes = ['key', 'quest', 'special'];
+        let category = 'keyItems';
+        if (equipTypes.some(t => itemType.includes(t))) category = 'equipped';
+        else if (consumeTypes.some(t => itemType.includes(t))) category = 'consumables';
+        else if (materialTypes.some(t => itemType.includes(t))) category = 'materials';
+        else if (keyTypes.some(t => itemType.includes(t))) category = 'keyItems';
+        const iconMap = { weapon: '⚔', armor: '🛡', shield: '🛡', ring: '💍', amulet: '📿', accessory: '💎', consumable: '🧪', potion: '🧪', scroll: '📜', material: '🔮', key: '🔑', tool: '🔧', relic: '✨', valuable: '💰', lore: '📖' };
+        const icon = Object.entries(iconMap).find(([k]) => itemType.includes(k))?.[1] || '🔮';
+        dispatch({ type: 'ADD_ITEM', payload: { category, item: { name: p.name, rarity: p.rarity || 'common', icon, desc: p.desc || '', qty: 1, weight: 0 } } });
         dispatch({ type: 'ADD_NOTIFICATION', payload: { title: 'ITEM ACQUIRED', body: `${p.name} (${p.rarity || 'common'}) — ${p.desc || ''}`, style: 'arcane' } });
         break;
+      }
       case 'ITEM_REMOVED':
         dispatch({ type: 'REMOVE_ITEM', payload: p.name });
         break;
@@ -899,7 +954,7 @@ async function sendChatMessage(message, state, dispatch) {
       body: JSON.stringify({
         apiKey: state.apiKey,
         model: state.model,
-        provider: state.apiProvider || 'anthropic',
+        provider: state.apiProvider || 'openrouter',
         messages: recentMessages,
         systemPrompt,
         maxTokens: 4096,
@@ -1944,6 +1999,7 @@ function QuestPanel() {
   const groups = [
     { label: 'Main Quest', type: 'main', icon: '👑' },
     { label: 'Active', type: 'active', icon: '🔥' },
+    { label: 'Completed', type: 'completed', icon: '✅' },
     { label: 'Rumored', type: 'rumored', icon: '❓' },
     { label: 'Failed', type: 'failed', icon: '💀' },
   ];
@@ -1956,9 +2012,18 @@ function QuestPanel() {
       </div>
 
       {groups.map(g => {
-        const filtered = g.type === 'active'
-          ? quests.filter(q => q.type === 'active' && q.status === 'active')
-          : quests.filter(q => q.type === g.type);
+        let filtered;
+        if (g.type === 'main') {
+          filtered = quests.filter(q => q.type === 'main' && q.status !== 'completed' && q.status !== 'failed');
+        } else if (g.type === 'active') {
+          filtered = quests.filter(q => q.type !== 'main' && q.status === 'active');
+        } else if (g.type === 'completed') {
+          filtered = quests.filter(q => q.status === 'completed');
+        } else if (g.type === 'failed') {
+          filtered = quests.filter(q => q.status === 'failed');
+        } else {
+          filtered = quests.filter(q => q.type === g.type || q.status === g.type);
+        }
         if (filtered.length === 0) return null;
         return (
           <div key={g.type} style={{marginBottom:20}}>
@@ -2118,7 +2183,8 @@ function NPCPanel() {
       {showWeb ? <RelationshipWeb /> : (
         <div>
           {groups.map(g => {
-            const filtered = npcs.filter(n => n.relationship === g.type);
+            const matchTypes = g.type === 'ally' ? ['ally', 'friendly'] : [g.type];
+            const filtered = npcs.filter(n => matchTypes.includes(n.relationship));
             if (filtered.length === 0) return null;
             return (
               <div key={g.type} style={{marginBottom:20}}>
@@ -2402,8 +2468,7 @@ function SettingsPanel() {
   const [particles, setParticles] = useState(true);
   const [notifications, setNotifications] = useState(true);
 
-  const isOpenRouter = (state.apiProvider || 'anthropic') === 'openrouter';
-  const keyPrefix = isOpenRouter ? 'sk-or-' : 'sk-ant-';
+  const keyPrefix = 'sk-or-';
 
   const testConnection = async () => {
     if (!state.apiKey) { setTestStatus('No API key entered'); return; }
@@ -2414,7 +2479,7 @@ function SettingsPanel() {
       const resp = await fetch('/api/test', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ apiKey: state.apiKey, model: state.model, provider: state.apiProvider || 'anthropic' }),
+        body: JSON.stringify({ apiKey: state.apiKey, model: state.model, provider: state.apiProvider || 'openrouter' }),
       });
       const data = await resp.json();
       if (data.status === 'ok') {
@@ -2434,13 +2499,7 @@ function SettingsPanel() {
     }
   };
 
-  const switchProvider = (provider) => {
-    dispatch({ type: 'SET_API_PROVIDER', payload: provider });
-    dispatch({ type: 'SET_API_KEY', payload: '' });
-    dispatch({ type: 'SET_API_STATUS', payload: 'disconnected' });
-    dispatch({ type: 'SET_MODEL', payload: provider === 'openrouter' ? 'google/gemini-3-flash-preview' : 'claude-sonnet-4-20250514' });
-    setTestStatus('');
-  };
+  // OpenRouter is the only supported provider
 
   const clearChat = () => {
     if (confirm('Clear all chat messages? Game state will be preserved.')) {
@@ -2462,51 +2521,24 @@ function SettingsPanel() {
       <div className="card">
         <h4 style={{marginBottom:12}}>🔑 API Configuration</h4>
 
-        {/* Provider selector */}
-        <div style={{marginBottom:14}}>
-          <label style={{fontSize:'0.78rem',color:'var(--muted)',display:'block',marginBottom:6}}>Provider</label>
-          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
-            <div onClick={() => switchProvider('anthropic')} style={{
-              padding:'10px 12px',borderRadius:6,cursor:'pointer',textAlign:'center',
-              background: !isOpenRouter ? 'rgba(201,168,76,0.1)' : 'var(--stone)',
-              border: !isOpenRouter ? '1.5px solid var(--gold)' : '1px solid var(--border-dim)',
-              transition: 'all 0.2s ease',
-            }}>
-              <div style={{fontSize:'0.82rem',fontWeight:600,color: !isOpenRouter ? 'var(--gold)' : 'var(--silver)'}}>🔑 Anthropic</div>
-              <div style={{fontSize:'0.65rem',color:'var(--muted)',marginTop:2}}>Direct API key</div>
-            </div>
-            <div onClick={() => switchProvider('openrouter')} style={{
-              padding:'10px 12px',borderRadius:6,cursor:'pointer',textAlign:'center',
-              background: isOpenRouter ? 'rgba(201,168,76,0.1)' : 'var(--stone)',
-              border: isOpenRouter ? '1.5px solid var(--gold)' : '1px solid var(--border-dim)',
-              transition: 'all 0.2s ease',
-            }}>
-              <div style={{fontSize:'0.82rem',fontWeight:600,color: isOpenRouter ? 'var(--gold)' : 'var(--silver)'}}>🌐 OpenRouter</div>
-              <div style={{fontSize:'0.65rem',color:'var(--muted)',marginTop:2}}>Works with Claude Max</div>
-            </div>
-          </div>
-        </div>
-
         {/* API Key input */}
         <div style={{marginBottom:12}}>
           <label style={{fontSize:'0.78rem',color:'var(--muted)',display:'block',marginBottom:4}}>
-            {isOpenRouter ? 'OpenRouter API Key' : 'Anthropic API Key'}
+            OpenRouter API Key
           </label>
           <input type="password" className="api-input"
-            placeholder={isOpenRouter ? 'sk-or-...' : 'sk-ant-...'}
+            placeholder="sk-or-..."
             value={state.apiKey}
             onChange={e => dispatch({ type: 'SET_API_KEY', payload: e.target.value })}
           />
           {state.apiKey && !state.apiKey.startsWith(keyPrefix) && (
             <div style={{fontSize:'0.7rem',color:'var(--crimson-bright)',marginTop:4,fontFamily:"'Fira Code',monospace"}}>
-              Key should start with "{keyPrefix}"
+              Key should start with "sk-or-"
             </div>
           )}
-          {isOpenRouter && (
-            <div style={{fontSize:'0.68rem',color:'var(--muted)',marginTop:6,lineHeight:1.4}}>
-              Get a key at <span style={{color:'var(--gold-dim)',fontFamily:"'Fira Code',monospace"}}>openrouter.ai/keys</span> — no Anthropic Console needed
-            </div>
-          )}
+          <div style={{fontSize:'0.68rem',color:'var(--muted)',marginTop:6,lineHeight:1.4}}>
+            Get a key at <span style={{color:'var(--gold-dim)',fontFamily:"'Fira Code',monospace"}}>openrouter.ai/keys</span>
+          </div>
           <label style={{fontSize:'0.72rem',color:'var(--muted)',display:'flex',alignItems:'center',gap:6,marginTop:8,cursor:'pointer'}}>
             <input type="checkbox" checked={state.rememberKey}
               onChange={e => dispatch({ type: 'SET_REMEMBER_KEY', payload: e.target.checked })} />
@@ -2518,19 +2550,10 @@ function SettingsPanel() {
         <div style={{marginBottom:12}}>
           <label style={{fontSize:'0.78rem',color:'var(--muted)',display:'block',marginBottom:4}}>Model</label>
           <select className="api-select" value={state.model} onChange={e => dispatch({ type: 'SET_MODEL', payload: e.target.value })}>
-            {isOpenRouter ? (
-              <>
-                <option value="google/gemini-3-flash-preview">Gemini 3 Flash Preview</option>
-                <option value="anthropic/claude-sonnet-4">Claude Sonnet 4</option>
-                <option value="anthropic/claude-opus-4">Claude Opus 4</option>
-                <option value="anthropic/claude-haiku-3.5">Claude Haiku 3.5</option>
-              </>
-            ) : (
-              <>
-                <option value="claude-sonnet-4-20250514">Claude Sonnet 4</option>
-                <option value="claude-opus-4-20250514">Claude Opus 4</option>
-              </>
-            )}
+            <option value="google/gemini-3-flash-preview">Gemini 3 Flash Preview</option>
+            <option value="anthropic/claude-sonnet-4">Claude Sonnet 4</option>
+            <option value="anthropic/claude-opus-4">Claude Opus 4</option>
+            <option value="anthropic/claude-haiku-3.5">Claude Haiku 3.5</option>
           </select>
         </div>
 
@@ -2546,7 +2569,7 @@ function SettingsPanel() {
         {/* Security note */}
         <div style={{marginTop:12,padding:10,background:'rgba(201,168,76,0.05)',border:'1px solid var(--gold-dim)',borderRadius:4}}>
           <div style={{fontSize:'0.7rem',color:'var(--silver)',lineHeight:1.5}}>
-            <strong style={{color:'var(--gold)'}}>🔒 Security</strong> — Your key is sent only to {isOpenRouter ? "OpenRouter's API" : "Anthropic's API"} via HTTPS.
+            <strong style={{color:'var(--gold)'}}>🔒 Security</strong> — Your key is sent only to OpenRouter's API via HTTPS.
             It is {state.rememberKey ? 'stored in localStorage (persists across sessions)' : 'stored in sessionStorage (cleared when you close this tab)'}.
             Never logged or sent to third parties.
           </div>
