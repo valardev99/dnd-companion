@@ -1,0 +1,215 @@
+/* ═══════════════════════════════════════════════════════════════
+   LAYOUT — Page structure, main content, context panel, footer
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ═══ APP LAYOUT ═══ */
+.app-layout {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* ═══ MAIN CONTENT ═══ */
+.main-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 20px 24px;
+  position: relative;
+}
+
+/* ═══ CONTEXT PANEL ═══ */
+.context-panel {
+  width: var(--context-width);
+  background: var(--void);
+  border-left: 1px solid var(--border-dim);
+  overflow-y: auto;
+  padding: 16px;
+  flex-shrink: 0;
+}
+
+.context-panel h3 {
+  font-size: 0.85rem;
+  color: var(--gold);
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TWO-SCREEN LAYOUT — Chat + Companion
+   ═══════════════════════════════════════════════════════════════ */
+
+.two-screen-layout {
+  display: grid;
+  grid-template-columns: 1fr 48px minmax(380px, 35%);
+  flex: 1;
+  overflow: hidden;
+}
+
+/* ═══ COMPANION WRAPPER ═══ */
+.companion-wrapper {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.companion-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.companion-main {
+  flex: 1 0 auto;
+  overflow-x: hidden;
+  padding: 16px 18px;
+  position: relative;
+}
+
+/* Hide the original context-panel inside companion — use inline context instead */
+.companion-content > .context-panel {
+  width: 100%;
+  background: var(--void);
+  border-top: 1px solid var(--border-dim);
+  border-left: none;
+  overflow-y: visible;
+  padding: 14px 18px;
+  flex-shrink: 0;
+}
+
+.companion-context h3 {
+  font-size: 0.82rem;
+  color: var(--gold);
+  margin-bottom: 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+/* ═══ TWO COLUMN LAYOUT (for panels like codex) ═══ */
+.two-col {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: 16px;
+}
+
+/* ═══ SEARCH ═══ */
+.search-input {
+  width: 100%;
+  padding: 8px 12px;
+  padding-left: 32px;
+  background: transparent;
+  border: 6px solid var(--stone);
+  border-image-source: var(--wc-input-frame);
+  border-image-slice: 16 fill;
+  border-image-repeat: stretch;
+  border-radius: 0;
+  color: var(--parchment);
+  font-size: 0.8rem;
+  outline: none;
+  transition: filter 0.2s;
+}
+
+.search-input:focus { filter: brightness(1.15); }
+.search-input::placeholder { color: var(--ash); }
+
+.search-wrapper {
+  position: relative;
+  margin-bottom: 12px;
+}
+
+.search-icon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+/* ═══ PARTICLES CANVAS ═══ */
+.particles-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.4;
+}
+
+/* Subtle parchment texture overlay for main content */
+.main-content::before,
+.companion-main::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(ellipse at 20% 50%, rgba(201, 168, 76, 0.02) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 20%, rgba(201, 168, 76, 0.015) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 80%, rgba(139, 42, 26, 0.01) 0%, transparent 50%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ═══ FOOTER ═══ */
+.app-footer {
+  height: 28px;
+  background: linear-gradient(180deg, #141008, #0c0a06);
+  border-top: 2px solid var(--gold-dim);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  font-size: 0.65rem;
+  color: var(--muted);
+  font-family: 'Fira Code', monospace;
+  z-index: 50;
+  position: relative;
+  overflow: hidden;
+}
+
+.app-footer::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(201, 168, 76, 0.03) 30%, rgba(201, 168, 76, 0.06) 50%, rgba(201, 168, 76, 0.03) 70%, transparent 100%);
+  background-size: 200% 100%;
+  animation: footer-breathe 8s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.footer-status { display: flex; align-items: center; gap: 6px; }
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--emerald);
+  animation: pulse-subtle 2s ease-in-out infinite;
+}
+
+.footer-api-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.footer-api-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.footer-api-dot.connected { background: var(--emerald); animation: pulse-subtle 2s ease-in-out infinite; }
+.footer-api-dot.disconnected { background: var(--crimson); }
+.footer-api-dot.streaming { background: var(--gold); animation: pulse-subtle 0.5s ease-in-out infinite; }

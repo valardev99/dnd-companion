@@ -1,0 +1,10 @@
+export { default as DashboardPanel } from './DashboardPanel.jsx';
+export { default as CharacterPanel } from './CharacterPanel.jsx';
+export { default as InventoryPanel } from './InventoryPanel.jsx';
+export { default as QuestPanel } from './QuestPanel.jsx';
+export { default as NPCPanel } from './NPCPanel.jsx';
+export { default as CombatPanel } from './CombatPanel.jsx';
+export { default as MapPanel } from './MapPanel.jsx';
+export { default as CodexPanel } from './CodexPanel.jsx';
+export { default as JournalPanel } from './JournalPanel.jsx';
+export { default as SettingsPanel } from './SettingsPanel.jsx';

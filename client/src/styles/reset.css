@@ -1,0 +1,112 @@
+/* ═══════════════════════════════════════════════════════════════
+   RESET & BASE — Element resets, fonts, scrollbar, typography
+   ═══════════════════════════════════════════════════════════════ */
+
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700;800;900&family=Cinzel+Decorative:wght@400;700;900&family=Crimson+Text:ital,wght@0,400;0,600;0,700;1,400&family=Fira+Code:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
+
+/* ═══ RESET & BASE ═══ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html {
+  font-size: 14px;
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  font-family: 'Crimson Text', serif;
+  background: var(--obsidian);
+  color: var(--parchment);
+  min-height: 100vh;
+  overflow: hidden;
+  line-height: 1.6;
+}
+
+/* Firefox scrollbar support */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--gold-dim) var(--void);
+}
+
+/* ═══ GLOBAL FOCUS STATES — Dark Fantasy gold outline ═══ */
+:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+  box-shadow: 0 0 8px rgba(201, 168, 76, 0.4);
+}
+
+/* ═══ REDUCED MOTION — Accessibility ═══ */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+#root {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  position: relative;
+}
+
+/* ═══ SCROLLBAR ═══ */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--void); }
+::-webkit-scrollbar-thumb {
+  background: var(--gold-dim);
+  border-radius: 1px;
+  border: 1px solid rgba(0,0,0,0.3);
+}
+::-webkit-scrollbar-thumb:hover { background: var(--gold); }
+
+/* ═══ TYPOGRAPHY ═══ */
+.font-title { font-family: 'Cinzel Decorative', 'Cinzel', serif; }
+.font-heading { font-family: 'Cinzel', serif; }
+.font-system { font-family: 'Fira Code', monospace; }
+.font-body { font-family: 'Crimson Text', serif; }
+.font-ui { font-family: 'Inter', sans-serif; }
+
+h1, h2, h3, h4 { font-family: 'Cinzel', serif; color: var(--gold); }
+h1 { font-size: 1.6rem; font-weight: 700; letter-spacing: 0.05em; }
+h2 { font-size: 1.25rem; font-weight: 600; letter-spacing: 0.03em; }
+h3 { font-size: 1.05rem; font-weight: 600; }
+h4 { font-size: 0.9rem; font-weight: 500; color: var(--gold-bright); }
+
+/* ═══ UTILITY ═══ */
+.text-gold { color: var(--gold); }
+.text-crimson { color: var(--crimson-bright); }
+.text-emerald { color: var(--emerald-bright); }
+.text-frost { color: var(--frost); }
+.text-arcane { color: var(--arcane-bright); }
+.text-muted { color: var(--muted); }
+.text-silver { color: var(--silver); }
+.text-parchment { color: var(--parchment); }
+.text-amber { color: var(--amber); }
+
+.flex { display: flex; }
+.flex-col { flex-direction: column; }
+.items-center { align-items: center; }
+.justify-between { justify-content: space-between; }
+.gap-2 { gap: 8px; }
+.gap-3 { gap: 12px; }
+.gap-4 { gap: 16px; }
+.mt-2 { margin-top: 8px; }
+.mt-3 { margin-top: 12px; }
+.mt-4 { margin-top: 16px; }
+.mb-2 { margin-bottom: 8px; }
+.mb-3 { margin-bottom: 12px; }
+.mb-4 { margin-bottom: 16px; }
+.p-3 { padding: 12px; }
+.w-full { width: 100%; }
+.hidden { display: none; }
+.truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Fantasy font class (for consistency with warcraftcn) */
+.fantasy {
+  font-family: 'Cinzel', serif;
+  line-height: 1.5;
+  letter-spacing: 0.5px;
+}

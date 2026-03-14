@@ -14,3 +14,18 @@ Thumbs.db
 # Never commit API keys
 .env
 *.key
+
+# Dependencies
+node_modules/
+
+# Database
+*.db
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# Build output
+dist/

@@ -1,0 +1,427 @@
+/* ═══════════════════════════════════════════════════════════════
+   COMPONENTS — Stat bars, badges, progress, settings, toggles,
+   condition tags, NPC avatars, API inputs, demo buttons
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ═══ STAT BARS ═══ */
+.stat-bar-container {
+  margin-bottom: 8px;
+}
+
+.stat-bar-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+  font-size: 0.75rem;
+}
+
+.stat-bar-label .name {
+  color: var(--silver);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 600;
+}
+
+.stat-bar-label .value {
+  font-family: 'Fira Code', monospace;
+  color: var(--parchment);
+  font-weight: 600;
+}
+
+.stat-bar {
+  height: 10px;
+  background: linear-gradient(180deg, rgba(0,0,0,0.6) 0%, var(--stone) 30%, var(--stone) 70%, rgba(0,0,0,0.4) 100%);
+  border: 1px solid var(--gold-dim);
+  border-radius: 1px;
+  overflow: hidden;
+  position: relative;
+}
+
+.stat-bar-fill {
+  height: 100%;
+  border-radius: 0;
+  transition: width 0.9s cubic-bezier(0.34, 1.56, 0.64, 1);
+  position: relative;
+}
+
+.stat-bar-fill.hp { background: linear-gradient(90deg, #8b1a1a, #c62828); }
+.stat-bar-fill.mp { background: linear-gradient(90deg, #0d47a1, #1565c0); }
+.stat-bar-fill.xp { background: linear-gradient(90deg, #8a7233, #c9a84c); }
+.stat-bar-fill.sanity { background: linear-gradient(90deg, #4a148c, #7b1fa2); }
+
+.stat-bar-fill::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 30%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1));
+}
+
+/* ═══ BADGES ═══ */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  border: 1px solid;
+}
+
+.badge.common { background: rgba(158,158,158,0.1); border-color: rgba(158,158,158,0.3); color: var(--rarity-common); }
+.badge.uncommon { background: rgba(76,175,80,0.1); border-color: rgba(76,175,80,0.3); color: var(--rarity-uncommon); }
+.badge.rare { background: rgba(33,150,243,0.1); border-color: rgba(33,150,243,0.3); color: var(--rarity-rare); }
+.badge.epic { background: rgba(156,39,176,0.1); border-color: rgba(156,39,176,0.3); color: var(--rarity-epic); }
+.badge.legendary { background: rgba(255,152,0,0.1); border-color: rgba(255,152,0,0.3); color: var(--rarity-legendary); }
+.badge.artifact { background: rgba(198,40,40,0.1); border-color: rgba(198,40,40,0.3); color: var(--rarity-artifact); }
+
+/* ═══ RELATIONSHIP STARS ═══ */
+.stars { display: flex; gap: 2px; }
+.star { color: var(--stone-light); font-size: 0.75rem; }
+.star.filled { color: var(--gold); }
+.star.half { color: var(--gold-dim); }
+
+/* ═══ PROGRESS BARS ═══ */
+.progress-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.progress-bar {
+  flex: 1;
+  height: 6px;
+  background: var(--stone);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: var(--gold);
+  transition: width 0.6s ease;
+}
+
+.progress-text {
+  font-family: 'Fira Code', monospace;
+  font-size: 0.7rem;
+  color: var(--muted);
+  min-width: 36px;
+  text-align: right;
+}
+
+/* ═══ CONDITION TAGS ═══ */
+.condition-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  margin-right: 4px;
+  margin-bottom: 4px;
+}
+
+.condition-tag.buff {
+  background: rgba(46, 125, 50, 0.15);
+  border: 1px solid rgba(46, 125, 50, 0.3);
+  color: var(--emerald-bright);
+}
+
+.condition-tag.debuff {
+  background: rgba(198, 40, 40, 0.15);
+  border: 1px solid rgba(198, 40, 40, 0.3);
+  color: var(--crimson-bright);
+}
+
+.condition-tag.neutral-tag {
+  background: rgba(79, 195, 247, 0.1);
+  border: 1px solid rgba(79, 195, 247, 0.3);
+  color: var(--frost);
+}
+
+/* ═══ SETTINGS ═══ */
+.setting-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border-dim);
+}
+
+.setting-label {
+  font-size: 0.85rem;
+  color: var(--parchment);
+}
+
+.setting-desc {
+  font-size: 0.7rem;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.toggle {
+  width: 44px;
+  height: 24px;
+  background: var(--stone);
+  border-radius: 11px;
+  position: relative;
+  cursor: pointer;
+  transition: background 0.2s;
+  border: 1px solid var(--border-dim);
+}
+
+.toggle:hover {
+  border-color: var(--gold-dim);
+  filter: brightness(1.15);
+}
+
+.toggle.active {
+  background: rgba(201, 168, 76, 0.3);
+  border-color: var(--gold-dim);
+}
+
+.toggle::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--muted);
+  transition: all 0.2s;
+}
+
+.toggle.active::after {
+  left: 22px;
+  background: var(--gold);
+}
+
+/* ═══ NPC AVATAR ═══ */
+.npc-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+  flex-shrink: 0;
+  border: 2px solid;
+}
+
+.npc-avatar.ally { border-color: var(--emerald); background: rgba(46,125,50,0.15); }
+.npc-avatar.neutral { border-color: var(--frost-dim); background: rgba(26,107,138,0.15); }
+.npc-avatar.hostile { border-color: var(--crimson); background: rgba(139,26,26,0.15); }
+.npc-avatar.rumored { border-color: var(--ash); background: rgba(58,58,85,0.15); }
+
+/* ═══ API SETTINGS ═══ */
+.api-input {
+  width: 100%;
+  padding: 8px 12px;
+  background: transparent;
+  border: 6px solid var(--stone);
+  border-image-source: var(--wc-input-frame);
+  border-image-slice: 16 fill;
+  border-image-repeat: stretch;
+  border-radius: 0;
+  color: var(--parchment);
+  font-family: 'Fira Code', monospace;
+  font-size: 0.78rem;
+  outline: none;
+  transition: filter 0.2s;
+}
+
+.api-input:focus { filter: brightness(1.15); }
+.api-input::placeholder { color: var(--ash); }
+
+.api-select {
+  width: 100%;
+  padding: 8px 12px;
+  background: transparent;
+  border: 6px solid var(--stone);
+  border-image-source: var(--wc-input-frame);
+  border-image-slice: 16 fill;
+  border-image-repeat: stretch;
+  border-radius: 0;
+  color: var(--parchment);
+  font-family: 'Fira Code', monospace;
+  font-size: 0.78rem;
+  outline: none;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%237a6f5e' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+}
+
+.api-select:hover {
+  filter: brightness(1.15);
+  border-color: var(--gold-dim);
+}
+
+.api-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-family: 'Fira Code', monospace;
+}
+
+.api-status.connected {
+  background: rgba(46, 125, 50, 0.1);
+  border: 1px solid rgba(46, 125, 50, 0.3);
+  color: var(--emerald-bright);
+}
+
+.api-status.disconnected {
+  background: rgba(198, 40, 40, 0.1);
+  border: 1px solid rgba(198, 40, 40, 0.3);
+  color: var(--crimson-bright);
+}
+
+.api-status.testing {
+  background: rgba(201, 168, 76, 0.1);
+  border: 1px solid rgba(201, 168, 76, 0.3);
+  color: var(--gold);
+}
+
+/* ═══ NOTIFICATION TRIGGER BUTTONS (Demo) ═══ */
+.demo-triggers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.demo-btn {
+  padding: 6px 14px;
+  background: transparent;
+  border: 5px solid var(--stone);
+  border-image-source: var(--wc-button-bg);
+  border-image-slice: 16 fill;
+  border-image-repeat: stretch;
+  border-radius: 0;
+  color: var(--parchment);
+  font-size: 0.7rem;
+  font-family: 'Cinzel', serif;
+  cursor: pointer;
+  transition: filter 0.2s, transform 0.1s;
+}
+
+.demo-btn:hover {
+  filter: brightness(1.2);
+  color: var(--gold-bright);
+}
+
+.demo-btn:active {
+  filter: brightness(0.85);
+  transform: scale(0.97);
+}
+
+/* ═══ Auth Modals ═══ */
+.auth-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
+}
+
+.auth-modal {
+  background: var(--deep-stone);
+  border: 2px solid var(--border-gold);
+  border-radius: 12px;
+  padding: 32px;
+  width: 100%;
+  max-width: 400px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.auth-modal h2 {
+  font-family: 'Cinzel', serif;
+  color: var(--gold-bright);
+  text-align: center;
+  margin-bottom: 24px;
+  font-size: 1.4rem;
+}
+
+.auth-field {
+  margin-bottom: 16px;
+}
+
+.auth-field label {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+
+.auth-field input {
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--obsidian);
+  border: 1px solid var(--border-dim);
+  border-radius: 6px;
+  color: var(--parchment);
+  font-size: 0.9rem;
+  font-family: 'Fira Code', monospace;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.auth-field input:focus {
+  border-color: var(--gold);
+}
+
+.auth-error {
+  color: var(--crimson-bright);
+  font-size: 0.78rem;
+  text-align: center;
+  margin-bottom: 12px;
+  font-family: 'Fira Code', monospace;
+}
+
+.auth-submit {
+  width: 100%;
+  padding: 12px;
+  background: linear-gradient(135deg, var(--gold-dim), var(--gold));
+  border: none;
+  border-radius: 6px;
+  color: var(--obsidian);
+  font-family: 'Cinzel', serif;
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.auth-submit:hover { opacity: 0.9; }
+.auth-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.auth-switch {
+  text-align: center;
+  margin-top: 16px;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.auth-switch a {
+  color: var(--gold);
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.auth-switch a:hover { text-decoration: underline; }

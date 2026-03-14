@@ -1,0 +1,88 @@
+/* ═══════════════════════════════════════════════════════════════
+   CSS CUSTOM PROPERTIES — Theme Variables
+   ═══════════════════════════════════════════════════════════════ */
+
+:root {
+  /* Core palette — warm leather & stone */
+  --obsidian: #0c0a06;
+  --void: #141008;
+  --deep-stone: #1a1209;
+  --stone: #2a2015;
+  --stone-light: #362a1c;
+  --ash: #6a5d4e;
+  --muted: #9a8d7a;
+  --silver: #b8a88e;
+  --parchment: #d4c5a0;
+  --parchment-light: #e8dcc0;
+  --bone: #f0e6d0;
+
+  /* Accent palette */
+  --crimson: #8b2a1a;
+  --crimson-bright: #c63828;
+  --crimson-glow: #ff4d3d;
+  --gold: #c9a84c;
+  --gold-bright: #f5d478;
+  --gold-dim: #a08a42;
+  --arcane: #1db954;
+  --arcane-bright: #33d96c;
+  --arcane-dim: #0d7a30;
+  --emerald: #2e7d32;
+  --emerald-bright: #4caf50;
+  --frost: #4fc3f7;
+  --frost-dim: #1a6b8a;
+  --amber: #ff8f00;
+  --amber-dim: #a05800;
+
+  /* Rarity colors — WoW authentic */
+  --rarity-common: #9e9e9e;
+  --rarity-uncommon: #4caf50;
+  --rarity-rare: #2196f3;
+  --rarity-epic: #9c27b0;
+  --rarity-legendary: #ff9800;
+  --rarity-artifact: #c62828;
+  --rarity-mythic: linear-gradient(135deg, #c62828, #ff9800, #f5d478, #9c27b0);
+
+  /* Functional */
+  --hp-bar: #c62828;
+  --hp-bg: #3a1515;
+  --mp-bar: #1565c0;
+  --mp-bg: #0d2744;
+  --xp-bar: #c9a84c;
+  --xp-bg: #3a3320;
+  --sanity-bar: #7b1fa2;
+  --sanity-bg: #2a1035;
+
+  /* Borders & Shadows */
+  --border-dim: rgba(201, 168, 76, 0.15);
+  --border-gold: rgba(201, 168, 76, 0.35);
+  --border-bright: rgba(201, 168, 76, 0.6);
+  --shadow-dark: 0 4px 20px rgba(0, 0, 0, 0.6);
+  --shadow-gold: 0 0 15px rgba(201, 168, 76, 0.15);
+  --shadow-arcane: 0 0 20px rgba(29, 185, 84, 0.2);
+  --shadow-crimson: 0 0 15px rgba(198, 40, 40, 0.2);
+
+  /* Z-index scale */
+  --z-bg: 0;
+  --z-content: 10;
+  --z-sidebar: 40;
+  --z-header: 50;
+  --z-context: 80;
+  --z-mobile-nav: 100;
+  --z-notification: 1000;
+  --z-modal: 2000;
+
+  /* Sizing */
+  --sidebar-width: 64px;
+  --sidebar-expanded: 220px;
+  --header-height: 56px;
+  --context-width: 340px;
+  --notification-width: 400px;
+
+  /* Warcraft border-image assets */
+  --wc-card-bg: url("https://www.warcraftcn.com/warcraftcn/card-bg.webp");
+  --wc-button-bg: url("https://www.warcraftcn.com/warcraftcn/button-bg.webp");
+  --wc-button-frame: url("https://www.warcraftcn.com/warcraftcn/button-bg-with-frame.webp");
+  --wc-input-frame: url("https://www.warcraftcn.com/warcraftcn/input-frame.webp");
+  --wc-dropdown-bg: url("https://www.warcraftcn.com/warcraftcn/dropdown-menu-bg.webp");
+  --wc-textarea-bg: url("https://www.warcraftcn.com/warcraftcn/textarea-bg.webp");
+}

@@ -1,0 +1,15 @@
+node_modules
+client/node_modules
+dist
+.git
+.claude
+*.pyc
+__pycache__
+.env
+.env.local
+.vscode
+.idea
+*.md
+!dm-engine.md
+!README.md
+test_tags.py

@@ -1,0 +1,178 @@
+/* ═══════════════════════════════════════════════════════════════
+   NOTIFICATIONS — System notifications, level up overlay
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ═══ SYSTEM NOTIFICATIONS ═══ */
+.notification-overlay {
+  position: fixed;
+  top: 70px;
+  right: 20px;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.system-notification {
+  width: var(--notification-width);
+  background: var(--obsidian);
+  border: 1px solid var(--gold-dim);
+  border-radius: 4px;
+  padding: 14px 16px;
+  font-family: 'Fira Code', monospace;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: var(--parchment);
+  pointer-events: auto;
+  /* Phase controlled by JS classes */
+  position: relative;
+  overflow: hidden;
+}
+
+.system-notification::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+}
+
+.system-notification::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--gold-dim), transparent);
+}
+
+.system-notification.critical {
+  border-color: var(--crimson);
+  box-shadow: 0 0 30px rgba(198, 40, 40, 0.3), inset 0 0 30px rgba(198, 40, 40, 0.05);
+}
+
+.system-notification.critical::before,
+.system-notification.critical::after {
+  background: linear-gradient(90deg, transparent, var(--crimson-bright), transparent);
+}
+
+.system-notification.arcane {
+  border-color: var(--arcane-dim);
+  box-shadow: 0 0 30px rgba(29, 185, 84, 0.2), inset 0 0 30px rgba(29, 185, 84, 0.05);
+}
+
+.system-notification.arcane::before,
+.system-notification.arcane::after {
+  background: linear-gradient(90deg, transparent, var(--arcane-bright), transparent);
+}
+
+.system-notification.success {
+  border-color: var(--emerald);
+  box-shadow: 0 0 20px rgba(46, 125, 50, 0.2);
+}
+
+.system-notification.success::before,
+.system-notification.success::after {
+  background: linear-gradient(90deg, transparent, var(--emerald-bright), transparent);
+}
+
+.notification-border {
+  font-family: 'Fira Code', monospace;
+  font-size: 0.7rem;
+  color: var(--gold-dim);
+  margin-bottom: 6px;
+  letter-spacing: 0.2em;
+}
+
+.notification-title {
+  font-weight: 700;
+  color: var(--gold-bright);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 0.8rem;
+}
+
+.notification-body { color: var(--parchment); }
+
+.notification-stat-change {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border-dim);
+}
+
+.stat-change-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.stat-change-name { color: var(--silver); }
+.stat-change-value.increase { color: var(--emerald-bright); }
+.stat-change-value.decrease { color: var(--crimson-bright); }
+
+/* ═══ NOTIFICATION ANIMATION CLASSES ═══ */
+@keyframes notif-phase-in {
+  from { opacity: 0; transform: translateX(40px) scale(0.95); }
+  to { opacity: 1; transform: translateX(0) scale(1); }
+}
+
+@keyframes notif-phase-out {
+  from { opacity: 1; transform: translateX(0) scale(1); }
+  to { opacity: 0; transform: translateX(40px) scale(0.95); }
+}
+
+.notif-entering { animation: notif-phase-in 1.5s ease-out forwards; }
+.notif-visible { opacity: 1; transform: translateX(0) scale(1); }
+.notif-exiting { animation: notif-phase-out 1.5s ease-in forwards; }
+
+/* ═══ LEVEL UP OVERLAY ═══ */
+.levelup-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.85);
+  animation: fade-in 0.5s ease;
+}
+
+.levelup-content {
+  text-align: center;
+  animation: levelup-entrance 0.8s ease-out;
+}
+
+.levelup-title {
+  font-family: 'Cinzel Decorative', serif;
+  font-size: 3rem;
+  color: var(--gold-bright);
+  text-shadow: 0 0 40px rgba(245, 212, 120, 0.5), 0 0 80px rgba(201, 168, 76, 0.3);
+  margin-bottom: 12px;
+  letter-spacing: 0.15em;
+}
+
+.levelup-level {
+  font-family: 'Cinzel', serif;
+  font-size: 1.5rem;
+  color: var(--parchment);
+  margin-bottom: 30px;
+}
+
+.levelup-rewards {
+  font-family: 'Fira Code', monospace;
+  font-size: 0.85rem;
+  color: var(--gold);
+  line-height: 2;
+}
+
+/* Notification-specific keyframes */
+@keyframes levelup-entrance {
+  0% { opacity: 0; transform: scale(0.8) translateY(20px); }
+  60% { transform: scale(1.05) translateY(-5px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}

@@ -1,0 +1,90 @@
+/* ═══════════════════════════════════════════════════════════════
+   HEADER — App header bar and header elements
+   ═══════════════════════════════════════════════════════════════ */
+
+.app-header {
+  height: var(--header-height);
+  background: linear-gradient(180deg, #2a1f10 0%, #1a1209 60%, #0c0a06 100%);
+  border-bottom: 2px solid var(--gold-dim);
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  gap: 16px;
+  position: relative;
+  z-index: 50;
+}
+
+.app-header::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, transparent 0%, var(--gold-dim) 15%, var(--gold) 35%, var(--gold-bright) 50%, var(--gold) 65%, var(--gold-dim) 85%, transparent 100%);
+  box-shadow: 0 0 8px rgba(201, 168, 76, 0.4);
+}
+
+.header-title {
+  font-family: 'Cinzel Decorative', serif;
+  font-size: 1.1rem;
+  color: var(--gold);
+  letter-spacing: 0.08em;
+  text-shadow: 0 0 20px rgba(201, 168, 76, 0.3);
+  white-space: nowrap;
+}
+
+.header-divider {
+  width: 1px;
+  height: 28px;
+  background: var(--border-gold);
+}
+
+.header-stat {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  color: var(--silver);
+}
+
+.header-stat .label { color: var(--muted); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; }
+.header-stat .value { color: var(--parchment); font-weight: 600; font-family: 'Fira Code', monospace; }
+
+.header-alerts {
+  margin-left: auto;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.alert-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 0.7rem;
+  font-family: 'Fira Code', monospace;
+  font-weight: 600;
+  border: 1px solid;
+  animation: pulse-subtle 3s ease-in-out infinite;
+}
+
+.alert-badge.danger {
+  background: rgba(198, 40, 40, 0.15);
+  border-color: rgba(198, 40, 40, 0.4);
+  color: var(--crimson-glow);
+}
+
+.alert-badge.warning {
+  background: rgba(255, 143, 0, 0.1);
+  border-color: rgba(255, 143, 0, 0.3);
+  color: var(--amber);
+}
+
+.alert-badge.arcane {
+  background: rgba(29, 185, 84, 0.1);
+  border-color: rgba(29, 185, 84, 0.3);
+  color: var(--arcane-bright);
+}
