@@ -3,7 +3,7 @@
 D&D Companion App — API Proxy Server
 Serves static files AND proxies API requests with SSE streaming.
 Uses OpenRouter as the LLM provider.
-No external dependencies — stdlib only.
+Includes PostgreSQL persistence for game saves.
 """
 
 import http.server
@@ -11,34 +11,90 @@ import socket
 import socketserver
 import json
 import os
+import re
 import ssl
 import urllib.request
 import urllib.error
+from datetime import datetime, timezone
 
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 PORT = int(os.environ.get("PORT", 3000))
 ALLOWED_ORIGIN = os.environ.get("ALLOWED_ORIGIN", "*")
 OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
+DATABASE_URL = os.environ.get("DATABASE_URL", "")
+
+
+# ═══════════════════════════════════════════════════════════════
+# DATABASE HELPERS
+# ═══════════════════════════════════════════════════════════════
+
+def get_db():
+    """Get a new database connection. Caller must close it."""
+    import psycopg2
+    import psycopg2.extras
+    conn = psycopg2.connect(DATABASE_URL)
+    conn.autocommit = True
+    return conn
+
+
+def init_db():
+    """Create the game_saves table if it doesn't exist."""
+    conn = get_db()
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS game_saves (
+                id SERIAL PRIMARY KEY,
+                save_name TEXT NOT NULL DEFAULT 'autosave',
+                game_data JSONB NOT NULL DEFAULT '{}',
+                chat_messages JSONB NOT NULL DEFAULT '[]',
+                world_bible TEXT DEFAULT '',
+                api_model TEXT DEFAULT 'claude-sonnet-4-20250514',
+                created_at TIMESTAMPTZ DEFAULT NOW(),
+                updated_at TIMESTAMPTZ DEFAULT NOW()
+            );
+        """)
+        cur.close()
+    finally:
+        conn.close()
+
+
+def _serialize_dt(dt):
+    """Convert a datetime to ISO format string."""
+    if isinstance(dt, datetime):
+        return dt.isoformat()
+    return str(dt) if dt else None
 
 
 class CompanionHandler(http.server.SimpleHTTPRequestHandler):
-    """Handles static files + API proxy."""
+    """Handles static files + API proxy + save/load endpoints."""
 
     def do_GET(self):
-        """Handle GET — health check + static files."""
+        """Handle GET — health check, saves API, + static files."""
         if self.path == "/health":
             self.send_response(200)
             self.send_header("Content-Type", "text/plain")
             self.end_headers()
             self.wfile.write(b"ok")
             return
+
+        # Save endpoints
+        if self.path == "/api/saves":
+            self._handle_list_saves()
+            return
+
+        save_match = re.match(r'^/api/saves/(\d+)$', self.path)
+        if save_match:
+            self._handle_load_save(int(save_match.group(1)))
+            return
+
         super().do_GET()
 
     def do_OPTIONS(self):
         """Handle CORS preflight."""
         self.send_response(200)
         self.send_header("Access-Control-Allow-Origin", ALLOWED_ORIGIN)
-        self.send_header("Access-Control-Allow-Methods", "POST, GET, OPTIONS")
+        self.send_header("Access-Control-Allow-Methods", "POST, GET, PUT, DELETE, OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "Content-Type")
         self.end_headers()
 
@@ -47,8 +103,186 @@ class CompanionHandler(http.server.SimpleHTTPRequestHandler):
             self._handle_chat()
         elif self.path == "/api/test":
             self._handle_test()
+        elif self.path == "/api/saves":
+            self._handle_create_save()
         else:
             self.send_error(404, "Not found")
+
+    def do_PUT(self):
+        save_match = re.match(r'^/api/saves/(\d+)$', self.path)
+        if save_match:
+            self._handle_update_save(int(save_match.group(1)))
+        else:
+            self.send_error(404, "Not found")
+
+    def do_DELETE(self):
+        save_match = re.match(r'^/api/saves/(\d+)$', self.path)
+        if save_match:
+            self._handle_delete_save(int(save_match.group(1)))
+        else:
+            self.send_error(404, "Not found")
+
+    # ─── Save/Load Handlers ───
+
+    def _handle_list_saves(self):
+        """List all saves with summary info."""
+        if not DATABASE_URL:
+            self._send_json_error(503, "Database not configured")
+            return
+        try:
+            import psycopg2.extras
+            conn = get_db()
+            try:
+                cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+                cur.execute("""
+                    SELECT id, save_name, updated_at,
+                           game_data->'campaign'->>'name' AS campaign_name
+                    FROM game_saves
+                    ORDER BY updated_at DESC
+                """)
+                rows = cur.fetchall()
+                cur.close()
+                saves = []
+                for row in rows:
+                    saves.append({
+                        "id": row["id"],
+                        "save_name": row["save_name"],
+                        "updated_at": _serialize_dt(row["updated_at"]),
+                        "campaign_name": row["campaign_name"],
+                    })
+                self._send_json(saves)
+            finally:
+                conn.close()
+        except Exception as e:
+            self._send_json_error(500, str(e))
+
+    def _handle_load_save(self, save_id):
+        """Load a specific save by ID."""
+        if not DATABASE_URL:
+            self._send_json_error(503, "Database not configured")
+            return
+        try:
+            import psycopg2.extras
+            conn = get_db()
+            try:
+                cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+                cur.execute("""
+                    SELECT id, save_name, game_data, chat_messages, world_bible, api_model
+                    FROM game_saves WHERE id = %s
+                """, (save_id,))
+                row = cur.fetchone()
+                cur.close()
+                if not row:
+                    self._send_json_error(404, "Save not found")
+                    return
+                self._send_json({
+                    "id": row["id"],
+                    "save_name": row["save_name"],
+                    "game_data": row["game_data"],
+                    "chat_messages": row["chat_messages"],
+                    "world_bible": row["world_bible"],
+                    "api_model": row["api_model"],
+                })
+            finally:
+                conn.close()
+        except Exception as e:
+            self._send_json_error(500, str(e))
+
+    def _handle_create_save(self):
+        """Create a new save."""
+        if not DATABASE_URL:
+            self._send_json_error(503, "Database not configured")
+            return
+        try:
+            import psycopg2.extras
+            data = self._read_json_body()
+            conn = get_db()
+            try:
+                cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+                cur.execute("""
+                    INSERT INTO game_saves (save_name, game_data, chat_messages, world_bible, api_model)
+                    VALUES (%s, %s, %s, %s, %s)
+                    RETURNING id, save_name, created_at
+                """, (
+                    data.get("save_name", "autosave"),
+                    json.dumps(data.get("game_data", {})),
+                    json.dumps(data.get("chat_messages", [])),
+                    data.get("world_bible", ""),
+                    data.get("api_model", "claude-sonnet-4-20250514"),
+                ))
+                row = cur.fetchone()
+                cur.close()
+                self._send_json({
+                    "id": row["id"],
+                    "save_name": row["save_name"],
+                    "created_at": _serialize_dt(row["created_at"]),
+                })
+            finally:
+                conn.close()
+        except Exception as e:
+            self._send_json_error(500, str(e))
+
+    def _handle_update_save(self, save_id):
+        """Update an existing save (autosave)."""
+        if not DATABASE_URL:
+            self._send_json_error(503, "Database not configured")
+            return
+        try:
+            import psycopg2.extras
+            data = self._read_json_body()
+            conn = get_db()
+            try:
+                cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+                cur.execute("""
+                    UPDATE game_saves
+                    SET game_data = %s,
+                        chat_messages = %s,
+                        world_bible = %s,
+                        api_model = %s,
+                        save_name = COALESCE(%s, save_name),
+                        updated_at = NOW()
+                    WHERE id = %s
+                    RETURNING id, updated_at
+                """, (
+                    json.dumps(data.get("game_data", {})),
+                    json.dumps(data.get("chat_messages", [])),
+                    data.get("world_bible", ""),
+                    data.get("api_model", "claude-sonnet-4-20250514"),
+                    data.get("save_name"),
+                    save_id,
+                ))
+                row = cur.fetchone()
+                cur.close()
+                if not row:
+                    self._send_json_error(404, "Save not found")
+                    return
+                self._send_json({
+                    "id": row["id"],
+                    "updated_at": _serialize_dt(row["updated_at"]),
+                })
+            finally:
+                conn.close()
+        except Exception as e:
+            self._send_json_error(500, str(e))
+
+    def _handle_delete_save(self, save_id):
+        """Delete a save."""
+        if not DATABASE_URL:
+            self._send_json_error(503, "Database not configured")
+            return
+        try:
+            conn = get_db()
+            try:
+                cur = conn.cursor()
+                cur.execute("DELETE FROM game_saves WHERE id = %s", (save_id,))
+                cur.close()
+                self._send_json({"status": "ok"})
+            finally:
+                conn.close()
+        except Exception as e:
+            self._send_json_error(500, str(e))
+
+    # ─── Existing Handlers ───
 
     def _read_json_body(self):
         length = int(self.headers.get("Content-Length", 0))
@@ -268,6 +502,17 @@ class ReusableTCPServer(socketserver.ThreadingTCPServer):
 
 
 if __name__ == "__main__":
+    # Initialize database if DATABASE_URL is present
+    if DATABASE_URL:
+        try:
+            init_db()
+            print("  [DB] PostgreSQL connected, game_saves table ready")
+        except Exception as e:
+            print(f"  [DB] Warning: Could not initialize database: {e}")
+            print("  [DB] Save/load endpoints will return errors")
+    else:
+        print("  [DB] No DATABASE_URL set — save/load disabled, using localStorage only")
+
     host = "0.0.0.0"
     with ReusableTCPServer((host, PORT), CompanionHandler) as httpd:
         print(f"\n  D&D Companion — Server Ready")

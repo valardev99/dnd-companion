@@ -475,6 +475,7 @@ function gameReducer(state, action) {
     // ─── Persistence ───
     case 'LOAD_GAME_STATE': return { ...state, ...action.payload };
     case 'SET_GAME_DATA': return { ...state, gameData: action.payload };
+    case 'SET_ACTIVE_SAVE': return { ...state, activeSaveId: action.payload };
 
     default: return state;
   }
@@ -503,6 +504,8 @@ const initialState = {
   rememberKey: false,
   // Opening scene trigger
   pendingOpening: false,
+  // Server persistence
+  activeSaveId: null,
 };
 
 function GameProvider({ children }) {
@@ -530,6 +533,24 @@ function GameProvider({ children }) {
       const savedTextSize = localStorage.getItem('dnd-chatTextSize');
       if (savedTextSize) dispatch({ type: 'SET_CHAT_TEXT_SIZE', payload: savedTextSize });
     } catch(e) {}
+
+    // Try to load from server (most recent save)
+    fetch('/api/saves').then(r => r.json()).then(saves => {
+      if (saves.length > 0) {
+        const latest = saves.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))[0];
+        fetch(`/api/saves/${latest.id}`).then(r => r.json()).then(save => {
+          if (save.game_data) dispatch({ type: 'SET_GAME_DATA', payload: save.game_data });
+          if (save.chat_messages) {
+            dispatch({ type: 'LOAD_GAME_STATE', payload: { chatMessages: save.chat_messages } });
+          }
+          if (save.world_bible) dispatch({ type: 'SET_WORLD_BIBLE', payload: save.world_bible });
+          if (save.api_model) dispatch({ type: 'SET_MODEL', payload: save.api_model });
+          dispatch({ type: 'SET_ACTIVE_SAVE', payload: latest.id });
+        }).catch(() => {});
+      }
+    }).catch(() => {
+      // Server saves unavailable, localStorage is the fallback
+    });
 
     // Load DM Engine
     fetch('/dm-engine.md').then(r => r.ok ? r.text() : '').then(t => {
@@ -564,6 +585,39 @@ function GameProvider({ children }) {
     }, 2000);
     return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
   }, [state.chatMessages, state.gameData, state.apiKey, state.model, state.apiProvider, state.worldBible, state.rememberKey]);
+
+  // Auto-save to server (separate, longer debounce)
+  const serverSaveTimer = useRef(null);
+  useEffect(() => {
+    if (serverSaveTimer.current) clearTimeout(serverSaveTimer.current);
+    serverSaveTimer.current = setTimeout(() => {
+      if (!state.gameData || !state.gameData.campaign) return;
+      const savePayload = {
+        save_name: state.gameData.campaign.name || 'autosave',
+        game_data: state.gameData,
+        chat_messages: state.chatMessages.slice(-50),
+        world_bible: state.worldBible || '',
+        api_model: state.model,
+      };
+
+      if (state.activeSaveId) {
+        fetch(`/api/saves/${state.activeSaveId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(savePayload),
+        }).catch(() => {});
+      } else {
+        fetch('/api/saves', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(savePayload),
+        }).then(r => r.json()).then(data => {
+          if (data.id) dispatch({ type: 'SET_ACTIVE_SAVE', payload: data.id });
+        }).catch(() => {});
+      }
+    }, 5000);
+    return () => { if (serverSaveTimer.current) clearTimeout(serverSaveTimer.current); };
+  }, [state.chatMessages, state.gameData, state.model, state.worldBible, state.activeSaveId]);
 
   return React.createElement(GameContext.Provider, { value: { state, dispatch } }, children);
 }
@@ -1131,6 +1185,7 @@ function CampaignWizard() {
     const worldBible = generateWorldBible(wizardData);
     const gameData = createBlankGameData(wizardData);
     dispatch({ type: 'START_NEW_CAMPAIGN', payload: { gameData, worldBible } });
+    dispatch({ type: 'SET_ACTIVE_SAVE', payload: null });
     localStorage.removeItem('dnd-chat');
     localStorage.removeItem('dnd-gameData');
     localStorage.removeItem('dnd-worldBible');
@@ -1143,6 +1198,7 @@ function CampaignWizard() {
     const gameData = createBlankGameData({ worldName: 'New Campaign', playerName: 'Chris' });
     const worldBible = `# Quick Start Campaign\n\nThe player has provided a freeform world description. Use it to establish the setting, create an opening scene, and begin character creation.\n\nBuild the world, NPCs, conflicts, and magic system from the player's description. Assign the player a character that fits naturally into the world they described. Start with the character creation process, then launch directly into the opening scene.\n`;
     dispatch({ type: 'START_NEW_CAMPAIGN', payload: { gameData, worldBible } });
+    dispatch({ type: 'SET_ACTIVE_SAVE', payload: null });
     localStorage.removeItem('dnd-chat');
     localStorage.removeItem('dnd-gameData');
     localStorage.removeItem('dnd-worldBible');
