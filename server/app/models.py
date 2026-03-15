@@ -268,6 +268,9 @@ class Friendship(Base):
 class FriendRequest(Base):
     """Friend request from one user to another."""
     __tablename__ = "friend_requests"
+    __table_args__ = (
+        UniqueConstraint("from_user_id", "to_user_id", name="uq_friend_request_pair"),
+    )
 
     id = Column(_UUID, primary_key=True, default=generate_uuid)
     from_user_id = Column(_UUID, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
@@ -291,6 +294,7 @@ class CampaignPlayer(Base):
     campaign_id = Column(_UUID, ForeignKey("campaigns.id", ondelete="CASCADE"), nullable=False, index=True)
     user_id = Column(_UUID, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     character_data = Column(JSON, nullable=True)
+    role = Column(String(20), default="player", nullable=False)  # player | spectator
     joined_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     campaign = relationship("Campaign", back_populates="players")
@@ -303,15 +307,15 @@ class CampaignInvite(Base):
 
     id = Column(_UUID, primary_key=True, default=generate_uuid)
     campaign_id = Column(_UUID, ForeignKey("campaigns.id", ondelete="CASCADE"), nullable=False, index=True)
-    invited_by_id = Column(_UUID, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
-    invited_user_id = Column(_UUID, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    from_user_id = Column(_UUID, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    to_user_id = Column(_UUID, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     status = Column(String(20), default="pending", nullable=False)  # pending | accepted | declined
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
     campaign = relationship("Campaign", back_populates="invites")
-    invited_by = relationship("User", foreign_keys=[invited_by_id], backref="sent_campaign_invites")
-    invited_user = relationship("User", foreign_keys=[invited_user_id], backref="received_campaign_invites")
+    from_user = relationship("User", foreign_keys=[from_user_id], backref="sent_campaign_invites")
+    to_user = relationship("User", foreign_keys=[to_user_id], backref="received_campaign_invites")
 
 
 class Notification(Base):
@@ -336,6 +340,7 @@ class ArchivedCampaign(Base):
 
     id = Column(_UUID, primary_key=True, default=generate_uuid)
     user_id = Column(_UUID, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    original_campaign_id = Column(String(36), nullable=True)  # Reference only, no FK (original deleted)
     name = Column(String(255), nullable=False)
     summary = Column(Text, nullable=True)
     ending = Column(Text, nullable=True)
