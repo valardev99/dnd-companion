@@ -8,28 +8,27 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const [token, setToken] = useState(null); // access token in memory (not localStorage!)
 
-  // Check auth on mount — try to get user from /auth/me
+  // Check auth on mount — try to refresh session from httpOnly cookie
   useEffect(() => {
     const checkAuth = async () => {
-      // If we have a refresh cookie, the server can validate it
       try {
-        const res = await fetch('/auth/me', {
-          credentials: 'include', // sends httpOnly cookie
-          headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+        const res = await fetch('/auth/refresh', {
+          method: 'POST',
+          credentials: 'include',
         });
         if (res.ok) {
-          const userData = await res.json();
-          setUser(userData);
-          connectSocket(token);
+          const data = await res.json();
+          setToken(data.access_token);
+          setUser(data.user);
+          connectSocket(data.access_token);
         }
       } catch (e) {
-        // Not authenticated
+        // Not authenticated — no valid refresh cookie
       } finally {
         setLoading(false);
       }
     };
-    if (token) checkAuth();
-    else setLoading(false);
+    checkAuth();
   }, []);
 
   const register = useCallback(async (email, username, password) => {

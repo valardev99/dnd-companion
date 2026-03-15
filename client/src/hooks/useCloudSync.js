@@ -40,6 +40,12 @@ export function useCloudSync(state, dispatch) {
         last_played_at: new Date().toISOString(),
       };
 
+      // Include campaign name from game data if available
+      const worldName = state?.gameData?.campaign?.worldName;
+      if (worldName && worldName !== 'New Campaign') {
+        payload.name = worldName;
+      }
+
       // Also include world_bible if present
       if (state?.worldBible) {
         payload.world_bible = state.worldBible;

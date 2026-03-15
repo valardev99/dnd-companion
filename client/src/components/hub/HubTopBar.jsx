@@ -18,7 +18,7 @@ function NotificationItem({ notification, onAction }) {
   return (
     <div className="notification-item">
       <div className="notification-item-icon">
-        {type === 'friend_request' ? '\uD83D\uDEE1\uFE0F' : type === 'campaign_invite' ? '\u2694\uFE0F' : '\uD83D\uDD14'}
+        {type === 'friend_request' ? '\u{1F6E1}\uFE0F' : type === 'campaign_invite' ? '\u2694\uFE0F' : '\u{1F514}'}
       </div>
       <div className="notification-item-body">
         <div className="notification-item-text">
@@ -70,22 +70,24 @@ function NotificationDropdown({ notifications, onAction, onClose }) {
 }
 
 export default function HubTopBar({ title }) {
-  const { user, authFetch } = useAuth();
+  const { user, token, authFetch } = useAuth();
   const [notifications, setNotifications] = useState([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [copied, setCopied] = useState(false);
 
   const fetchNotifications = useCallback(async () => {
+    if (!token) return; // Don't fetch until authenticated
     try {
-      const res = await authFetch('/api/notifications');
+      const res = await authFetch('/api/notifications/');
       if (res.ok) {
         const data = await res.json();
-        setNotifications(data.notifications || []);
+        // Backend returns a raw list, not {notifications: [...]}
+        setNotifications(Array.isArray(data) ? data : data.notifications || []);
       }
     } catch (e) {
       // Notifications endpoint may not exist yet
     }
-  }, [authFetch]);
+  }, [authFetch, token]);
 
   useEffect(() => {
     fetchNotifications();

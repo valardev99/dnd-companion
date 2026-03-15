@@ -262,22 +262,50 @@ const initialState = {
 
 function GameProvider({ children, campaignId }) {
   const [state, dispatch] = useReducer(gameReducer, initialState);
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, authFetch } = useAuth();
 
   // Cloud sync — backend-primary save, localStorage as fallback
-  const { syncNow, loadFromCloud } = useCloudSync(state, dispatch);
+  const { syncNow, loadFromCloud, setCampaignId } = useCloudSync(state, dispatch);
 
   // Set activeSaveId from route param
   useEffect(() => {
-    if (campaignId) {
+    if (campaignId && campaignId !== 'new') {
       dispatch({ type: 'SET_ACTIVE_SAVE', payload: campaignId });
     }
   }, [campaignId]);
 
-  // Load from backend on mount when we have a campaignId and are authenticated
+  // Create campaign on backend when id is "new", then update URL
+  const createdRef = useRef(false);
+  useEffect(() => {
+    if (campaignId !== 'new' || !isAuthenticated || createdRef.current) return;
+    createdRef.current = true;
+    (async () => {
+      try {
+        const res = await authFetch('/api/campaigns', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: 'New Campaign' }),
+        });
+        if (res.ok) {
+          const campaign = await res.json();
+          dispatch({ type: 'SET_ACTIVE_SAVE', payload: campaign.id });
+          setCampaignId(campaign.id);
+          // Replace URL without full navigation so state is preserved
+          window.history.replaceState(null, '', `/play/campaign/${campaign.id}`);
+          // Show the campaign wizard for new campaigns
+          dispatch({ type: 'SHOW_CAMPAIGN_WIZARD', payload: true });
+        }
+      } catch (e) {
+        console.warn('[GameProvider] Failed to create campaign:', e);
+        loadFromLocalStorage(dispatch);
+      }
+    })();
+  }, [campaignId, isAuthenticated, authFetch, setCampaignId]);
+
+  // Load from backend on mount when we have a real campaignId and are authenticated
   const cloudLoadedRef = useRef(false);
   useEffect(() => {
-    if (campaignId && isAuthenticated && !cloudLoadedRef.current) {
+    if (campaignId && campaignId !== 'new' && isAuthenticated && !cloudLoadedRef.current) {
       cloudLoadedRef.current = true;
       loadFromCloud(campaignId).then((loaded) => {
         if (!loaded) {
@@ -290,6 +318,15 @@ function GameProvider({ children, campaignId }) {
       loadFromLocalStorage(dispatch);
     }
   }, [campaignId, isAuthenticated, loadFromCloud]);
+
+  // Sync immediately when wizard completes (worldBible gets set)
+  const prevWorldBibleRef = useRef(state.worldBible);
+  useEffect(() => {
+    if (state.worldBible && !prevWorldBibleRef.current && state.activeSaveId) {
+      syncNow();
+    }
+    prevWorldBibleRef.current = state.worldBible;
+  }, [state.worldBible, state.activeSaveId, syncNow]);
 
   // Load DM Engine on mount
   useEffect(() => {

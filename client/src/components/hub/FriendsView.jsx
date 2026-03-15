@@ -20,7 +20,7 @@ function PresenceIndicator({ status, detail }) {
 }
 
 export default function FriendsView() {
-  const { user, authFetch } = useAuth();
+  const { user, token, authFetch } = useAuth();
   const [friends, setFriends] = useState([]);
   const [pendingIncoming, setPendingIncoming] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -28,18 +28,20 @@ export default function FriendsView() {
   const [copied, setCopied] = useState(false);
 
   const fetchFriends = useCallback(async () => {
+    if (!token) return; // Don't fetch until authenticated
     try {
-      const res = await authFetch('/api/friends');
+      const res = await authFetch('/api/friends/');
       if (res.ok) {
         const data = await res.json();
-        setFriends(data.friends || []);
-        setPendingIncoming(data.pending_incoming || []);
+        // Backend returns a raw list of friends, not {friends: [...]}
+        setFriends(Array.isArray(data) ? data : data.friends || []);
+        setPendingIncoming(Array.isArray(data) ? [] : data.pending_incoming || []);
       }
     } catch (e) {
       // API may not exist yet
     }
     setLoading(false);
-  }, [authFetch]);
+  }, [authFetch, token]);
 
   useEffect(() => {
     fetchFriends();
@@ -113,7 +115,7 @@ export default function FriendsView() {
         <div className="campaigns-loading">Searching the realm...</div>
       ) : friends.length === 0 ? (
         <div className="campaigns-empty">
-          <div className="campaigns-empty-icon">\uD83D\uDEE1\uFE0F</div>
+          <div className="campaigns-empty-icon">{'\uD83D\uDEE1\uFE0F'}</div>
           <h3>No allies yet</h3>
           <p>Share your friend code or add an ally to begin your fellowship.</p>
         </div>

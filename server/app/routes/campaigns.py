@@ -690,7 +690,7 @@ async def archive_campaign(
     campaign = await _get_owned_campaign(campaign_id, user, db)
 
     # Confirmation text must match campaign name exactly
-    if body.confirmation_text != campaign.name:
+    if body.confirmation_text.strip().lower() != (campaign.name or "").strip().lower():
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Confirmation text does not match campaign name.",

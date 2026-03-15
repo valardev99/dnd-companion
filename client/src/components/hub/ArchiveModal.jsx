@@ -19,7 +19,7 @@ export default function ArchiveModal({ campaign, onConfirm, onCancel }) {
       const res = await authFetch(`/api/campaigns/${campaign.id}/archive`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ summary, ending }),
+        body: JSON.stringify({ confirmation_text: confirmText, summary, ending }),
       });
       if (res.ok) {
         onConfirm();

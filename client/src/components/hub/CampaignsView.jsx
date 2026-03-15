@@ -19,7 +19,7 @@ export default function CampaignsView() {
       const res = await authFetch('/api/campaigns/hub');
       if (res.ok) {
         const data = await res.json();
-        setCampaigns(data.owned || []);
+        setCampaigns(data.active || data.owned || []);
         setJoined(data.joined || []);
         setArchived(data.archived || []);
       }
@@ -84,7 +84,7 @@ export default function CampaignsView() {
           {/* Active Campaigns */}
           {activeCampaigns.length === 0 && joined.length === 0 ? (
             <div className="campaigns-empty">
-              <div className="campaigns-empty-icon">\uD83D\uDCDC</div>
+              <div className="campaigns-empty-icon">{'\uD83D\uDCDC'}</div>
               <h3>No campaigns yet</h3>
               <p>Begin your first adventure by creating a new campaign.</p>
             </div>

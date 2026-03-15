@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext.jsx';
 
 export default function SettingsView() {
-  const { authFetch } = useAuth();
+  const { authFetch, storeApiKey } = useAuth();
 
   // Load from localStorage
   const [apiKey, setApiKey] = useState(() => localStorage.getItem('dnd-apiKey') || sessionStorage.getItem('dnd-apiKey') || '');
@@ -26,9 +26,13 @@ export default function SettingsView() {
         sessionStorage.setItem('dnd-apiKey', apiKey);
         localStorage.removeItem('dnd-apiKey');
       }
+      // Also store encrypted on server if key looks valid
+      if (apiKey.startsWith('sk-or-') && rememberKey) {
+        storeApiKey(apiKey).catch(() => {});
+      }
     }
     localStorage.setItem('dnd-rememberKey', rememberKey.toString());
-  }, [apiKey, rememberKey]);
+  }, [apiKey, rememberKey, storeApiKey]);
 
   useEffect(() => { localStorage.setItem('dnd-model', model); }, [model]);
   useEffect(() => { localStorage.setItem('dnd-xaiKey', xaiKey); }, [xaiKey]);
@@ -123,7 +127,7 @@ export default function SettingsView() {
         {testStatus && <div className="settings-test-result">{testStatus}</div>}
 
         <div className="settings-security-note">
-          <strong style={{ color: 'var(--gold)' }}>Security</strong> \u2014 Your key is sent only to OpenRouter's API via HTTPS.
+          <strong style={{ color: 'var(--gold)' }}>Security</strong> {'\u2014'} Your key is sent only to OpenRouter's API via HTTPS.
           It is {rememberKey ? 'stored in localStorage (persists across sessions)' : 'stored in sessionStorage (cleared when you close this tab)'}.
         </div>
       </div>
@@ -141,7 +145,7 @@ export default function SettingsView() {
             onChange={e => setXaiKey(e.target.value)}
           />
           <div className="settings-hint">
-            Get a key at <span style={{ color: 'var(--gold-dim)', fontFamily: "'Fira Code', monospace" }}>console.x.ai</span> \u2014 $25 free credits. Used for portrait art ($0.02/image).
+            Get a key at <span style={{ color: 'var(--gold-dim)', fontFamily: "'Fira Code', monospace" }}>console.x.ai</span> {'\u2014'} $25 free credits. Used for portrait art ($0.02/image).
           </div>
         </div>
         {xaiKey && (

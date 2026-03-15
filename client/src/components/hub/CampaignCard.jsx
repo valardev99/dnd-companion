@@ -65,7 +65,7 @@ export default function CampaignCard({ campaign, onClick, isSelected }) {
 
       {is_multiplayer && co_player_name && (
         <div className="campaign-card-multiplayer">
-          <span className="campaign-card-coop-icon">\uD83D\uDEE1\uFE0F</span>
+          <span className="campaign-card-coop-icon">{'\uD83D\uDEE1\uFE0F'}</span>
           <span>with {co_player_name}</span>
         </div>
       )}

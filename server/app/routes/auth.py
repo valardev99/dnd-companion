@@ -1,7 +1,7 @@
 """Authentication routes — register, login, logout, profile, API key storage."""
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Cookie, Depends, HTTPException, Request, Response, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError
 from pydantic import BaseModel, EmailStr
@@ -17,10 +17,13 @@ from app.auth import (
     hash_password,
     verify_password,
 )
+from app.config import DATABASE_URL
 from app.database import get_db
 from app.models import User
 
 router = APIRouter(tags=["auth"])
+
+_IS_LOCAL = DATABASE_URL.startswith("sqlite")
 
 bearer_scheme = HTTPBearer(auto_error=False)
 
@@ -49,7 +52,7 @@ class UserResponse(BaseModel):
     username: str
     is_admin: bool
     has_api_key: bool
-    friend_code: str | None = None
+    friend_code: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -107,7 +110,7 @@ async def register(body: RegisterRequest, response: Response, db: AsyncSession =
         key="refresh_token",
         value=refresh_token,
         httponly=True,
-        secure=True,
+        secure=not _IS_LOCAL,
         samesite="lax",
         max_age=30 * 24 * 60 * 60,  # 30 days
         path="/",
@@ -135,7 +138,7 @@ async def login(body: LoginRequest, response: Response, db: AsyncSession = Depen
         key="refresh_token",
         value=refresh_token,
         httponly=True,
-        secure=True,
+        secure=not _IS_LOCAL,
         samesite="lax",
         max_age=30 * 24 * 60 * 60,
         path="/",
@@ -153,11 +156,38 @@ async def logout(response: Response):
     response.delete_cookie(
         key="refresh_token",
         httponly=True,
-        secure=True,
+        secure=not _IS_LOCAL,
         samesite="lax",
         path="/",
     )
     return {"status": "ok", "message": "Logged out"}
+
+
+@router.post("/auth/refresh", response_model=AuthResponse)
+async def refresh(request: Request, response: Response, db: AsyncSession = Depends(get_db)):
+    """Exchange a valid refresh cookie for a new access token."""
+    refresh_token = request.cookies.get("refresh_token")
+    if not refresh_token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="No refresh token")
+    try:
+        payload = decode_token(refresh_token)
+    except JWTError:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token")
+    user_id = payload.get("sub")
+    if not user_id:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token payload")
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
+    access_token = create_access_token(str(user.id))
+    new_refresh = create_refresh_token(str(user.id))
+    response.set_cookie(
+        key="refresh_token", value=new_refresh,
+        httponly=True, secure=not _IS_LOCAL, samesite="lax",
+        max_age=30 * 24 * 60 * 60, path="/",
+    )
+    return AuthResponse(user=_user_response(user), access_token=access_token)
 
 
 @router.get("/auth/me", response_model=UserResponse)

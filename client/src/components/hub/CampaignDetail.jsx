@@ -74,7 +74,7 @@ export default function CampaignDetail({ campaign, onArchived, onBack }) {
   return (
     <div className="campaign-detail">
       <button className="campaign-detail-back" onClick={onBack}>
-        \u2190 Back to Campaigns
+        {'\u2190'} Back to Campaigns
       </button>
 
       <div className="campaign-detail-header">
