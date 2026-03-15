@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { connectSocket, disconnectSocket } from '../services/socketService.js';
 
 const AuthContext = createContext();
 
@@ -19,6 +20,7 @@ export function AuthProvider({ children }) {
         if (res.ok) {
           const userData = await res.json();
           setUser(userData);
+          connectSocket(token);
         }
       } catch (e) {
         // Not authenticated
@@ -44,6 +46,7 @@ export function AuthProvider({ children }) {
     const data = await res.json();
     setToken(data.access_token);
     setUser(data.user);
+    connectSocket(data.access_token);
     return data;
   }, []);
 
@@ -61,6 +64,7 @@ export function AuthProvider({ children }) {
     const data = await res.json();
     setToken(data.access_token);
     setUser(data.user);
+    connectSocket(data.access_token);
     return data;
   }, []);
 
@@ -68,6 +72,7 @@ export function AuthProvider({ children }) {
     try {
       await fetch('/auth/logout', { method: 'POST', credentials: 'include' });
     } catch (e) {}
+    disconnectSocket();
     setToken(null);
     setUser(null);
   }, []);

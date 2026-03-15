@@ -3,14 +3,32 @@ import { useGame } from '../../contexts/GameContext.jsx';
 import { sendChatMessage } from '../../services/chatService.js';
 import { formatDMText } from '../../utils/textFormatter.jsx';
 import SessionRating from '../shared/SessionRating.jsx';
+import { sendPlayerAction, onMultiplayerMessage } from '../../services/socketService.js';
 
-function ChatPanel() {
+function ChatPanel({ multiplayer, campaignId }) {
   const { state, dispatch } = useGame();
   const [input, setInput] = useState('');
   const [showScrollBtn, setShowScrollBtn] = useState(false);
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
   const textareaRef = useRef(null);
+
+  // Multiplayer: listen for other player's messages via WebSocket
+  useEffect(() => {
+    if (!multiplayer) return;
+    const cleanup = onMultiplayerMessage((data) => {
+      dispatch({
+        type: 'ADD_CHAT_MESSAGE',
+        payload: {
+          role: 'dm',
+          content: data.content,
+          playerName: data.player_name,
+          isMultiplayer: true,
+        },
+      });
+    });
+    return cleanup;
+  }, [multiplayer, dispatch]);
 
   // Auto-scroll to bottom on new messages (only if near bottom)
   useEffect(() => {
@@ -46,6 +64,10 @@ function ChatPanel() {
     const msg = input.trim();
     if (!msg || state.isStreaming) return;
     setInput('');
+    // In multiplayer, also broadcast the action to the other player via WebSocket
+    if (multiplayer && campaignId) {
+      sendPlayerAction(campaignId, msg);
+    }
     sendChatMessage(msg, state, dispatch);
   };
 
@@ -84,9 +106,14 @@ function ChatPanel() {
 
         {state.chatMessages.map((msg, i) => (
           <React.Fragment key={msg.id || i}>
-            <div className={`message-bubble ${msg.role === 'player' ? 'player' : msg.role === 'system' ? 'system-msg' : 'dm'}`}>
-              {msg.role === 'dm' && <div className="message-sender">The DM</div>}
-              {msg.role === 'player' && <div className="message-sender">You</div>}
+            <div className={`message-bubble ${msg.role === 'player' ? 'player' : msg.role === 'system' ? 'system-msg' : 'dm'} ${msg.isMultiplayer ? 'multiplayer-msg' : ''}`}>
+              {msg.role === 'dm' && !msg.playerName && <div className="message-sender">The DM</div>}
+              {msg.role === 'dm' && msg.playerName && (
+                <div className="message-sender multiplayer-sender" style={{ color: 'var(--frost)' }}>
+                  {msg.playerName}
+                </div>
+              )}
+              {msg.role === 'player' && <div className="message-sender">{multiplayer && msg.playerName ? msg.playerName : 'You'}</div>}
               {msg.role === 'system' && <div className="message-sender">System</div>}
               <div className="message-content">{msg.role === 'dm' ? formatDMText(msg.content) : (msg.content || (state.isStreaming && i === state.chatMessages.length - 1 ? '' : ''))}</div>
             </div>

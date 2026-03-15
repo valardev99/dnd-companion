@@ -82,6 +82,23 @@ Rules:
 
 The best campaigns emerge when players feel FREE to do anything and TERRIFIED of what might happen when they do.`;
 
+export function buildMultiplayerContext(player1, player2) {
+  return `
+## MULTIPLAYER SESSION
+Two adventurers are playing together. Address them by name.
+
+**Player 1:** ${player1.name} — ${player1.race} ${player1.class} (Level ${player1.level})
+**Player 2:** ${player2.name} — ${player2.race} ${player2.class} (Level ${player2.level})
+
+Rules:
+- When one player acts, describe the outcome and give the other player a chance to react
+- Both players see all DM narration
+- Combat: alternate turns between players, then enemies
+- Reference both characters in scene descriptions
+- Each player's actions affect the shared world
+`;
+}
+
 export function buildSystemPrompt(dmEngine, gameData, worldBible, dmStyle) {
   const worldState = JSON.stringify({
     campaign: gameData.campaign,

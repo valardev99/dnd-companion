@@ -1559,3 +1559,372 @@
     font-size: 1.3rem;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   LOBBY PAGE — Multiplayer Pre-Game Lobby
+   ═══════════════════════════════════════════════════════════════ */
+
+.lobby-page {
+  min-height: 100vh;
+  background: var(--obsidian);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.lobby-container {
+  max-width: 720px;
+  width: 100%;
+}
+
+.lobby-header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.lobby-back-btn {
+  display: inline-block;
+  font-family: 'Crimson Text', serif;
+  font-size: 0.85rem;
+  color: var(--gold);
+  text-decoration: none;
+  margin-bottom: 16px;
+  transition: color 0.2s;
+}
+
+.lobby-back-btn:hover {
+  color: var(--gold-bright);
+}
+
+.lobby-title {
+  font-family: 'Cinzel', serif;
+  font-size: 1.8rem;
+  color: var(--gold);
+  margin: 0 0 8px;
+  text-shadow: 0 0 20px rgba(201, 168, 76, 0.3);
+}
+
+.lobby-subtitle {
+  font-family: 'Crimson Text', serif;
+  font-size: 1rem;
+  color: var(--muted);
+  margin: 0;
+}
+
+/* Recap */
+.lobby-recap {
+  background: var(--stone);
+  border: 1px solid var(--border-dim);
+  border-radius: 8px;
+  padding: 20px 24px;
+  margin-bottom: 24px;
+}
+
+.lobby-recap-title {
+  font-family: 'Cinzel', serif;
+  font-size: 0.9rem;
+  color: var(--gold);
+  margin: 0 0 10px;
+}
+
+.lobby-recap-text {
+  font-family: 'Crimson Text', serif;
+  font-size: 0.95rem;
+  color: var(--silver);
+  line-height: 1.7;
+  margin: 0;
+  font-style: italic;
+}
+
+/* Section Title */
+.lobby-section-title {
+  font-family: 'Cinzel', serif;
+  font-size: 1rem;
+  color: var(--gold);
+  margin: 0 0 16px;
+  text-align: center;
+}
+
+/* Player Grid */
+.lobby-player-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.lobby-player-card {
+  background: var(--stone);
+  border: 1px solid var(--border-dim);
+  border-radius: 8px;
+  padding: 20px;
+  text-align: center;
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+.lobby-player-card.ready {
+  border-color: var(--emerald);
+  box-shadow: 0 0 12px rgba(46, 125, 50, 0.2);
+}
+
+.lobby-player-card.empty {
+  border-style: dashed;
+  opacity: 0.5;
+}
+
+.lobby-player-badge {
+  display: inline-block;
+  font-family: 'Fira Code', monospace;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--gold);
+  background: rgba(201, 168, 76, 0.1);
+  padding: 2px 10px;
+  border-radius: 4px;
+  margin-bottom: 10px;
+}
+
+.lobby-player-name {
+  font-family: 'Cinzel', serif;
+  font-size: 1.1rem;
+  color: var(--parchment);
+  margin-bottom: 12px;
+}
+
+.lobby-character-info {
+  margin-bottom: 12px;
+}
+
+.lobby-char-name {
+  font-family: 'Cinzel', serif;
+  font-size: 0.95rem;
+  color: var(--gold-bright);
+  margin-bottom: 4px;
+}
+
+.lobby-char-details {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.lobby-char-details span {
+  font-family: 'Fira Code', monospace;
+  font-size: 0.7rem;
+  color: var(--muted);
+  background: rgba(201, 168, 76, 0.06);
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.lobby-no-character {
+  font-family: 'Crimson Text', serif;
+  font-size: 0.85rem;
+  color: var(--muted);
+  font-style: italic;
+  margin-bottom: 12px;
+}
+
+.lobby-ready-status {
+  margin-top: 8px;
+}
+
+.lobby-ready-badge {
+  font-family: 'Fira Code', monospace;
+  font-size: 0.72rem;
+  color: var(--emerald-bright);
+  background: rgba(46, 125, 50, 0.12);
+  padding: 3px 12px;
+  border-radius: 4px;
+}
+
+.lobby-not-ready-badge {
+  font-family: 'Fira Code', monospace;
+  font-size: 0.72rem;
+  color: var(--muted);
+  background: rgba(154, 141, 122, 0.08);
+  padding: 3px 12px;
+  border-radius: 4px;
+}
+
+/* Actions */
+.lobby-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.lobby-ready-btn {
+  font-family: 'Cinzel', serif;
+  font-size: 0.9rem;
+  color: var(--parchment);
+  background: linear-gradient(135deg, var(--emerald), var(--arcane-dim));
+  border: 1px solid var(--emerald);
+  padding: 12px 32px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.lobby-ready-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, var(--emerald-bright), var(--arcane));
+  box-shadow: 0 0 15px rgba(29, 185, 84, 0.3);
+}
+
+.lobby-ready-btn.confirmed {
+  background: var(--stone);
+  border-color: var(--emerald);
+  color: var(--emerald-bright);
+  cursor: default;
+}
+
+.lobby-ready-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.lobby-launch-btn {
+  font-family: 'Cinzel', serif;
+  font-size: 0.9rem;
+  color: var(--obsidian);
+  background: linear-gradient(135deg, var(--gold), var(--gold-bright));
+  border: 1px solid var(--gold);
+  padding: 12px 32px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.lobby-launch-btn:hover:not(:disabled) {
+  box-shadow: 0 0 20px rgba(201, 168, 76, 0.4);
+}
+
+.lobby-launch-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Loading / Error States */
+.lobby-loading, .lobby-error {
+  text-align: center;
+  padding: 48px 24px;
+}
+
+.lobby-loading-icon {
+  font-size: 2.5rem;
+  margin-bottom: 16px;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.lobby-loading p, .lobby-error p {
+  font-family: 'Crimson Text', serif;
+  color: var(--silver);
+  font-size: 1rem;
+}
+
+.lobby-error h2 {
+  font-family: 'Cinzel', serif;
+  color: var(--crimson-bright);
+  margin-bottom: 12px;
+}
+
+.lobby-back-link {
+  display: inline-block;
+  margin-top: 16px;
+  font-family: 'Cinzel', serif;
+  font-size: 0.85rem;
+  color: var(--gold);
+  text-decoration: none;
+  padding: 8px 20px;
+  border: 1px solid var(--border-dim);
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.lobby-back-link:hover {
+  border-color: var(--gold);
+  color: var(--gold-bright);
+}
+
+/* Character Builder in Lobby */
+.lobby-character-builder {
+  margin-bottom: 24px;
+}
+
+.character-builder {
+  background: var(--stone);
+  border: 1px solid var(--border-dim);
+  border-radius: 8px;
+  padding: 24px;
+}
+
+.character-builder-title {
+  font-family: 'Cinzel', serif;
+  font-size: 1.1rem;
+  color: var(--gold);
+  margin: 0 0 16px;
+  text-align: center;
+}
+
+.character-builder-briefing {
+  background: rgba(201, 168, 76, 0.06);
+  border: 1px solid var(--border-dim);
+  border-radius: 6px;
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+.character-builder-briefing-title {
+  font-family: 'Cinzel', serif;
+  font-size: 0.85rem;
+  color: var(--gold);
+  margin: 0 0 8px;
+}
+
+.character-builder-briefing-details {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.character-builder-tag {
+  font-family: 'Fira Code', monospace;
+  font-size: 0.68rem;
+  color: var(--gold);
+  background: rgba(201, 168, 76, 0.1);
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.character-builder-briefing-text {
+  font-family: 'Crimson Text', serif;
+  font-size: 0.9rem;
+  color: var(--silver);
+  line-height: 1.6;
+  margin: 0;
+  font-style: italic;
+}
+
+.character-builder-error {
+  font-family: 'Crimson Text', serif;
+  font-size: 0.85rem;
+  color: var(--crimson-bright);
+  margin-top: 8px;
+  text-align: center;
+}
+
+/* Multiplayer chat message styling */
+.multiplayer-sender {
+  font-weight: 700;
+}
+
+@media (max-width: 600px) {
+  .lobby-player-grid {
+    grid-template-columns: 1fr;
+  }
+}
