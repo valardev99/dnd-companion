@@ -735,27 +735,38 @@ async def archive_campaign(
 # ---------------------------------------------------------------------------
 # Campaign invite endpoint
 # ---------------------------------------------------------------------------
+class CampaignInviteByCodeRequest(BaseModel):
+    friend_code: str
+
+
 @router.post("/campaigns/{campaign_id}/invite")
 async def invite_to_campaign(
     campaign_id: str,
-    body: CampaignInviteRequest,
+    body: CampaignInviteByCodeRequest,
     user=Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Send a campaign invite to a friend."""
+    """Send a campaign invite to a friend by friend code."""
     campaign = await _get_owned_campaign(campaign_id, user, db)
 
-    # Verify the friend exists
-    friend_result = await db.execute(select(User).where(User.id == body.friend_id))
+    # Look up friend by friend code
+    friend_result = await db.execute(
+        select(User).where(User.friend_code == body.friend_code.strip().upper())
+    )
     friend = friend_result.scalar_one_or_none()
     if friend is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No user found with that friend code")
+
+    if str(friend.id) == str(user.id):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="You cannot invite yourself")
+
+    friend_id = str(friend.id)
 
     # Check for existing pending invite
     existing = await db.execute(
         select(CampaignInvite).where(
             CampaignInvite.campaign_id == campaign_id,
-            CampaignInvite.to_user_id == body.friend_id,
+            CampaignInvite.to_user_id == friend_id,
             CampaignInvite.status == "pending",
         )
     )
@@ -768,16 +779,16 @@ async def invite_to_campaign(
     invite = CampaignInvite(
         campaign_id=str(campaign.id),
         from_user_id=str(user.id),
-        to_user_id=body.friend_id,
+        to_user_id=friend_id,
     )
     db.add(invite)
     await db.flush()
 
     # Create notification for the invited user
     notification = Notification(
-        user_id=body.friend_id,
+        user_id=friend_id,
         type="campaign_invite",
-        title=f"Campaign invite from {user.username}",
+        title=f"Campaign invite from {user.display_name or user.username}",
         body=f"You've been invited to join \"{campaign.name}\".",
         data={"invite_id": str(invite.id), "campaign_id": str(campaign.id)},
     )

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 
 /**
  * Feedback widget — bottom-right floating button that expands into a panel.
+ * On mobile, positions above the bottom nav bar.
  */
 function FeedbackWidget() {
   const [isOpen, setIsOpen] = useState(false);
@@ -11,9 +12,9 @@ function FeedbackWidget() {
   const [sent, setSent] = useState(false);
 
   const categories = [
-    { id: 'idea', label: '💡 Idea', desc: 'Feature request or suggestion' },
-    { id: 'bug', label: '🐛 Bug', desc: 'Something broken or unexpected' },
-    { id: 'question', label: '❓ Question', desc: 'Need help or clarification' },
+    { id: 'idea', label: '\uD83D\uDCA1 Idea', desc: 'Feature request or suggestion' },
+    { id: 'bug', label: '\uD83D\uDC1B Bug', desc: 'Something broken or unexpected' },
+    { id: 'question', label: '\u2753 Question', desc: 'Need help or clarification' },
   ];
 
   const submit = async () => {
@@ -39,8 +40,9 @@ function FeedbackWidget() {
 
   return (
     <>
-      {/* Floating toggle button — bottom right */}
+      {/* Floating toggle button */}
       <button
+        className="feedback-fab"
         onClick={() => setIsOpen(!isOpen)}
         title="Send Feedback"
         style={{
@@ -63,12 +65,13 @@ function FeedbackWidget() {
           boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
         }}
       >
-        {isOpen ? '✕' : '💬'}
+        {isOpen ? '\u2715' : '\uD83D\uDCAC'}
       </button>
 
       {/* Expandable panel — above the button */}
       {isOpen && (
         <div
+          className="feedback-panel"
           style={{
             position: 'fixed',
             right: 20,
@@ -156,7 +159,7 @@ function FeedbackWidget() {
               opacity: !message.trim() && !sent ? 0.5 : 1,
             }}
           >
-            {sent ? '✓ Sent!' : sending ? 'Sending...' : 'Submit'}
+            {sent ? '\u2713 Sent!' : sending ? 'Sending...' : 'Submit'}
           </button>
         </div>
       )}

@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useGame } from './contexts/GameContext.jsx';
 
 // Layout
-import { Header, Sidebar, Footer } from './components/layout';
+import { Header, Sidebar, Footer, MobileNav } from './components/layout';
 
 // Effects
 import { ParticleBackground, NotificationOverlay, LevelUpOverlay } from './components/effects';
@@ -53,6 +53,9 @@ function App() {
     settings: SettingsPanel,
   };
 
+  // Mobile view toggle: 'chat' or 'companion'
+  const [mobileView, setMobileView] = useState('chat');
+
   const [panelFade, setPanelFade] = useState('panel-active');
   const [ctxFade, setCtxFade] = useState('ctx-active');
   const [renderedPanel, setRenderedPanel] = useState(state.activePanel);
@@ -82,9 +85,9 @@ function App() {
       <ParticleBackground />
       <Header />
       <div className={`two-screen-layout ${state.gameData.combat.active ? 'combat-active' : ''}`}>
-        <ChatPanel />
+        <ChatPanel className={mobileView !== 'chat' ? 'hidden-mobile' : ''} />
         <Sidebar />
-        <div className="companion-wrapper">
+        <div className={`companion-wrapper ${mobileView !== 'companion' ? 'hidden-mobile' : ''}`}>
           <div className="companion-content" style={{ zoom: (parseInt(state.companionTextSize || '100', 10) / 100) || 1 }}>
             <main className={`companion-main ${panelFade}`}>
               <RenderedPanel />
@@ -96,6 +99,7 @@ function App() {
         </div>
       </div>
       <Footer />
+      <MobileNav activeView={mobileView} onViewChange={setMobileView} />
       <NotificationOverlay />
       <LevelUpOverlay />
       {state.showCampaignWizard && <CampaignWizard />}

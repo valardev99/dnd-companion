@@ -5,7 +5,7 @@ import { formatDMText } from '../../utils/textFormatter.jsx';
 import SessionRating from '../shared/SessionRating.jsx';
 import { sendPlayerAction, onMultiplayerMessage } from '../../services/socketService.js';
 
-function ChatPanel({ multiplayer, campaignId }) {
+function ChatPanel({ multiplayer, campaignId, className }) {
   const { state, dispatch } = useGame();
   const [input, setInput] = useState('');
   const [showScrollBtn, setShowScrollBtn] = useState(false);
@@ -82,7 +82,7 @@ function ChatPanel({ multiplayer, campaignId }) {
   const chatTextVar = textSizeMap[state.chatTextSize || 'medium'] || '0.95rem';
 
   return (
-    <div className="chat-panel" style={{ '--chat-text-size': chatTextVar }}>
+    <div className={`chat-panel ${className || ''}`} style={{ '--chat-text-size': chatTextVar }}>
       <div className="chat-messages" ref={messagesContainerRef}>
         {state.chatMessages.length === 0 && (
           <div className="chat-welcome">

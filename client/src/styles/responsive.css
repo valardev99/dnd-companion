@@ -157,10 +157,13 @@
     position: relative;
   }
 
-  /* --- Chat panel: full screen --- */
+  /* --- Chat panel: full screen with room for bottom nav --- */
   .chat-panel {
     position: absolute;
-    inset: 0;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 56px;
     z-index: 10;
     border-right: none;
     transition: transform 0.3s ease;
@@ -171,10 +174,13 @@
     pointer-events: none;
   }
 
-  /* --- Companion wrapper: full screen overlay --- */
+  /* --- Companion wrapper: full screen overlay with room for bottom nav --- */
   .companion-wrapper {
     position: absolute;
-    inset: 0;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 56px;
     z-index: 10;
     background: var(--obsidian);
     transition: transform 0.3s ease;
@@ -782,6 +788,18 @@
     gap: 6px;
   }
 
+  /* --- Feedback FAB: push above mobile nav --- */
+  .feedback-fab {
+    bottom: 72px !important;
+  }
+
+  .feedback-panel {
+    bottom: 128px !important;
+    right: 12px !important;
+    width: calc(100vw - 24px) !important;
+    max-width: 360px !important;
+  }
+
   /* --- Body: add bottom padding for mobile nav --- */
   body {
     padding-bottom: env(safe-area-inset-bottom, 0px);
@@ -912,8 +930,9 @@
   bottom: 0;
   left: 0;
   right: 0;
-  background: var(--obsidian);
-  border-top: 1px solid var(--border-gold);
+  background: var(--stone);
+  border-top: 2px solid var(--border-gold);
+  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.6);
   z-index: 100;
   padding: 6px 0 env(safe-area-inset-bottom, 0);
 }
@@ -937,7 +956,7 @@
   min-height: 48px;
   justify-content: center;
   cursor: pointer;
-  color: var(--muted);
+  color: var(--silver);
   transition: color 0.2s;
   -webkit-tap-highlight-color: transparent;
   user-select: none;

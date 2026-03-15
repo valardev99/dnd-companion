@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../../contexts/AuthContext.jsx';
 
 function NotificationItem({ notification, onAction }) {
-  const { type, message, from_username, campaign_name, id, created_at } = notification;
+  // Backend returns: { id, type, title, body, data, read, created_at }
+  const { type, title, body, data, id, created_at } = notification;
 
   const timeAgo = (dateStr) => {
     const diff = Date.now() - new Date(dateStr).getTime();
@@ -15,22 +16,22 @@ function NotificationItem({ notification, onAction }) {
     return `${days}d ago`;
   };
 
+  // Determine if this notification has actionable buttons
+  const isActionable = type === 'friend_request' || type === 'campaign_invite';
+
   return (
-    <div className="notification-item">
+    <div className={`notification-item ${notification.read ? 'read' : ''}`}>
       <div className="notification-item-icon">
-        {type === 'friend_request' ? '\u{1F6E1}\uFE0F' : type === 'campaign_invite' ? '\u2694\uFE0F' : '\u{1F514}'}
+        {type === 'friend_request' ? '\u{1F6E1}\uFE0F' : type === 'campaign_invite' ? '\u2694\uFE0F' : type === 'friend_request_accepted' ? '\u{1F91D}' : '\u{1F514}'}
       </div>
       <div className="notification-item-body">
-        <div className="notification-item-text">
-          {type === 'friend_request' && <><strong>{from_username}</strong> wants to be your ally</>}
-          {type === 'campaign_invite' && <><strong>{from_username}</strong> invited you to <strong>{campaign_name}</strong></>}
-          {type === 'generic' && message}
-        </div>
+        <div className="notification-item-title">{title}</div>
+        {body && <div className="notification-item-text">{body}</div>}
         <div className="notification-item-time">{timeAgo(created_at)}</div>
-        {(type === 'friend_request' || type === 'campaign_invite') && (
+        {isActionable && (
           <div className="notification-item-actions">
-            <button className="notif-btn notif-accept" onClick={() => onAction(id, 'accept')}>Accept</button>
-            <button className="notif-btn notif-decline" onClick={() => onAction(id, 'decline')}>Decline</button>
+            <button className="notif-btn notif-accept" onClick={() => onAction(notification, 'accept')}>Accept</button>
+            <button className="notif-btn notif-decline" onClick={() => onAction(notification, 'decline')}>Decline</button>
           </div>
         )}
       </div>
@@ -76,12 +77,11 @@ export default function HubTopBar({ title }) {
   const [copied, setCopied] = useState(false);
 
   const fetchNotifications = useCallback(async () => {
-    if (!token) return; // Don't fetch until authenticated
+    if (!token) return;
     try {
       const res = await authFetch('/api/notifications/');
       if (res.ok) {
         const data = await res.json();
-        // Backend returns a raw list, not {notifications: [...]}
         setNotifications(Array.isArray(data) ? data : data.notifications || []);
       }
     } catch (e) {
@@ -95,14 +95,32 @@ export default function HubTopBar({ title }) {
     return () => clearInterval(interval);
   }, [fetchNotifications]);
 
-  const handleAction = async (notifId, action) => {
+  const handleAction = async (notification, action) => {
+    const { id, type, data } = notification;
     try {
-      await authFetch(`/api/notifications/${notifId}/${action}`, { method: 'POST' });
-      setNotifications(prev => prev.filter(n => n.id !== notifId));
-    } catch (e) {}
+      if (type === 'friend_request' && data?.friend_request_id) {
+        // Accept/decline the friend request
+        const endpoint = action === 'accept'
+          ? `/api/friends/request/${data.friend_request_id}/accept`
+          : `/api/friends/request/${data.friend_request_id}/decline`;
+        await authFetch(endpoint, { method: 'POST' });
+      } else if (type === 'campaign_invite' && data?.invite_id) {
+        // Accept/decline the campaign invite
+        const endpoint = action === 'accept'
+          ? `/api/campaigns/invites/${data.invite_id}/accept`
+          : `/api/campaigns/invites/${data.invite_id}/decline`;
+        await authFetch(endpoint, { method: 'POST' });
+      }
+      // Mark notification as read
+      await authFetch(`/api/notifications/${id}/read`, { method: 'POST' });
+      // Remove from list
+      setNotifications(prev => prev.filter(n => n.id !== id));
+    } catch (e) {
+      // Silently fail
+    }
   };
 
-  const unreadCount = notifications.length;
+  const unreadCount = notifications.filter(n => !n.read).length;
 
   const copyFriendCode = () => {
     if (user?.friend_code) {
@@ -143,7 +161,7 @@ export default function HubTopBar({ title }) {
 
         {/* Profile + Friend Code */}
         <div className="hub-profile">
-          <span className="hub-profile-name">{user?.username || 'Adventurer'}</span>
+          <span className="hub-profile-name">{user?.display_name || user?.username || 'Adventurer'}</span>
           {user?.friend_code && (
             <button className="hub-friend-code" onClick={copyFriendCode} title="Copy friend code">
               <span className="hub-friend-code-value">#{user.friend_code}</span>
