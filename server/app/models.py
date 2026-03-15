@@ -1,4 +1,5 @@
 """SQLAlchemy models for Wanderlore AI."""
+import secrets
 import uuid
 from datetime import datetime
 
@@ -31,6 +32,12 @@ def generate_uuid() -> str:
     return str(uuid.uuid4())
 
 
+def generate_friend_code() -> str:
+    """Generate a unique 8-character friend code (no ambiguous chars 0/O/1/I)."""
+    alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+    return ''.join(secrets.choice(alphabet) for _ in range(8))
+
+
 class User(Base):
     __tablename__ = "users"
 
@@ -39,6 +46,9 @@ class User(Base):
     username = Column(String(100), unique=True, nullable=False, index=True)
     hashed_password = Column(String(255), nullable=False)
     encrypted_api_key = Column(Text, nullable=True)
+    friend_code = Column(String(8), unique=True, index=True, default=generate_friend_code)
+    display_name = Column(String(100), nullable=True)
+    avatar_url = Column(String(500), nullable=True)
     is_admin = Column(Boolean, default=False, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
@@ -47,6 +57,8 @@ class User(Base):
     feedback = relationship("Feedback", back_populates="user", cascade="all, delete-orphan")
     subscription = relationship("Subscription", back_populates="user", uselist=False, cascade="all, delete-orphan")
     payment_history = relationship("PaymentHistory", back_populates="user", cascade="all, delete-orphan")
+    notifications = relationship("Notification", back_populates="user", cascade="all, delete-orphan")
+    archived_campaigns = relationship("ArchivedCampaign", back_populates="user", cascade="all, delete-orphan")
 
 
 class Campaign(Base):
@@ -58,11 +70,20 @@ class Campaign(Base):
     world_bible = Column(Text, nullable=True)
     game_data = Column(JSON, nullable=True)
     is_public = Column(Boolean, default=False, nullable=False)
+    is_multiplayer = Column(Boolean, default=False, nullable=False)
+    max_players = Column(Integer, default=1, nullable=False)
+    status = Column(String(20), default="active", nullable=False)  # active | paused | completed | archived
+    chat_history = Column(JSON, nullable=True)
+    session_summary = Column(Text, nullable=True)
+    thumbnail_url = Column(String(500), nullable=True)
+    last_played_at = Column(DateTime, nullable=True)
     share_slug = Column(String(100), unique=True, nullable=True, index=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
     owner = relationship("User", back_populates="campaigns")
+    players = relationship("CampaignPlayer", back_populates="campaign", cascade="all, delete-orphan")
+    invites = relationship("CampaignInvite", back_populates="campaign", cascade="all, delete-orphan")
 
 
 class Feedback(Base):
@@ -226,3 +247,103 @@ class UserTestSession(Base):
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     user = relationship("User", backref="test_sessions")
+
+
+class Friendship(Base):
+    """Bidirectional friendship between two users."""
+    __tablename__ = "friendships"
+    __table_args__ = (
+        UniqueConstraint("user_id", "friend_id", name="uq_friendships_user_friend"),
+    )
+
+    id = Column(_UUID, primary_key=True, default=generate_uuid)
+    user_id = Column(_UUID, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    friend_id = Column(_UUID, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    user = relationship("User", foreign_keys=[user_id], backref="friendships")
+    friend = relationship("User", foreign_keys=[friend_id], backref="incoming_friendships")
+
+
+class FriendRequest(Base):
+    """Friend request from one user to another."""
+    __tablename__ = "friend_requests"
+
+    id = Column(_UUID, primary_key=True, default=generate_uuid)
+    from_user_id = Column(_UUID, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    to_user_id = Column(_UUID, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    status = Column(String(20), default="pending", nullable=False)  # pending | accepted | declined
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    from_user = relationship("User", foreign_keys=[from_user_id], backref="sent_friend_requests")
+    to_user = relationship("User", foreign_keys=[to_user_id], backref="received_friend_requests")
+
+
+class CampaignPlayer(Base):
+    """Links players to campaigns (multiplayer)."""
+    __tablename__ = "campaign_players"
+    __table_args__ = (
+        UniqueConstraint("campaign_id", "user_id", name="uq_campaign_players_campaign_user"),
+    )
+
+    id = Column(_UUID, primary_key=True, default=generate_uuid)
+    campaign_id = Column(_UUID, ForeignKey("campaigns.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = Column(_UUID, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    character_data = Column(JSON, nullable=True)
+    joined_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    campaign = relationship("Campaign", back_populates="players")
+    user = relationship("User", backref="campaign_memberships")
+
+
+class CampaignInvite(Base):
+    """Invitation to join a campaign."""
+    __tablename__ = "campaign_invites"
+
+    id = Column(_UUID, primary_key=True, default=generate_uuid)
+    campaign_id = Column(_UUID, ForeignKey("campaigns.id", ondelete="CASCADE"), nullable=False, index=True)
+    invited_by_id = Column(_UUID, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    invited_user_id = Column(_UUID, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    status = Column(String(20), default="pending", nullable=False)  # pending | accepted | declined
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    campaign = relationship("Campaign", back_populates="invites")
+    invited_by = relationship("User", foreign_keys=[invited_by_id], backref="sent_campaign_invites")
+    invited_user = relationship("User", foreign_keys=[invited_user_id], backref="received_campaign_invites")
+
+
+class Notification(Base):
+    """User notifications for friend requests, campaign invites, etc."""
+    __tablename__ = "notifications"
+
+    id = Column(_UUID, primary_key=True, default=generate_uuid)
+    user_id = Column(_UUID, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    type = Column(String(50), nullable=False)  # friend_request | campaign_invite | system | etc.
+    title = Column(String(255), nullable=False)
+    body = Column(Text, nullable=True)
+    data = Column(JSON, nullable=True)
+    read = Column(Boolean, default=False, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    user = relationship("User", back_populates="notifications")
+
+
+class ArchivedCampaign(Base):
+    """Archived campaign record for the user's hall of legends."""
+    __tablename__ = "archived_campaigns"
+
+    id = Column(_UUID, primary_key=True, default=generate_uuid)
+    user_id = Column(_UUID, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    name = Column(String(255), nullable=False)
+    summary = Column(Text, nullable=True)
+    ending = Column(Text, nullable=True)
+    character_name = Column(String(150), nullable=True)
+    world_name = Column(String(255), nullable=True)
+    sessions_played = Column(Integer, default=0, nullable=False)
+    was_multiplayer = Column(Boolean, default=False, nullable=False)
+    co_player_name = Column(String(100), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    user = relationship("User", back_populates="archived_campaigns")
