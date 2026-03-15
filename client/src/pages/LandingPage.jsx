@@ -453,7 +453,7 @@ export default function LandingPage() {
               </>
             )}
           </div>
-          <Link to="/play" className="landing-cta-btn landing-cta-btn-secondary" style={{ padding: '8px 24px', fontSize: '0.75rem' }}>
+          <Link to="/play" className="landing-cta-btn landing-cta-btn-secondary" style={{ padding: '6px 16px', fontSize: '1.2rem' }}>
             Play Free
           </Link>
         </div>
@@ -609,7 +609,7 @@ export default function LandingPage() {
           <div className="landing-stories">
             <div className="landing-story-card">
               <div className="landing-story-image">
-                <div className="landing-icon landing-icon-lg"><IconDragonHead /></div>
+                <img src="/images/story-1.png" alt="Dragon throne room" className="landing-story-img" />
               </div>
               <div className="landing-story-body">
                 <p className="landing-story-quote">
@@ -624,7 +624,7 @@ export default function LandingPage() {
 
             <div className="landing-story-card">
               <div className="landing-story-image">
-                <div className="landing-icon landing-icon-lg"><IconPolymorphChicken /></div>
+                <img src="/images/story-3.png" alt="Archmage's tower" className="landing-story-img" />
               </div>
               <div className="landing-story-body">
                 <p className="landing-story-quote">
@@ -639,15 +639,16 @@ export default function LandingPage() {
 
             <div className="landing-story-card">
               <div className="landing-story-image">
-                <div className="landing-icon landing-icon-lg"><IconFortressSiege /></div>
+                <img src="/images/story-2.png" alt="A god striking down a warrior" className="landing-story-img" />
               </div>
               <div className="landing-story-body">
                 <p className="landing-story-quote">
-                  The merchant I helped in session 1 became a powerful ally 30 sessions later.
-                  He raised an army to help me siege the undead fortress. Every choice matters here.
+                  I attacked a god at level 1. One hit. Instant death. No cutscene, no mercy,
+                  no second chance. I rolled a new character and never made that mistake again.
+                  This game doesn't play around.
                 </p>
-                <p className="landing-story-author">-- Paladin, Session 34</p>
-                <span className="landing-story-tag">Long Memory</span>
+                <p className="landing-story-author">-- Warrior, Session 3</p>
+                <span className="landing-story-tag">Divine Reckoning</span>
               </div>
             </div>
           </div>
