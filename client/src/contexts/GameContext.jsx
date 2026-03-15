@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useReducer, useEffect, useRef } from 'react';
 import { DEFAULT_GAME_DATA } from '../data/defaultGameData.js';
+import { useCloudSync } from '../hooks/useCloudSync.js';
+import { useAuth } from './AuthContext.jsx';
 
 // ═══════════════════════════════════════════════════════════════
 // STATE MANAGEMENT — REDUCER + CONTEXT
@@ -214,6 +216,9 @@ function gameReducer(state, action) {
     case 'SET_DM_STYLE': return { ...state, dmStyle: action.payload };
     case 'SET_ACTIVE_SAVE': return { ...state, activeSaveId: action.payload };
 
+    // ─── Session summary (recap from previous sessions) ───
+    case 'SET_SESSION_SUMMARY': return { ...state, sessionSummary: action.payload };
+
     // ─── Persistence ───
     case 'LOAD_GAME_STATE': return { ...state, ...action.payload };
     case 'SET_GAME_DATA': return { ...state, gameData: action.payload };
@@ -251,52 +256,49 @@ const initialState = {
   xaiKey: '',
   // Server persistence
   activeSaveId: null,
+  // Session summary / recap from previous sessions
+  sessionSummary: null,
 };
 
-function GameProvider({ children }) {
+function GameProvider({ children, campaignId }) {
   const [state, dispatch] = useReducer(gameReducer, initialState);
+  const { isAuthenticated } = useAuth();
 
-  // Load from localStorage on mount
+  // Cloud sync — backend-primary save, localStorage as fallback
+  const { syncNow, loadFromCloud } = useCloudSync(state, dispatch);
+
+  // Set activeSaveId from route param
   useEffect(() => {
-    try {
-      const savedRemember = localStorage.getItem('dnd-rememberKey') === 'true';
-      const savedKey = savedRemember ? localStorage.getItem('dnd-apiKey') : sessionStorage.getItem('dnd-apiKey');
-      const savedModel = localStorage.getItem('dnd-model');
-      const savedChat = localStorage.getItem('dnd-chat');
-      const savedGameData = localStorage.getItem('dnd-gameData');
-      const savedWorldBible = localStorage.getItem('dnd-worldBible');
-      if (savedRemember) dispatch({ type: 'SET_REMEMBER_KEY', payload: true });
-      if (savedKey) dispatch({ type: 'SET_API_KEY', payload: savedKey });
-      if (savedModel) dispatch({ type: 'SET_MODEL', payload: savedModel });
-      if (savedChat) {
-        try { const msgs = JSON.parse(savedChat); msgs.forEach(m => dispatch({ type: 'ADD_CHAT_MESSAGE', payload: m })); } catch(e) {}
-      }
-      if (savedGameData) {
-        try { dispatch({ type: 'SET_GAME_DATA', payload: JSON.parse(savedGameData) }); } catch(e) {}
-      }
-      if (savedWorldBible) dispatch({ type: 'SET_WORLD_BIBLE', payload: savedWorldBible });
-      const savedTextSize = localStorage.getItem('dnd-chatTextSize');
-      if (savedTextSize) dispatch({ type: 'SET_CHAT_TEXT_SIZE', payload: savedTextSize });
-      const savedCompanionSize = localStorage.getItem('dnd-companionTextSize');
-      if (savedCompanionSize) dispatch({ type: 'SET_COMPANION_TEXT_SIZE', payload: savedCompanionSize });
-      const savedDmStyle = localStorage.getItem('dnd-dmStyle');
-      if (savedDmStyle) dispatch({ type: 'SET_DM_STYLE', payload: parseInt(savedDmStyle) });
-      const savedXaiKey = localStorage.getItem('dnd-xaiKey');
-      if (savedXaiKey) dispatch({ type: 'SET_XAI_KEY', payload: savedXaiKey });
+    if (campaignId) {
+      dispatch({ type: 'SET_ACTIVE_SAVE', payload: campaignId });
+    }
+  }, [campaignId]);
 
-      // First-time visitor: no saved world or chat → auto-show Campaign Wizard
-      if (!savedWorldBible && !savedChat) {
-        dispatch({ type: 'SHOW_CAMPAIGN_WIZARD', payload: true });
-      }
-    } catch(e) {}
+  // Load from backend on mount when we have a campaignId and are authenticated
+  const cloudLoadedRef = useRef(false);
+  useEffect(() => {
+    if (campaignId && isAuthenticated && !cloudLoadedRef.current) {
+      cloudLoadedRef.current = true;
+      loadFromCloud(campaignId).then((loaded) => {
+        if (!loaded) {
+          // Fallback: load from localStorage
+          loadFromLocalStorage(dispatch);
+        }
+      });
+    } else if (!campaignId || !isAuthenticated) {
+      // No campaign ID or not authenticated — use localStorage
+      loadFromLocalStorage(dispatch);
+    }
+  }, [campaignId, isAuthenticated, loadFromCloud]);
 
-    // Load DM Engine
+  // Load DM Engine on mount
+  useEffect(() => {
     fetch('/dm-engine.md').then(r => r.ok ? r.text() : '').then(t => {
       if (t) dispatch({ type: 'SET_DM_ENGINE', payload: t });
     }).catch(() => {});
   }, []);
 
-  // Auto-save to localStorage (debounced)
+  // Auto-save to localStorage (debounced) — kept as offline fallback
   const saveTimer = useRef(null);
   useEffect(() => {
     if (saveTimer.current) clearTimeout(saveTimer.current);
@@ -325,7 +327,42 @@ function GameProvider({ children }) {
     return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
   }, [state.chatMessages, state.gameData, state.apiKey, state.model, state.apiProvider, state.worldBible, state.rememberKey, state.dmStyle]);
 
-  return <GameContext.Provider value={{ state, dispatch }}>{children}</GameContext.Provider>;
+  return <GameContext.Provider value={{ state, dispatch, syncNow }}>{children}</GameContext.Provider>;
+}
+
+/** Load saved state from localStorage (offline fallback). */
+function loadFromLocalStorage(dispatch) {
+  try {
+    const savedRemember = localStorage.getItem('dnd-rememberKey') === 'true';
+    const savedKey = savedRemember ? localStorage.getItem('dnd-apiKey') : sessionStorage.getItem('dnd-apiKey');
+    const savedModel = localStorage.getItem('dnd-model');
+    const savedChat = localStorage.getItem('dnd-chat');
+    const savedGameData = localStorage.getItem('dnd-gameData');
+    const savedWorldBible = localStorage.getItem('dnd-worldBible');
+    if (savedRemember) dispatch({ type: 'SET_REMEMBER_KEY', payload: true });
+    if (savedKey) dispatch({ type: 'SET_API_KEY', payload: savedKey });
+    if (savedModel) dispatch({ type: 'SET_MODEL', payload: savedModel });
+    if (savedChat) {
+      try { const msgs = JSON.parse(savedChat); msgs.forEach(m => dispatch({ type: 'ADD_CHAT_MESSAGE', payload: m })); } catch(e) {}
+    }
+    if (savedGameData) {
+      try { dispatch({ type: 'SET_GAME_DATA', payload: JSON.parse(savedGameData) }); } catch(e) {}
+    }
+    if (savedWorldBible) dispatch({ type: 'SET_WORLD_BIBLE', payload: savedWorldBible });
+    const savedTextSize = localStorage.getItem('dnd-chatTextSize');
+    if (savedTextSize) dispatch({ type: 'SET_CHAT_TEXT_SIZE', payload: savedTextSize });
+    const savedCompanionSize = localStorage.getItem('dnd-companionTextSize');
+    if (savedCompanionSize) dispatch({ type: 'SET_COMPANION_TEXT_SIZE', payload: savedCompanionSize });
+    const savedDmStyle = localStorage.getItem('dnd-dmStyle');
+    if (savedDmStyle) dispatch({ type: 'SET_DM_STYLE', payload: parseInt(savedDmStyle) });
+    const savedXaiKey = localStorage.getItem('dnd-xaiKey');
+    if (savedXaiKey) dispatch({ type: 'SET_XAI_KEY', payload: savedXaiKey });
+
+    // First-time visitor: no saved world or chat → auto-show Campaign Wizard
+    if (!savedWorldBible && !savedChat) {
+      dispatch({ type: 'SHOW_CAMPAIGN_WIZARD', payload: true });
+    }
+  } catch(e) {}
 }
 
 function useGame() { return useContext(GameContext); }

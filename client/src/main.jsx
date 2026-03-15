@@ -2,6 +2,8 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext.jsx';
+import { NotificationProvider } from './contexts/NotificationContext.jsx';
+import NotificationToast from './components/effects/NotificationToast.jsx';
 import LandingPage from './pages/LandingPage.jsx';
 import HubPage from './pages/HubPage.jsx';
 import GameSessionPage from './pages/GameSessionPage.jsx';
@@ -14,15 +16,18 @@ import './styles/index.css';
 createRoot(document.getElementById('root')).render(
   <BrowserRouter>
     <AuthProvider>
-      <Routes>
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/play" element={<HubPage />} />
-        <Route path="/play/campaign/:id" element={<GameSessionPage />} />
-        <Route path="/play/lobby/:id" element={<LobbyPage />} />
-        <Route path="/stories" element={<StoriesPage />} />
-        <Route path="/share/:slug" element={<SharePage />} />
-        <Route path="/admin" element={<AdminPage />} />
-      </Routes>
+      <NotificationProvider>
+        <Routes>
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/play" element={<HubPage />} />
+          <Route path="/play/campaign/:id" element={<GameSessionPage />} />
+          <Route path="/play/lobby/:id" element={<LobbyPage />} />
+          <Route path="/stories" element={<StoriesPage />} />
+          <Route path="/share/:slug" element={<SharePage />} />
+          <Route path="/admin" element={<AdminPage />} />
+        </Routes>
+        <NotificationToast />
+      </NotificationProvider>
     </AuthProvider>
   </BrowserRouter>
 );

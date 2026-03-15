@@ -47,6 +47,9 @@ class CampaignUpdate(BaseModel):
     name: Optional[str] = None
     world_bible: Optional[str] = None
     game_data: Optional[Dict[str, Any]] = None
+    chat_history: Optional[List[Dict[str, Any]]] = None
+    session_summary: Optional[str] = None
+    last_played_at: Optional[str] = None
 
 
 class CampaignResponse(BaseModel):
@@ -55,6 +58,8 @@ class CampaignResponse(BaseModel):
     name: str
     world_bible: Optional[str]
     game_data: Optional[Dict[str, Any]]
+    chat_history: Optional[List[Dict[str, Any]]] = None
+    session_summary: Optional[str] = None
     is_public: bool
     share_slug: Optional[str]
     created_at: str
@@ -93,6 +98,8 @@ def _campaign_to_response(c: Campaign) -> CampaignResponse:
         name=c.name,
         world_bible=c.world_bible,
         game_data=c.game_data,
+        chat_history=c.chat_history,
+        session_summary=c.session_summary,
         is_public=c.is_public,
         share_slug=c.share_slug,
         created_at=c.created_at.isoformat(),
@@ -397,6 +404,16 @@ async def update_campaign(
         campaign.world_bible = body.world_bible
     if body.game_data is not None:
         campaign.game_data = body.game_data
+    if body.chat_history is not None:
+        campaign.chat_history = body.chat_history
+    if body.session_summary is not None:
+        campaign.session_summary = body.session_summary
+    if body.last_played_at is not None:
+        from datetime import datetime as dt
+        try:
+            campaign.last_played_at = dt.fromisoformat(body.last_played_at.replace("Z", "+00:00"))
+        except (ValueError, AttributeError):
+            campaign.last_played_at = dt.utcnow()
 
     db.add(campaign)
     await db.flush()
@@ -586,6 +603,77 @@ async def create_recap(
         is_public=story.is_public,
         created_at=story.created_at.isoformat(),
     )
+
+
+# ---------------------------------------------------------------------------
+# Generate recap (session summary) endpoint
+# ---------------------------------------------------------------------------
+class GenerateRecapRequest(BaseModel):
+    chat_messages: Optional[List[Dict[str, Any]]] = None
+    model: str = "google/gemini-3-flash-preview"
+
+
+@router.post("/campaigns/{campaign_id}/generate-recap")
+async def generate_recap_endpoint(
+    campaign_id: str,
+    body: GenerateRecapRequest,
+    user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Generate a 'Previously on...' session recap and store it in campaign.session_summary.
+
+    Uses the campaign owner's stored API key to call the LLM with the last 30
+    chat messages. The result is saved to the campaign's session_summary field.
+    """
+    campaign = await _get_owned_campaign(campaign_id, user, db)
+
+    # Resolve API key
+    if not user.encrypted_api_key:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No API key stored. Please save your OpenRouter API key in account settings.",
+        )
+
+    try:
+        api_key = decrypt_api_key(user.encrypted_api_key)
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to decrypt API key. Please re-save your key.",
+        )
+
+    # Use chat_messages from request body, or fall back to stored chat_history
+    chat_messages = body.chat_messages
+    if not chat_messages and campaign.chat_history:
+        chat_messages = campaign.chat_history
+
+    # Generate the recap
+    from app.services.summarizer import generate_session_summary
+
+    try:
+        summary = await generate_session_summary(
+            chat_messages=chat_messages,
+            game_data=campaign.game_data,
+            world_bible=campaign.world_bible,
+            api_key=api_key,
+            model=body.model,
+        )
+    except RuntimeError as exc:
+        logger.error("Session recap generation failed for campaign %s: %s", campaign_id, exc)
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Recap generation failed: {exc}",
+        )
+
+    # Store in campaign.session_summary
+    campaign.session_summary = summary
+    db.add(campaign)
+    await db.flush()
+
+    return {
+        "campaign_id": str(campaign.id),
+        "session_summary": summary,
+    }
 
 
 # ---------------------------------------------------------------------------

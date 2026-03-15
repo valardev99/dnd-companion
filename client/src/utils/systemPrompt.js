@@ -99,7 +99,19 @@ Rules:
 `;
 }
 
-export function buildSystemPrompt(dmEngine, gameData, worldBible, dmStyle) {
+/**
+ * Trim chat messages for the context window.
+ * Keeps the last 30 raw messages to stay within token limits for long campaigns.
+ */
+export function trimMessagesForContext(messages, maxMessages = 30) {
+  if (!messages || !Array.isArray(messages)) return [];
+  return messages.slice(-maxMessages).map(m => ({
+    role: m.role === 'dm' ? 'assistant' : 'user',
+    content: m.content,
+  }));
+}
+
+export function buildSystemPrompt(dmEngine, gameData, worldBible, dmStyle, sessionSummary) {
   const worldState = JSON.stringify({
     campaign: gameData.campaign,
     character: {
@@ -175,7 +187,12 @@ ALWAYS include relevant tags at the END of your response. The companion app depe
   const styleModifier = buildStyleModifier(dmStyle);
   const styleSection = styleModifier ? `\n${styleModifier}\n` : '';
 
-  // Build prompt layers: DM Engine → Freedom+Consequence → Style Modifier → World Bible → World State → Tag Instructions
+  // Session summary from previous sessions (context continuity for long campaigns)
+  const sessionSummarySection = sessionSummary
+    ? `\n\n═══ PREVIOUSLY ON... ═══\n${sessionSummary}\n`
+    : '';
+
+  // Build prompt layers: DM Engine → Freedom+Consequence → Style Modifier → World Bible → Session Summary → World State → Tag Instructions
   const worldBibleSection = worldBible ? `\n\n═══ WORLD BIBLE ═══\n${worldBible}\n` : '';
-  return `${processedEngine}${FREEDOM_CONSEQUENCE_PHILOSOPHY}${styleSection}${worldBibleSection}\n\n═══ CURRENT WORLD STATE ═══\n${worldState}\n${tagInstructions}`;
+  return `${processedEngine}${FREEDOM_CONSEQUENCE_PHILOSOPHY}${styleSection}${worldBibleSection}${sessionSummarySection}\n\n═══ CURRENT WORLD STATE ═══\n${worldState}\n${tagInstructions}`;
 }
