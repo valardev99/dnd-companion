@@ -15,7 +15,7 @@ router = APIRouter(tags=["chat"])
 
 class ChatRequest(BaseModel):
     apiKey: Optional[str] = None
-    model: str = "google/gemini-3-flash-preview"
+    model: str = "google/gemini-2.5-flash"
     messages: List[Dict[str, Any]]
     systemPrompt: Optional[str] = None
     maxTokens: int = 4096

@@ -67,7 +67,7 @@ async def stream_chat_completion(
 
     Args:
         api_key: OpenRouter API key.
-        model: Model identifier (e.g. "google/gemini-3-flash-preview").
+        model: Model identifier (e.g. "google/gemini-2.5-flash").
         messages: Chat message history.
         system_prompt: Optional system prompt prepended as a system message.
         max_tokens: Maximum tokens for the completion.

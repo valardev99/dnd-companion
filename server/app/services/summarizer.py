@@ -86,7 +86,7 @@ async def generate_session_summary(
     game_data: Optional[Dict[str, Any]],
     world_bible: Optional[str],
     api_key: str,
-    model: str = "google/gemini-3-flash-preview",
+    model: str = "google/gemini-2.5-flash",
 ) -> str:
     """Generate a 'Previously on...' session summary via OpenRouter (non-streaming).
 

@@ -12,7 +12,7 @@ router = APIRouter(tags=["test"])
 
 class TestRequest(BaseModel):
     apiKey: str
-    model: str = "google/gemini-3-flash-preview"
+    model: str = "google/gemini-2.5-flash"
 
 
 class TestResponse(BaseModel):

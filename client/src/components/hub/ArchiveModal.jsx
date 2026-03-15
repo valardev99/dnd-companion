@@ -13,7 +13,7 @@ export default function ArchiveModal({ campaign, onConfirm, onCancel }) {
   const nameMatch = confirmText.trim().toLowerCase() === (campaign.name || '').trim().toLowerCase();
 
   const apiKey = localStorage.getItem('dnd-apiKey') || sessionStorage.getItem('dnd-apiKey') || '';
-  const model = localStorage.getItem('dnd-model') || 'google/gemini-3-flash-preview';
+  const model = localStorage.getItem('dnd-model') || 'google/gemini-2.5-flash';
 
   const generateRecap = async () => {
     if (!apiKey) {

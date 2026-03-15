@@ -12,7 +12,7 @@ import urllib.request
 
 API_URL = "http://localhost:3000/api/chat"
 API_KEY = "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"
-MODEL = "google/gemini-3-flash-preview"
+MODEL = "google/gemini-2.5-flash"
 PROVIDER = "openrouter"
 
 # Read dm-engine from disk

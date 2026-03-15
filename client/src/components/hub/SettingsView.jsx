@@ -1,13 +1,28 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext.jsx';
 
+const VALID_MODELS = [
+  'google/gemini-2.5-flash',
+  'google/gemini-3-flash-preview',
+  'anthropic/claude-sonnet-4',
+  'anthropic/claude-haiku-4.5',
+  'anthropic/claude-3.5-haiku',
+  'openai/gpt-4o',
+];
+const DEFAULT_MODEL = 'google/gemini-2.5-flash';
+
 export default function SettingsView() {
   const { authFetch, storeApiKey } = useAuth();
 
-  // Load from localStorage
+  // Load from localStorage — validate cached model against known valid IDs
   const [apiKey, setApiKey] = useState(() => localStorage.getItem('dnd-apiKey') || sessionStorage.getItem('dnd-apiKey') || '');
   const [rememberKey, setRememberKey] = useState(() => localStorage.getItem('dnd-rememberKey') === 'true');
-  const [model, setModel] = useState(() => localStorage.getItem('dnd-model') || 'claude-sonnet-4-20250514');
+  const [model, setModel] = useState(() => {
+    const cached = localStorage.getItem('dnd-model');
+    if (cached && VALID_MODELS.includes(cached)) return cached;
+    localStorage.setItem('dnd-model', DEFAULT_MODEL);
+    return DEFAULT_MODEL;
+  });
   const [xaiKey, setXaiKey] = useState(() => localStorage.getItem('dnd-xaiKey') || '');
   const [dmStyle, setDmStyle] = useState(() => parseInt(localStorage.getItem('dnd-dmStyle')) || 50);
   const [particles, setParticles] = useState(true);
@@ -21,10 +36,8 @@ export default function SettingsView() {
     if (apiKey) {
       if (rememberKey) {
         localStorage.setItem('dnd-apiKey', apiKey);
-        sessionStorage.removeItem('dnd-apiKey');
       } else {
         sessionStorage.setItem('dnd-apiKey', apiKey);
-        localStorage.removeItem('dnd-apiKey');
       }
       // Also store encrypted on server if key looks valid
       if (apiKey.startsWith('sk-or-') && rememberKey) {
@@ -112,10 +125,12 @@ export default function SettingsView() {
         <div className="settings-field">
           <label className="settings-label">Model</label>
           <select className="api-select" value={model} onChange={e => setModel(e.target.value)}>
+            <option value="google/gemini-2.5-flash">Gemini 2.5 Flash</option>
             <option value="google/gemini-3-flash-preview">Gemini 3 Flash Preview</option>
             <option value="anthropic/claude-sonnet-4">Claude Sonnet 4</option>
-            <option value="anthropic/claude-opus-4">Claude Opus 4</option>
-            <option value="anthropic/claude-haiku-3.5">Claude Haiku 3.5</option>
+            <option value="anthropic/claude-haiku-4.5">Claude Haiku 4.5</option>
+            <option value="anthropic/claude-3.5-haiku">Claude Haiku 3.5</option>
+            <option value="openai/gpt-4o">GPT-4o</option>
           </select>
         </div>
 

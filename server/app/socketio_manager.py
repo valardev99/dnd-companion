@@ -309,7 +309,7 @@ async def player_action(sid, data):
 
             async for sse_line in stream_chat_completion(
                 api_key=api_key,
-                model="google/gemini-3-flash-preview",
+                model="google/gemini-2.5-flash",
                 messages=chat_history,
                 system_prompt=system_prompt,
                 max_tokens=4096,

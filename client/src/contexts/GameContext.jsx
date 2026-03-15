@@ -33,7 +33,7 @@ function gameReducer(state, action) {
     }
 
     // ─── API config ───
-    case 'SET_API_KEY': return { ...state, apiKey: action.payload };
+    case 'SET_API_KEY': return { ...state, apiKey: action.payload, apiStatus: action.payload ? 'connected' : 'disconnected' };
     case 'SET_MODEL': return { ...state, model: action.payload };
     case 'SET_API_PROVIDER': return { ...state, apiProvider: action.payload };
     case 'SET_REMEMBER_KEY': return { ...state, rememberKey: action.payload };
@@ -308,8 +308,10 @@ function GameProvider({ children, campaignId }) {
     if (campaignId && campaignId !== 'new' && isAuthenticated && !cloudLoadedRef.current) {
       cloudLoadedRef.current = true;
       loadFromCloud(campaignId).then((loaded) => {
+        // Always load local settings (API key, model, etc.) — these aren't stored in the cloud
+        loadLocalSettings(dispatch);
         if (!loaded) {
-          // Fallback: load from localStorage
+          // Fallback: load full state from localStorage
           loadFromLocalStorage(dispatch);
         }
       });
@@ -367,17 +369,40 @@ function GameProvider({ children, campaignId }) {
   return <GameContext.Provider value={{ state, dispatch, syncNow }}>{children}</GameContext.Provider>;
 }
 
+/** Load local-only settings (API key, model, preferences) that aren't stored in the cloud. */
+function loadLocalSettings(dispatch) {
+  try {
+    const savedKey = localStorage.getItem('dnd-apiKey') || sessionStorage.getItem('dnd-apiKey');
+    const savedModel = localStorage.getItem('dnd-model');
+    const savedRemember = localStorage.getItem('dnd-rememberKey') === 'true';
+    if (savedRemember) dispatch({ type: 'SET_REMEMBER_KEY', payload: true });
+    if (savedKey) dispatch({ type: 'SET_API_KEY', payload: savedKey });
+    if (savedModel) dispatch({ type: 'SET_MODEL', payload: savedModel });
+    const savedDmStyle = localStorage.getItem('dnd-dmStyle');
+    if (savedDmStyle) dispatch({ type: 'SET_DM_STYLE', payload: parseInt(savedDmStyle) });
+    const savedXaiKey = localStorage.getItem('dnd-xaiKey');
+    if (savedXaiKey) dispatch({ type: 'SET_XAI_KEY', payload: savedXaiKey });
+    const savedTextSize = localStorage.getItem('dnd-chatTextSize');
+    if (savedTextSize) dispatch({ type: 'SET_CHAT_TEXT_SIZE', payload: savedTextSize });
+    const savedCompanionSize = localStorage.getItem('dnd-companionTextSize');
+    if (savedCompanionSize) dispatch({ type: 'SET_COMPANION_TEXT_SIZE', payload: savedCompanionSize });
+  } catch (e) {}
+}
+
 /** Load saved state from localStorage (offline fallback). */
 function loadFromLocalStorage(dispatch) {
   try {
     const savedRemember = localStorage.getItem('dnd-rememberKey') === 'true';
-    const savedKey = savedRemember ? localStorage.getItem('dnd-apiKey') : sessionStorage.getItem('dnd-apiKey');
+    const savedKey = localStorage.getItem('dnd-apiKey') || sessionStorage.getItem('dnd-apiKey');
     const savedModel = localStorage.getItem('dnd-model');
     const savedChat = localStorage.getItem('dnd-chat');
     const savedGameData = localStorage.getItem('dnd-gameData');
     const savedWorldBible = localStorage.getItem('dnd-worldBible');
     if (savedRemember) dispatch({ type: 'SET_REMEMBER_KEY', payload: true });
-    if (savedKey) dispatch({ type: 'SET_API_KEY', payload: savedKey });
+    if (savedKey) {
+      dispatch({ type: 'SET_API_KEY', payload: savedKey });
+      dispatch({ type: 'SET_API_STATUS', payload: 'connected' });
+    }
     if (savedModel) dispatch({ type: 'SET_MODEL', payload: savedModel });
     if (savedChat) {
       try { const msgs = JSON.parse(savedChat); msgs.forEach(m => dispatch({ type: 'ADD_CHAT_MESSAGE', payload: m })); } catch(e) {}

@@ -126,7 +126,7 @@ async def generate_recap(
     chat_messages: Optional[List[Dict[str, Any]]],
     world_bible: Optional[str],
     api_key: str,
-    model: str = "google/gemini-3-flash-preview",
+    model: str = "google/gemini-2.5-flash",
 ) -> str:
     """Generate an LLM-powered dramatic story recap.
 

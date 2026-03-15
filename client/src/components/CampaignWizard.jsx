@@ -41,6 +41,7 @@ function CampaignWizard() {
   const saveApiKey = () => {
     if (!localApiKey.trim()) return;
     dispatch({ type: 'SET_API_KEY', payload: localApiKey.trim() });
+    dispatch({ type: 'SET_API_STATUS', payload: 'connected' });
     dispatch({ type: 'SET_REMEMBER_KEY', payload: rememberKey });
     setStep(-1);
   };

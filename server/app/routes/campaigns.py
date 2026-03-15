@@ -71,7 +71,7 @@ class CampaignResponse(BaseModel):
 
 class RecapRequest(BaseModel):
     chat_messages: Optional[List[Dict[str, Any]]] = None
-    model: str = "google/gemini-3-flash-preview"
+    model: str = "google/gemini-2.5-flash"
     title: Optional[str] = None
 
 
@@ -610,7 +610,7 @@ async def create_recap(
 # ---------------------------------------------------------------------------
 class GenerateRecapRequest(BaseModel):
     chat_messages: Optional[List[Dict[str, Any]]] = None
-    model: str = "google/gemini-3-flash-preview"
+    model: str = "google/gemini-2.5-flash"
 
 
 @router.post("/campaigns/{campaign_id}/generate-recap")
