@@ -46,6 +46,11 @@ class ApiKeyRequest(BaseModel):
     api_key: str
 
 
+class UpdateProfileRequest(BaseModel):
+    display_name: Optional[str] = None
+    avatar_url: Optional[str] = None
+
+
 class UserResponse(BaseModel):
     id: str
     email: str
@@ -53,6 +58,8 @@ class UserResponse(BaseModel):
     is_admin: bool
     has_api_key: bool
     friend_code: Optional[str] = None
+    display_name: Optional[str] = None
+    avatar_url: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -75,6 +82,8 @@ def _user_response(user: User) -> UserResponse:
         is_admin=user.is_admin,
         has_api_key=user.encrypted_api_key is not None,
         friend_code=user.friend_code,
+        display_name=user.display_name,
+        avatar_url=user.avatar_url,
     )
 
 
@@ -211,3 +220,24 @@ async def store_api_key(
     await db.flush()
 
     return {"status": "ok", "message": "API key stored securely"}
+
+
+@router.put("/auth/profile", response_model=UserResponse)
+async def update_profile(
+    body: UpdateProfileRequest,
+    user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Update the current user's display name and/or avatar."""
+    if body.display_name is not None:
+        clean = body.display_name.strip()
+        if len(clean) > 100:
+            raise HTTPException(status_code=400, detail="Display name too long (max 100)")
+        user.display_name = clean if clean else None
+    if body.avatar_url is not None:
+        if body.avatar_url and not body.avatar_url.startswith("preset:"):
+            raise HTTPException(status_code=400, detail="Invalid avatar format")
+        user.avatar_url = body.avatar_url if body.avatar_url else None
+    db.add(user)
+    await db.flush()
+    return _user_response(user)

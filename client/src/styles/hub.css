@@ -2024,3 +2024,303 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ═══ PROFILE AVATAR IN SIDEBAR ═══ */
+.hub-nav-profile-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 24px;
+  background: none;
+  border: none;
+  color: var(--parchment);
+  cursor: pointer;
+  transition: all 0.25s ease;
+  text-align: left;
+  margin-bottom: 4px;
+}
+
+.hub-nav-profile-btn:hover {
+  background: rgba(201, 168, 76, 0.08);
+}
+
+.hub-nav-profile-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 2px solid var(--border-gold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  background: rgba(201, 168, 76, 0.08);
+  flex-shrink: 0;
+}
+
+.hub-nav-profile-name {
+  font-family: 'Cinzel', serif;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--gold);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ═══ PROFILE DRAWER ═══ */
+.profile-drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 998;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.profile-drawer-backdrop.open {
+  opacity: 1;
+  visibility: visible;
+}
+
+.profile-drawer {
+  position: fixed;
+  top: 0;
+  left: 240px;
+  width: 360px;
+  height: 100vh;
+  background: linear-gradient(180deg, var(--stone) 0%, var(--void) 100%);
+  border-right: 1px solid var(--border-gold);
+  z-index: 999;
+  display: flex;
+  flex-direction: column;
+  transform: translateX(-360px);
+  visibility: hidden;
+  transition: transform 0.3s ease, visibility 0.3s ease;
+  box-shadow: 8px 0 32px rgba(0, 0, 0, 0.6);
+}
+
+.profile-drawer.open {
+  transform: translateX(0);
+  visibility: visible;
+}
+
+.profile-drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--border-gold);
+}
+
+.profile-drawer-title {
+  font-family: 'Cinzel', serif;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--gold);
+  margin: 0;
+  letter-spacing: 1px;
+}
+
+.profile-drawer-close {
+  background: none;
+  border: 1px solid var(--border-dim);
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 4px 8px;
+  transition: all 0.2s;
+}
+
+.profile-drawer-close:hover {
+  color: var(--parchment);
+  border-color: var(--border-gold);
+}
+
+.profile-drawer-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+}
+
+/* Avatar Section */
+.profile-avatar-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 28px;
+}
+
+.profile-avatar-large {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  border: 2px solid var(--border-gold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.8rem;
+  background: rgba(201, 168, 76, 0.06);
+  margin-bottom: 10px;
+  box-shadow: 0 0 20px rgba(201, 168, 76, 0.15);
+}
+
+.profile-avatar-change {
+  background: none;
+  border: none;
+  color: var(--gold);
+  font-family: 'Crimson Text', serif;
+  font-size: 0.9rem;
+  cursor: pointer;
+  padding: 4px 8px;
+  transition: color 0.2s;
+}
+
+.profile-avatar-change:hover {
+  color: var(--gold-bright);
+}
+
+.profile-avatar-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-top: 12px;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--border-dim);
+  border-radius: 4px;
+  width: 100%;
+}
+
+.profile-avatar-option {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  border: 2px solid var(--border-dim);
+  background: rgba(201, 168, 76, 0.04);
+  cursor: pointer;
+  font-size: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.profile-avatar-option:hover {
+  border-color: var(--gold);
+  background: rgba(201, 168, 76, 0.1);
+}
+
+.profile-avatar-option.selected {
+  border-color: var(--gold-bright);
+  background: rgba(201, 168, 76, 0.15);
+  box-shadow: 0 0 12px rgba(201, 168, 76, 0.3);
+}
+
+/* Profile Fields */
+.profile-field {
+  margin-bottom: 20px;
+}
+
+.profile-field-label {
+  display: block;
+  font-family: 'Cinzel', serif;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 6px;
+}
+
+.profile-field-input {
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--obsidian);
+  border: 1px solid var(--border-dim);
+  color: var(--parchment);
+  font-family: 'Crimson Text', serif;
+  font-size: 1rem;
+  transition: border-color 0.2s;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.profile-field-input:focus {
+  border-color: var(--gold);
+}
+
+.profile-field-input::placeholder {
+  color: var(--muted);
+}
+
+.profile-field-readonly {
+  padding: 10px 0;
+  color: var(--muted);
+  font-family: 'Crimson Text', serif;
+  font-size: 1rem;
+}
+
+.profile-field-hint {
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin-left: 8px;
+  opacity: 0.6;
+}
+
+/* Friend Code */
+.profile-friend-code {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0;
+  cursor: pointer;
+}
+
+.profile-friend-code-value {
+  font-family: 'Fira Code', monospace;
+  font-size: 1.1rem;
+  color: var(--gold);
+  letter-spacing: 1px;
+}
+
+.profile-friend-code-copy {
+  font-family: 'Crimson Text', serif;
+  font-size: 0.85rem;
+  color: var(--muted);
+  transition: color 0.2s;
+}
+
+.profile-friend-code:hover .profile-friend-code-copy {
+  color: var(--gold);
+}
+
+/* Drawer Footer */
+.profile-drawer-footer {
+  padding: 16px 24px;
+  border-top: 1px solid var(--border-dim);
+}
+
+.profile-save-btn {
+  width: 100%;
+  padding: 12px;
+  background: var(--gold);
+  color: var(--obsidian);
+  border: none;
+  font-family: 'Cinzel', serif;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: 0.5px;
+  transition: all 0.2s;
+}
+
+.profile-save-btn:hover:not(:disabled) {
+  background: var(--gold-bright);
+}
+
+.profile-save-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
