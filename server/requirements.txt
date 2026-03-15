@@ -12,3 +12,4 @@ python-multipart==0.0.18
 aiosqlite==0.20.0
 pydantic[email]==2.10.3
 stripe==11.4.1
+python-socketio[asyncio]==5.11.0

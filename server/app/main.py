@@ -88,3 +88,11 @@ async def dm_engine():
 _dist_dir = os.path.join(os.path.dirname(__file__), "..", "..", "dist")
 if os.path.isdir(_dist_dir):
     app.mount("/", StaticFiles(directory=_dist_dir, html=True), name="static")
+
+# ---------------------------------------------------------------------------
+# Socket.IO — wrap FastAPI so both HTTP and WebSocket run on the same port
+# ---------------------------------------------------------------------------
+import socketio as socketio_lib
+from app.socketio_manager import sio
+
+socket_app = socketio_lib.ASGIApp(sio, other_asgi_app=app)
