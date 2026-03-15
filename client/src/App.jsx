@@ -85,7 +85,7 @@ function App() {
         <ChatPanel />
         <Sidebar />
         <div className="companion-wrapper">
-          <div className="companion-content">
+          <div className="companion-content" style={{ zoom: (parseInt(state.companionTextSize || '100', 10) / 100) || 1 }}>
             <main className={`companion-main ${panelFade}`}>
               <RenderedPanel />
             </main>

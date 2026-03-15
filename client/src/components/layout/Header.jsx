@@ -6,6 +6,7 @@ function Header() {
   const { state } = useGame();
   const c = state.gameData.campaign;
   const ch = state.gameData.character;
+  const hasActiveGame = c.session > 0 || ch.level > 0;
   return (
     <header className="app-header">
       <Link to="/" className="header-home" title="Back to Home" style={{
@@ -18,24 +19,26 @@ function Header() {
       <div className="header-divider" />
       <div className="header-stat">
         <span className="label">Session</span>
-        <span className="value">{c.session}</span>
+        <span className="value">{hasActiveGame ? c.session : '—'}</span>
       </div>
       <div className="header-stat">
         <span className="label">Day</span>
-        <span className="value">{c.day}</span>
+        <span className="value">{hasActiveGame ? c.day : '—'}</span>
       </div>
       <div className="header-stat">
         <span className="label">Time</span>
-        <span className="value">{c.time}</span>
+        <span className="value">{hasActiveGame ? c.time : '—'}</span>
       </div>
       <div className="header-divider" />
       <div className="header-stat">
         <span className="label">Level</span>
-        <span className="value">{ch.level}</span>
+        <span className="value">{hasActiveGame ? ch.level : '—'}</span>
       </div>
       <div className="header-stat">
         <span className="label">HP</span>
-        <span className="value" style={{color: ch.hp.current < ch.hp.max * 0.5 ? 'var(--crimson-bright)' : 'var(--parchment)'}}>{ch.hp.current}/{ch.hp.max}</span>
+        <span className="value" style={{color: hasActiveGame && ch.hp.current < ch.hp.max * 0.5 ? 'var(--crimson-bright)' : 'var(--parchment)'}}>
+          {hasActiveGame ? `${ch.hp.current}/${ch.hp.max}` : '—'}
+        </span>
       </div>
     </header>
   );

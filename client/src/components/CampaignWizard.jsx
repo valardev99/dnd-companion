@@ -189,7 +189,7 @@ function CampaignWizard() {
         <div className="wizard-step-content">
           <div className="wizard-field">
             <label className="wizard-label">World Name <span className="wizard-required">*</span></label>
-            <input className="wizard-input" type="text" value={wizardData.worldName} onChange={e => update('worldName', e.target.value)} placeholder="The Shattered Reaches, Valdris, Aethermoor..." autoFocus />
+            <input className="wizard-input" type="text" value={wizardData.worldName} onChange={e => update('worldName', e.target.value)} placeholder="Valdris, Aethermoor, The Hollow Wastes..." autoFocus />
           </div>
           <div className="wizard-field">
             <label className="wizard-label">Core Premise</label>
@@ -341,7 +341,7 @@ function CampaignWizard() {
         <div className="wizard-step-content">
           <div className="wizard-field">
             <label className="wizard-label">Character Name <span className="wizard-hint">(leave blank to choose in chat)</span></label>
-            <input className="wizard-input" type="text" value={wizardData.characterName} onChange={e => update('characterName', e.target.value)} placeholder="Kaelen, Sera, Moth..." />
+            <input className="wizard-input" type="text" value={wizardData.characterName} onChange={e => update('characterName', e.target.value)} placeholder="Aldric, Theron, Lyra..." />
           </div>
           <div className="wizard-field">
             <label className="wizard-label">Race Preference</label>

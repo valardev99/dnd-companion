@@ -210,6 +210,7 @@ function gameReducer(state, action) {
 
     case 'SET_PENDING_OPENING': return { ...state, pendingOpening: action.payload };
     case 'SET_CHAT_TEXT_SIZE': return { ...state, chatTextSize: action.payload };
+    case 'SET_COMPANION_TEXT_SIZE': return { ...state, companionTextSize: action.payload };
     case 'SET_DM_STYLE': return { ...state, dmStyle: action.payload };
     case 'SET_ACTIVE_SAVE': return { ...state, activeSaveId: action.payload };
 
@@ -276,6 +277,8 @@ function GameProvider({ children }) {
       if (savedWorldBible) dispatch({ type: 'SET_WORLD_BIBLE', payload: savedWorldBible });
       const savedTextSize = localStorage.getItem('dnd-chatTextSize');
       if (savedTextSize) dispatch({ type: 'SET_CHAT_TEXT_SIZE', payload: savedTextSize });
+      const savedCompanionSize = localStorage.getItem('dnd-companionTextSize');
+      if (savedCompanionSize) dispatch({ type: 'SET_COMPANION_TEXT_SIZE', payload: savedCompanionSize });
       const savedDmStyle = localStorage.getItem('dnd-dmStyle');
       if (savedDmStyle) dispatch({ type: 'SET_DM_STYLE', payload: parseInt(savedDmStyle) });
       const savedXaiKey = localStorage.getItem('dnd-xaiKey');

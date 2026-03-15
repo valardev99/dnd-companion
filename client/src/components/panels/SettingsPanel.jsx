@@ -222,6 +222,23 @@ function SettingsPanel() {
             <option value="xl">X-Large</option>
           </select>
         </div>
+        <div className="setting-row">
+          <div>
+            <div className="setting-label">Companion Panel Scale</div>
+            <div className="setting-desc">Scale the right-side panels for readability on high-res screens</div>
+          </div>
+          <select className="api-select" style={{width:'auto',minWidth:100}} value={state.companionTextSize || '100'} onChange={e => {
+            dispatch({ type: 'SET_COMPANION_TEXT_SIZE', payload: e.target.value });
+            localStorage.setItem('dnd-companionTextSize', e.target.value);
+          }}>
+            <option value="100">100%</option>
+            <option value="110">110%</option>
+            <option value="125">125%</option>
+            <option value="150">150%</option>
+            <option value="175">175%</option>
+            <option value="200">200%</option>
+          </select>
+        </div>
       </div>
 
       <div className="card">
