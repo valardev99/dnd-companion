@@ -30,12 +30,17 @@ export default function FriendsView() {
   const fetchFriends = useCallback(async () => {
     if (!token) return; // Don't fetch until authenticated
     try {
-      const res = await authFetch('/api/friends/');
-      if (res.ok) {
-        const data = await res.json();
-        // Backend returns a raw list of friends, not {friends: [...]}
-        setFriends(Array.isArray(data) ? data : data.friends || []);
-        setPendingIncoming(Array.isArray(data) ? [] : data.pending_incoming || []);
+      const [friendsRes, pendingRes] = await Promise.all([
+        authFetch('/api/friends/'),
+        authFetch('/api/friends/requests/pending'),
+      ]);
+      if (friendsRes.ok) {
+        const data = await friendsRes.json();
+        setFriends(Array.isArray(data) ? data : []);
+      }
+      if (pendingRes.ok) {
+        const data = await pendingRes.json();
+        setPendingIncoming(Array.isArray(data) ? data : []);
       }
     } catch (e) {
       // API may not exist yet
@@ -47,16 +52,16 @@ export default function FriendsView() {
     fetchFriends();
   }, [fetchFriends]);
 
-  const handleAccept = async (friendId) => {
+  const handleAccept = async (requestId) => {
     try {
-      await authFetch(`/api/friends/${friendId}/accept`, { method: 'POST' });
+      await authFetch(`/api/friends/request/${requestId}/accept`, { method: 'POST' });
       fetchFriends();
     } catch (e) {}
   };
 
-  const handleDecline = async (friendId) => {
+  const handleDecline = async (requestId) => {
     try {
-      await authFetch(`/api/friends/${friendId}/decline`, { method: 'POST' });
+      await authFetch(`/api/friends/request/${requestId}/decline`, { method: 'POST' });
       fetchFriends();
     } catch (e) {}
   };
@@ -98,8 +103,8 @@ export default function FriendsView() {
           {pendingIncoming.map(req => (
             <div key={req.id} className="friend-row friend-row-pending">
               <div className="friend-row-info">
-                <span className="friend-row-name">{req.username}</span>
-                <span className="friend-row-code">#{req.friend_code}</span>
+                <span className="friend-row-name">{req.from_user?.display_name || req.from_user?.username || 'Unknown'}</span>
+                <span className="friend-row-code">#{req.from_user?.friend_code}</span>
               </div>
               <div className="friend-row-actions">
                 <button className="notif-btn notif-accept" onClick={() => handleAccept(req.id)}>Accept</button>

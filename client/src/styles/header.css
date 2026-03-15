@@ -88,3 +88,92 @@
   border-color: rgba(29, 185, 84, 0.3);
   color: var(--arcane-bright);
 }
+
+/* ─── Header Back Button ─── */
+.header-back-btn {
+  background: none;
+  border: none;
+  color: var(--gold);
+  font-size: 1.1rem;
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+  padding: 4px 8px 4px 0;
+  line-height: 1;
+}
+.header-back-btn:hover { opacity: 1; }
+
+/* ─── Save & Quit Modal ─── */
+.save-quit-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.15s ease;
+}
+.save-quit-modal {
+  background: var(--obsidian);
+  border: 1px solid var(--gold-dim);
+  border-radius: 12px;
+  padding: 28px 32px;
+  max-width: 380px;
+  width: 90%;
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.8);
+  text-align: center;
+}
+.save-quit-title {
+  font-family: 'Cinzel', serif;
+  color: var(--gold-bright);
+  font-size: 1.1rem;
+  margin: 0 0 12px;
+}
+.save-quit-desc {
+  font-family: 'Crimson Text', serif;
+  color: var(--silver);
+  font-size: 0.9rem;
+  line-height: 1.6;
+  margin: 0 0 24px;
+}
+.save-quit-actions {
+  display: flex;
+  gap: 12px;
+}
+.save-quit-btn {
+  flex: 1;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-family: 'Cinzel', serif;
+  font-weight: bold;
+  font-size: 0.78rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.save-quit-cancel {
+  background: var(--stone);
+  border: 1px solid var(--border-dim);
+  color: var(--silver);
+}
+.save-quit-cancel:hover {
+  border-color: var(--gold-dim);
+  color: var(--parchment);
+}
+.save-quit-confirm {
+  background: linear-gradient(135deg, var(--gold-dim), var(--gold));
+  border: 1px solid var(--gold);
+  color: var(--obsidian);
+}
+.save-quit-confirm:hover {
+  box-shadow: 0 0 12px rgba(201, 168, 76, 0.4);
+}
+.save-quit-confirm:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}

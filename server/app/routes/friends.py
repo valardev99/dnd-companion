@@ -181,6 +181,30 @@ async def decline_friend_request(
     return {"status": "declined"}
 
 
+@router.get("/requests/pending", response_model=List[FriendRequestResponse])
+async def list_pending_requests(
+    user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """List all pending incoming friend requests."""
+    result = await db.execute(
+        select(FriendRequest)
+        .where(
+            FriendRequest.to_user_id == str(user.id),
+            FriendRequest.status == "pending",
+        )
+        .options()
+    )
+    requests = result.scalars().all()
+
+    # Eagerly load from_user for each request
+    responses = []
+    for fr in requests:
+        await db.refresh(fr, attribute_names=["from_user"])
+        responses.append(_friend_request_to_response(fr))
+    return responses
+
+
 @router.get("/", response_model=List[FriendResponse])
 async def list_friends(
     user=Depends(get_current_user),
