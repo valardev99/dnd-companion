@@ -82,20 +82,32 @@ Rules:
 
 The best campaigns emerge when players feel FREE to do anything and TERRIFIED of what might happen when they do.`;
 
-export function buildMultiplayerContext(player1, player2) {
+export function buildMultiplayerContext(players) {
+  if (!players || !Array.isArray(players) || players.length < 2) return '';
+
+  const roster = players.map((p, i) => {
+    const cls = p.class || p.concept || 'Adventurer';
+    const ownerTag = p.isOwner ? ' (Party Leader)' : '';
+    return `- **${p.name}** — ${p.race} ${cls} (Level ${p.level})${ownerTag}`;
+  }).join('\n');
+
   return `
-## MULTIPLAYER SESSION
-Two adventurers are playing together. Address them by name.
 
-**Player 1:** ${player1.name} — ${player1.race} ${player1.class} (Level ${player1.level})
-**Player 2:** ${player2.name} — ${player2.race} ${player2.class} (Level ${player2.level})
+═══ MULTIPLAYER SESSION ═══
+Multiple adventurers are playing together in a shared world.
 
-Rules:
-- When one player acts, describe the outcome and give the other player a chance to react
-- Both players see all DM narration
-- Combat: alternate turns between players, then enemies
-- Reference both characters in scene descriptions
-- Each player's actions affect the shared world
+**Party Roster:**
+${roster}
+
+Rules for multiplayer narration:
+1. ADDRESS both players by their character names. Never refer to "the player" — use names.
+2. When one player acts, describe the outcome fully, then prompt the other player(s) to react or take their turn.
+3. Both players see ALL narration — never send private information to one player only.
+4. COMBAT: Alternate turns between players first, then resolve enemy actions. Clearly announce whose turn it is.
+5. Reference ALL party members in scene descriptions — even idle characters should feel present in the world.
+6. Each player's actions affect the shared world. If one player intimidates an NPC, the other player's subsequent interaction with that NPC should reflect it.
+7. Prefix player-directed prompts with the character's name so everyone knows who is being addressed (e.g., "Thorin, what do you do?" or "Lyra, how do you respond?").
+8. When both players are present in a scene, give each a moment to shine — avoid letting one character dominate the narrative.
 `;
 }
 
@@ -111,7 +123,7 @@ export function trimMessagesForContext(messages, maxMessages = 30) {
   }));
 }
 
-export function buildSystemPrompt(dmEngine, gameData, worldBible, dmStyle, sessionSummary) {
+export function buildSystemPrompt(dmEngine, gameData, worldBible, dmStyle, sessionSummary, multiplayerPlayers) {
   const worldState = JSON.stringify({
     campaign: gameData.campaign,
     character: {
@@ -192,7 +204,10 @@ ALWAYS include relevant tags at the END of your response. The companion app depe
     ? `\n\n═══ PREVIOUSLY ON... ═══\n${sessionSummary}\n`
     : '';
 
-  // Build prompt layers: DM Engine → Freedom+Consequence → Style Modifier → World Bible → Session Summary → World State → Tag Instructions
+  // Multiplayer context (optional)
+  const multiplayerSection = multiplayerPlayers ? buildMultiplayerContext(multiplayerPlayers) : '';
+
+  // Build prompt layers: DM Engine → Freedom+Consequence → Style Modifier → World Bible → Multiplayer → Session Summary → World State → Tag Instructions
   const worldBibleSection = worldBible ? `\n\n═══ WORLD BIBLE ═══\n${worldBible}\n` : '';
-  return `${processedEngine}${FREEDOM_CONSEQUENCE_PHILOSOPHY}${styleSection}${worldBibleSection}${sessionSummarySection}\n\n═══ CURRENT WORLD STATE ═══\n${worldState}\n${tagInstructions}`;
+  return `${processedEngine}${FREEDOM_CONSEQUENCE_PHILOSOPHY}${styleSection}${worldBibleSection}${multiplayerSection}${sessionSummarySection}\n\n═══ CURRENT WORLD STATE ═══\n${worldState}\n${tagInstructions}`;
 }

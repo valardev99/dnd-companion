@@ -1,0 +1,501 @@
+/* ═══════════════════════════════════════════════════════════════
+   LOBBY — Multiplayer Pre-Session Lobby
+   Dark Fantasy / WoW themed lobby interface
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ═══ ANIMATIONS ═══ */
+@keyframes lobbyFadeIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes readyPulse {
+  0%, 100% { box-shadow: 0 0 8px rgba(46, 125, 50, 0.3); }
+  50%      { box-shadow: 0 0 20px rgba(46, 125, 50, 0.6), 0 0 40px rgba(46, 125, 50, 0.2); }
+}
+
+@keyframes loadingSpin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+@keyframes scrollUnfurl {
+  from { opacity: 0; max-height: 0; padding-top: 0; padding-bottom: 0; }
+  to   { opacity: 1; max-height: 400px; padding-top: 24px; padding-bottom: 24px; }
+}
+
+/* ═══ PAGE LAYOUT ═══ */
+.lobby-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(ellipse at center, var(--deep-stone) 0%, var(--obsidian) 70%);
+  color: var(--parchment);
+  padding: 32px 16px;
+}
+
+.lobby-container {
+  width: 100%;
+  max-width: 780px;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  animation: lobbyFadeIn 0.5s ease-out;
+}
+
+/* ═══ LOADING STATE ═══ */
+.lobby-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  color: var(--muted);
+  font-family: 'Crimson Text', serif;
+  font-size: 1.1rem;
+}
+
+.lobby-loading-icon {
+  font-size: 2.4rem;
+  color: var(--gold);
+  animation: loadingSpin 2s linear infinite;
+  text-shadow: 0 0 12px rgba(201, 168, 76, 0.4);
+}
+
+/* ═══ ERROR STATE ═══ */
+.lobby-error {
+  text-align: center;
+  padding: 48px 24px;
+  background: linear-gradient(135deg, var(--stone) 0%, var(--deep-stone) 100%);
+  border: 1px solid var(--crimson);
+  border-radius: 4px;
+}
+
+.lobby-error h2 {
+  font-family: 'Cinzel', serif;
+  font-size: 1.4rem;
+  color: var(--crimson-bright);
+  margin: 0 0 12px;
+}
+
+.lobby-error p {
+  font-family: 'Crimson Text', serif;
+  color: var(--muted);
+  margin: 0 0 20px;
+}
+
+.lobby-back-link {
+  color: var(--gold);
+  font-family: 'Cinzel', serif;
+  font-size: 0.85rem;
+  text-decoration: none;
+  border-bottom: 1px solid var(--border-dim);
+  transition: color 0.2s, border-color 0.2s;
+}
+
+.lobby-back-link:hover {
+  color: var(--gold-bright);
+  border-color: var(--gold);
+}
+
+/* ═══ HEADER ═══ */
+.lobby-header {
+  text-align: center;
+}
+
+.lobby-back-btn {
+  display: inline-block;
+  font-family: 'Cinzel', serif;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-decoration: none;
+  letter-spacing: 0.5px;
+  margin-bottom: 12px;
+  transition: color 0.2s;
+}
+
+.lobby-back-btn:hover {
+  color: var(--gold-bright);
+}
+
+.lobby-title {
+  font-family: 'Cinzel', serif;
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--gold);
+  margin: 0;
+  letter-spacing: 1.5px;
+  text-shadow: 0 0 20px rgba(201, 168, 76, 0.25);
+}
+
+.lobby-subtitle {
+  font-family: 'Crimson Text', serif;
+  font-size: 1.05rem;
+  color: var(--muted);
+  margin: 6px 0 0;
+  font-style: italic;
+}
+
+/* ═══ SESSION RECAP — Parchment Scroll ═══ */
+.lobby-recap {
+  background: linear-gradient(135deg, rgba(212, 197, 160, 0.08) 0%, rgba(232, 220, 192, 0.04) 100%);
+  border: 1px solid rgba(212, 197, 160, 0.2);
+  border-radius: 4px;
+  padding: 24px 28px;
+  position: relative;
+  overflow: hidden;
+  animation: scrollUnfurl 0.6s ease-out;
+}
+
+.lobby-recap::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, var(--parchment), transparent);
+  opacity: 0.3;
+}
+
+.lobby-recap::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, var(--parchment), transparent);
+  opacity: 0.3;
+}
+
+.lobby-recap-title {
+  font-family: 'Cinzel', serif;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--parchment);
+  margin: 0 0 10px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.lobby-recap-text {
+  font-family: 'Crimson Text', serif;
+  font-size: 1.05rem;
+  line-height: 1.7;
+  color: var(--parchment-light);
+  margin: 0;
+  font-style: italic;
+}
+
+/* ═══ CHARACTER BUILDER SECTION ═══ */
+.lobby-character-builder {
+  animation: lobbyFadeIn 0.4s ease-out;
+}
+
+/* ═══ PLAYER SECTION ═══ */
+.lobby-players {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.lobby-section-title {
+  font-family: 'Cinzel', serif;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--gold-dim);
+  margin: 0;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  text-align: center;
+}
+
+.lobby-player-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+}
+
+/* ═══ PLAYER CARD — Warcraft Metallic Border ═══ */
+.lobby-player-card {
+  background: linear-gradient(135deg, var(--stone) 0%, var(--deep-stone) 100%);
+  border: 1px solid var(--border-gold);
+  border-radius: 4px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  position: relative;
+  transition: all 0.3s ease;
+  animation: lobbyFadeIn 0.4s ease-out;
+  /* Metallic double-border effect */
+  box-shadow:
+    inset 0 0 0 1px rgba(201, 168, 76, 0.08),
+    0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+.lobby-player-card::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: 20%;
+  right: 20%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gold-dim), transparent);
+}
+
+/* Ready state — emerald glow */
+.lobby-player-card.ready {
+  border-color: var(--emerald);
+  box-shadow:
+    inset 0 0 0 1px rgba(46, 125, 50, 0.15),
+    0 0 12px rgba(46, 125, 50, 0.2),
+    0 4px 16px rgba(0, 0, 0, 0.4);
+  animation: readyPulse 2.5s ease-in-out infinite;
+}
+
+/* Empty slot — dim dashed border */
+.lobby-player-card.empty {
+  border: 1px dashed var(--border-dim);
+  opacity: 0.5;
+  box-shadow: none;
+}
+
+.lobby-player-card.empty::before {
+  display: none;
+}
+
+.lobby-player-card.empty .lobby-player-name {
+  color: var(--muted);
+}
+
+/* ═══ PLAYER CARD INTERNALS ═══ */
+.lobby-player-badge {
+  font-family: 'Cinzel', serif;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--gold);
+  background: rgba(201, 168, 76, 0.1);
+  border: 1px solid var(--border-dim);
+  border-radius: 2px;
+  padding: 2px 10px;
+  align-self: flex-start;
+}
+
+.lobby-player-name {
+  font-family: 'Cinzel', serif;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--parchment);
+  letter-spacing: 0.5px;
+}
+
+.lobby-character-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.lobby-char-name {
+  font-family: 'Cinzel', serif;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--gold-bright);
+}
+
+.lobby-char-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-family: 'Crimson Text', serif;
+  font-size: 0.88rem;
+  color: var(--silver);
+}
+
+.lobby-char-details span {
+  background: rgba(201, 168, 76, 0.06);
+  border: 1px solid var(--border-dim);
+  border-radius: 2px;
+  padding: 1px 8px;
+}
+
+.lobby-no-character {
+  font-family: 'Crimson Text', serif;
+  font-size: 0.9rem;
+  color: var(--muted);
+  font-style: italic;
+}
+
+/* ═══ READY STATUS ═══ */
+.lobby-ready-status {
+  margin-top: 4px;
+}
+
+.lobby-ready-badge {
+  font-family: 'Cinzel', serif;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--emerald-bright);
+  text-shadow: 0 0 8px rgba(46, 125, 50, 0.4);
+}
+
+.lobby-not-ready-badge {
+  font-family: 'Cinzel', serif;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--muted);
+  opacity: 0.6;
+}
+
+/* ═══ ACTIONS ═══ */
+.lobby-actions {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding-top: 8px;
+}
+
+/* Ready Up Button — Emerald Gradient */
+.lobby-ready-btn {
+  font-family: 'Cinzel', serif;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: var(--parchment-light);
+  background: linear-gradient(135deg, var(--emerald) 0%, var(--emerald-bright) 100%);
+  border: 1px solid var(--emerald-bright);
+  border-radius: 4px;
+  padding: 14px 36px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  text-transform: uppercase;
+  box-shadow:
+    0 0 12px rgba(46, 125, 50, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.lobby-ready-btn:hover {
+  background: linear-gradient(135deg, var(--emerald-bright) 0%, var(--emerald) 100%);
+  box-shadow:
+    0 0 20px rgba(46, 125, 50, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  transform: translateY(-1px);
+}
+
+.lobby-ready-btn:active {
+  transform: translateY(0);
+}
+
+.lobby-ready-btn.confirmed {
+  background: linear-gradient(135deg, rgba(46, 125, 50, 0.2) 0%, rgba(46, 125, 50, 0.1) 100%);
+  border-color: var(--emerald);
+  color: var(--emerald-bright);
+  cursor: default;
+  box-shadow: none;
+  opacity: 0.7;
+}
+
+/* Launch Button — Prominent Gold Gradient */
+.lobby-launch-btn {
+  font-family: 'Cinzel', serif;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: var(--obsidian);
+  background: linear-gradient(135deg, var(--gold) 0%, var(--gold-bright) 50%, var(--gold) 100%);
+  border: 1px solid var(--gold-bright);
+  border-radius: 4px;
+  padding: 16px 48px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  text-transform: uppercase;
+  box-shadow:
+    0 0 20px rgba(201, 168, 76, 0.3),
+    0 4px 12px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  text-shadow: 0 1px 2px rgba(201, 168, 76, 0.3);
+}
+
+.lobby-launch-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, var(--gold-bright) 0%, var(--gold) 50%, var(--gold-bright) 100%);
+  box-shadow:
+    0 0 30px rgba(201, 168, 76, 0.45),
+    0 4px 16px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  transform: translateY(-2px);
+}
+
+.lobby-launch-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.lobby-launch-btn:disabled {
+  background: linear-gradient(135deg, var(--stone-light) 0%, var(--stone) 100%);
+  border-color: var(--border-dim);
+  color: var(--muted);
+  cursor: not-allowed;
+  box-shadow: none;
+  text-shadow: none;
+  opacity: 0.5;
+}
+
+/* ═══ RESPONSIVE — 768px ═══ */
+@media (max-width: 768px) {
+  .lobby-page {
+    padding: 20px 12px;
+    align-items: flex-start;
+  }
+
+  .lobby-container {
+    gap: 20px;
+  }
+
+  .lobby-title {
+    font-size: 1.5rem;
+  }
+
+  .lobby-subtitle {
+    font-size: 0.95rem;
+  }
+
+  .lobby-player-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .lobby-player-card {
+    padding: 16px;
+  }
+
+  .lobby-recap {
+    padding: 18px 20px;
+  }
+
+  .lobby-recap-text {
+    font-size: 0.95rem;
+  }
+
+  .lobby-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .lobby-ready-btn,
+  .lobby-launch-btn {
+    width: 100%;
+    text-align: center;
+    padding: 14px 24px;
+  }
+
+  .lobby-launch-btn {
+    font-size: 0.95rem;
+  }
+}
