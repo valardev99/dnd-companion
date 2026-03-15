@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext.jsx';
 
-export default function RegisterModal({ onClose, onSwitchToLogin }) {
+export default function RegisterModal({ onClose, onSuccess, onSwitchToLogin }) {
   const { register } = useAuth();
   const [email, setEmail] = useState('');
   const [username, setUsername] = useState('');
@@ -21,7 +21,7 @@ export default function RegisterModal({ onClose, onSwitchToLogin }) {
     setSubmitting(true);
     try {
       await register(email, username, password);
-      onClose();
+      (onSuccess || onClose)();
     } catch (err) {
       setError(err.message);
     } finally {

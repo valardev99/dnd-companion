@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import LoginModal from '../components/auth/LoginModal.jsx';
 import RegisterModal from '../components/auth/RegisterModal.jsx';
@@ -403,8 +403,14 @@ const HERO_IMAGES = [
 
 export default function LandingPage() {
   const { user, isAuthenticated, logout } = useAuth();
+  const navigate = useNavigate();
   const [authModal, setAuthModal] = useState(null); // 'login' | 'register' | null
   const [heroIndex, setHeroIndex] = useState(0);
+
+  const handleAuthSuccess = () => {
+    setAuthModal(null);
+    navigate('/play');
+  };
 
   // Rotate hero images every 8 seconds
   useEffect(() => {
@@ -421,12 +427,14 @@ export default function LandingPage() {
       {authModal === 'login' && (
         <LoginModal
           onClose={() => setAuthModal(null)}
+          onSuccess={handleAuthSuccess}
           onSwitchToRegister={() => setAuthModal('register')}
         />
       )}
       {authModal === 'register' && (
         <RegisterModal
           onClose={() => setAuthModal(null)}
+          onSuccess={handleAuthSuccess}
           onSwitchToLogin={() => setAuthModal('login')}
         />
       )}

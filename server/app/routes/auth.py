@@ -49,6 +49,7 @@ class UserResponse(BaseModel):
     username: str
     is_admin: bool
     has_api_key: bool
+    friend_code: str | None = None
 
     class Config:
         from_attributes = True
@@ -70,6 +71,7 @@ def _user_response(user: User) -> UserResponse:
         username=user.username,
         is_admin=user.is_admin,
         has_api_key=user.encrypted_api_key is not None,
+        friend_code=user.friend_code,
     )
 
 
