@@ -197,3 +197,136 @@ class PublicShareResponse(BaseModel):
     story_excerpt: Optional[str] = None
     likes: int = 0
     created_at: datetime
+
+
+# ---------------------------------------------------------------------------
+# Friends
+# ---------------------------------------------------------------------------
+
+class FriendCodeLookup(BaseModel):
+    friend_code: str
+
+
+class FriendResponse(BaseModel):
+    id: str
+    username: str
+    display_name: Optional[str] = None
+    avatar_url: Optional[str] = None
+    friend_code: str
+    is_online: bool = False
+    status: Optional[str] = None  # "online" | "in_campaign" | "idle" | "offline"
+    last_seen: Optional[datetime] = None
+    current_campaign_name: Optional[str] = None
+
+    model_config = {"from_attributes": True}
+
+
+class FriendRequestResponse(BaseModel):
+    id: str
+    from_user: FriendResponse
+    status: str
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+# ---------------------------------------------------------------------------
+# Campaign Hub
+# ---------------------------------------------------------------------------
+
+class CampaignCardResponse(BaseModel):
+    id: str
+    name: str
+    character_name: Optional[str] = None
+    character_level: Optional[int] = None
+    world_name: Optional[str] = None
+    thumbnail_url: Optional[str] = None
+    is_multiplayer: bool
+    co_player: Optional[FriendResponse] = None
+    status: str
+    last_played_at: Optional[datetime] = None
+    session_count: Optional[int] = None
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class CampaignDetailResponse(CampaignCardResponse):
+    world_bible_summary: Optional[str] = None
+    session_summary: Optional[str] = None
+    game_data: Optional[dict] = None
+    chat_history: Optional[list] = None
+
+
+class ArchiveCampaignRequest(BaseModel):
+    confirmation_text: str
+    summary: Optional[str] = None
+    ending: Optional[str] = None
+
+
+class ArchivedCampaignResponse(BaseModel):
+    id: str
+    name: str
+    summary: Optional[str] = None
+    ending: Optional[str] = None
+    character_name: Optional[str] = None
+    sessions_played: int
+    was_multiplayer: bool
+    co_player_name: Optional[str] = None
+    archived_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+# ---------------------------------------------------------------------------
+# Campaign Invites
+# ---------------------------------------------------------------------------
+
+class CampaignInviteRequest(BaseModel):
+    friend_id: str
+
+
+class CampaignInviteResponse(BaseModel):
+    id: str
+    campaign_name: str
+    from_user: FriendResponse
+    status: str
+    created_at: datetime
+    world_briefing: Optional[str] = None
+
+    model_config = {"from_attributes": True}
+
+
+# ---------------------------------------------------------------------------
+# Notifications
+# ---------------------------------------------------------------------------
+
+class NotificationResponse(BaseModel):
+    id: str
+    type: str
+    title: str
+    body: Optional[str] = None
+    data: Optional[dict] = None
+    read: bool
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+# ---------------------------------------------------------------------------
+# User Profile
+# ---------------------------------------------------------------------------
+
+class UserProfileResponse(BaseModel):
+    id: str
+    username: str
+    email: str
+    display_name: Optional[str] = None
+    avatar_url: Optional[str] = None
+    friend_code: str
+    has_api_key: bool
+    is_admin: bool
+    active_campaign_count: int
+    max_campaigns: int = 5
+
+    model_config = {"from_attributes": True}

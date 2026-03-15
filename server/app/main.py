@@ -9,7 +9,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.config import ALLOWED_ORIGINS
 from app.database import init_db
-from app.routes import admin, auth, billing, campaigns, chat, errors, feedback, images, quality, stories, submissions, test
+from app.routes import admin, auth, billing, campaigns, chat, errors, feedback, friends, images, notifications, quality, stories, submissions, test
 
 
 @asynccontextmanager
@@ -54,6 +54,8 @@ app.include_router(errors.router)                     # /api/errors — path alr
 app.include_router(submissions.router)                # /api/submissions — path already prefixed
 app.include_router(quality.router)                    # /api/quality/* — path already prefixed
 app.include_router(billing.router)                    # /api/billing/* — path already prefixed
+app.include_router(friends.router)                     # /api/friends/* — path already prefixed
+app.include_router(notifications.router)               # /api/notifications/* — path already prefixed
 
 
 # ---------------------------------------------------------------------------
