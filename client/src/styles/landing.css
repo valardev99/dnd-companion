@@ -208,6 +208,33 @@ html {
   overflow: hidden;
 }
 
+/* Hero background image carousel */
+.landing-hero-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.landing-hero-bg-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 30%;
+  opacity: 0;
+  filter: saturate(0.7) brightness(0.45);
+  transition: opacity 3s ease-in-out, transform 8s linear;
+  will-change: opacity, transform;
+  transform: scale(1);
+}
+
+.landing-hero-bg-img.active {
+  opacity: 0.6;
+  transform: scale(1.08);
+}
+
 .landing-hero::before {
   content: '';
   position: absolute;
@@ -215,7 +242,7 @@ html {
   background:
     radial-gradient(ellipse 80% 60% at 50% 40%, rgba(201, 168, 76, 0.06) 0%, transparent 70%),
     radial-gradient(ellipse 120% 80% at 50% 100%, rgba(12, 10, 6, 0.95) 0%, transparent 50%),
-    linear-gradient(180deg, rgba(12, 10, 6, 0.3) 0%, rgba(12, 10, 6, 0) 30%, rgba(12, 10, 6, 0) 70%, rgba(12, 10, 6, 0.9) 100%);
+    linear-gradient(180deg, rgba(12, 10, 6, 0.6) 0%, rgba(12, 10, 6, 0.2) 30%, rgba(12, 10, 6, 0.2) 60%, rgba(12, 10, 6, 0.95) 100%);
   pointer-events: none;
   z-index: 1;
 }
@@ -334,7 +361,12 @@ html {
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  animation: hero-cta-reveal 1s ease-out 1.5s both;
+  animation: scroll-indicator-reveal 1s ease-out 1.5s both;
+}
+
+@keyframes scroll-indicator-reveal {
+  from { opacity: 0; transform: translateX(-50%) translateY(16px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
 
 .landing-scroll-indicator span {

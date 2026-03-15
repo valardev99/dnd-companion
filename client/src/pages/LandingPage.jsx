@@ -387,12 +387,32 @@ function LandingParticles() {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// HERO IMAGES — rotating banner
+// ═══════════════════════════════════════════════════════════════
+const HERO_IMAGES = [
+  '/images/hero-1.png',
+  '/images/hero-2.png',
+  '/images/hero-3.png',
+  '/images/hero-4.png',
+  '/images/hero-5.png',
+];
+
+// ═══════════════════════════════════════════════════════════════
 // LANDING PAGE
 // ═══════════════════════════════════════════════════════════════
 
 export default function LandingPage() {
   const { user, isAuthenticated, logout } = useAuth();
   const [authModal, setAuthModal] = useState(null); // 'login' | 'register' | null
+  const [heroIndex, setHeroIndex] = useState(0);
+
+  // Rotate hero images every 8 seconds
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setHeroIndex(prev => (prev + 1) % HERO_IMAGES.length);
+    }, 4000);
+    return () => clearInterval(timer);
+  }, []);
 
   return (
     <div className="landing-page">
@@ -441,6 +461,16 @@ export default function LandingPage() {
 
       {/* ─── Hero Section ─── */}
       <section className="landing-hero">
+        <div className="landing-hero-bg">
+          {HERO_IMAGES.map((src, i) => (
+            <img
+              key={src}
+              src={src}
+              alt=""
+              className={`landing-hero-bg-img ${i === heroIndex ? 'active' : ''}`}
+            />
+          ))}
+        </div>
         <LandingParticles />
         <div className="landing-hero-content">
           <div className="landing-hero-rune">
