@@ -9,10 +9,24 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from sqlalchemy import func
 from app.auth import decrypt_api_key, get_current_user
 from app.database import get_db
-from app.models import Campaign, Story, User
-from app.schemas import ShareCampaignResponse
+from app.models import (
+    ArchivedCampaign,
+    Campaign,
+    CampaignInvite,
+    CampaignPlayer,
+    Notification,
+    Story,
+    User,
+)
+from app.schemas import (
+    ArchiveCampaignRequest,
+    CampaignCardResponse,
+    CampaignInviteRequest,
+    ShareCampaignResponse,
+)
 from app.services.recap import generate_recap
 
 logger = logging.getLogger(__name__)
@@ -166,9 +180,150 @@ async def _generate_unique_story_slug(
     return secrets.token_urlsafe(16)
 
 
+MAX_CAMPAIGNS = 5
+
+# Spoiler-section keywords — lines starting with these signal spoiler content
+_SPOILER_KEYWORDS = {"quest", "conflict", "secret", "plot", "opening"}
+
+
+def format_campaign_card(campaign: Campaign) -> dict:
+    """Extract card-level info from a Campaign's game_data JSON."""
+    game_data = campaign.game_data or {}
+    character_name = None
+    character_level = None
+    world_name = None
+    session_count = None
+
+    if isinstance(game_data, dict):
+        character_name = (
+            game_data.get("characterName")
+            or game_data.get("character_name")
+        )
+        character_level = (
+            game_data.get("characterLevel")
+            or game_data.get("character_level")
+        )
+        if character_level is not None:
+            try:
+                character_level = int(character_level)
+            except (ValueError, TypeError):
+                character_level = None
+        world_name = (
+            game_data.get("worldName")
+            or game_data.get("world_name")
+        )
+        session_count = (
+            game_data.get("sessionCount")
+            or game_data.get("session_count")
+        )
+        if session_count is not None:
+            try:
+                session_count = int(session_count)
+            except (ValueError, TypeError):
+                session_count = None
+
+    return CampaignCardResponse(
+        id=str(campaign.id),
+        name=campaign.name,
+        character_name=character_name,
+        character_level=character_level,
+        world_name=world_name,
+        thumbnail_url=campaign.thumbnail_url,
+        is_multiplayer=campaign.is_multiplayer,
+        co_player=None,
+        status=campaign.status,
+        last_played_at=campaign.last_played_at,
+        session_count=session_count,
+        created_at=campaign.created_at,
+    )
+
+
+def extract_world_briefing(world_bible: Optional[str]) -> Optional[str]:
+    """Return first ~500 chars of world bible, skipping spoiler sections."""
+    if not world_bible:
+        return None
+
+    lines = world_bible.splitlines()
+    safe_lines: List[str] = []
+    in_spoiler = False
+
+    for line in lines:
+        stripped = line.strip().lower()
+        # Check if this line starts a spoiler section (heading or keyword at start)
+        first_word = stripped.lstrip("#").strip().split()[0] if stripped.lstrip("#").strip() else ""
+        if first_word in _SPOILER_KEYWORDS:
+            in_spoiler = True
+            continue
+        # A new heading that is NOT a spoiler keyword resets the flag
+        if stripped.startswith("#") and first_word not in _SPOILER_KEYWORDS:
+            in_spoiler = False
+        if in_spoiler:
+            continue
+        safe_lines.append(line)
+
+    text = "\n".join(safe_lines).strip()
+    if len(text) > 500:
+        text = text[:500].rsplit(" ", 1)[0] + "..."
+    return text or None
+
+
 # ---------------------------------------------------------------------------
 # Routes
 # ---------------------------------------------------------------------------
+@router.get("/campaigns/hub")
+async def campaign_hub(
+    user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Return the campaign hub: active, joined, and archived campaigns."""
+    # Active (owned) campaigns
+    active_result = await db.execute(
+        select(Campaign)
+        .where(Campaign.owner_id == user.id, Campaign.status == "active")
+        .order_by(Campaign.updated_at.desc())
+    )
+    active_campaigns = active_result.scalars().all()
+
+    # Joined campaigns (via CampaignPlayer)
+    joined_result = await db.execute(
+        select(Campaign)
+        .join(CampaignPlayer, CampaignPlayer.campaign_id == Campaign.id)
+        .where(CampaignPlayer.user_id == user.id)
+        .order_by(Campaign.updated_at.desc())
+    )
+    joined_campaigns = joined_result.scalars().all()
+
+    # Archived campaigns
+    archived_result = await db.execute(
+        select(ArchivedCampaign)
+        .where(ArchivedCampaign.user_id == user.id)
+        .order_by(ArchivedCampaign.created_at.desc())
+    )
+    archived = archived_result.scalars().all()
+
+    return {
+        "active": [format_campaign_card(c) for c in active_campaigns],
+        "joined": [format_campaign_card(c) for c in joined_campaigns],
+        "archived": [
+            {
+                "id": str(a.id),
+                "name": a.name,
+                "summary": a.summary,
+                "ending": a.ending,
+                "character_name": a.character_name,
+                "world_name": a.world_name,
+                "sessions_played": a.sessions_played,
+                "was_multiplayer": a.was_multiplayer,
+                "co_player_name": a.co_player_name,
+                "archived_at": a.created_at.isoformat(),
+            }
+            for a in archived
+        ],
+        "active_count": len(active_campaigns),
+        "max_campaigns": MAX_CAMPAIGNS,
+    }
+
+
 @router.get("/campaigns", response_model=List[CampaignResponse])
 async def list_campaigns(
     user=Depends(get_current_user),
@@ -191,6 +346,19 @@ async def create_campaign(
     db: AsyncSession = Depends(get_db),
 ):
     """Create a new campaign."""
+    # Enforce active campaign limit
+    count_result = await db.execute(
+        select(func.count())
+        .select_from(Campaign)
+        .where(Campaign.owner_id == user.id, Campaign.status == "active")
+    )
+    active_count = count_result.scalar() or 0
+    if active_count >= MAX_CAMPAIGNS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Campaign limit reached. You can have at most {MAX_CAMPAIGNS} active campaigns. Archive or delete one first.",
+        )
+
     campaign = Campaign(
         owner_id=str(user.id),
         name=body.name,
@@ -418,3 +586,220 @@ async def create_recap(
         is_public=story.is_public,
         created_at=story.created_at.isoformat(),
     )
+
+
+# ---------------------------------------------------------------------------
+# Archive endpoint
+# ---------------------------------------------------------------------------
+@router.post("/campaigns/{campaign_id}/archive")
+async def archive_campaign(
+    campaign_id: str,
+    body: ArchiveCampaignRequest,
+    user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Archive a campaign: create an ArchivedCampaign record and delete the original."""
+    campaign = await _get_owned_campaign(campaign_id, user, db)
+
+    # Confirmation text must match campaign name exactly
+    if body.confirmation_text != campaign.name:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Confirmation text does not match campaign name.",
+        )
+
+    # Extract info from game_data
+    game_data = campaign.game_data or {}
+    character_name = None
+    world_name = None
+    sessions_played = 0
+
+    if isinstance(game_data, dict):
+        character_name = game_data.get("characterName") or game_data.get("character_name")
+        world_name = game_data.get("worldName") or game_data.get("world_name")
+        sp = game_data.get("sessionCount") or game_data.get("session_count") or 0
+        try:
+            sessions_played = int(sp)
+        except (ValueError, TypeError):
+            sessions_played = 0
+
+    archive = ArchivedCampaign(
+        user_id=str(user.id),
+        original_campaign_id=str(campaign.id),
+        name=campaign.name,
+        summary=body.summary,
+        ending=body.ending,
+        character_name=character_name,
+        world_name=world_name,
+        sessions_played=sessions_played,
+        was_multiplayer=campaign.is_multiplayer,
+    )
+    db.add(archive)
+    await db.flush()
+
+    # Delete the original campaign (frees the slot)
+    await db.delete(campaign)
+    await db.flush()
+
+    return {"status": "archived", "archive_id": str(archive.id)}
+
+
+# ---------------------------------------------------------------------------
+# Campaign invite endpoint
+# ---------------------------------------------------------------------------
+@router.post("/campaigns/{campaign_id}/invite")
+async def invite_to_campaign(
+    campaign_id: str,
+    body: CampaignInviteRequest,
+    user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Send a campaign invite to a friend."""
+    campaign = await _get_owned_campaign(campaign_id, user, db)
+
+    # Verify the friend exists
+    friend_result = await db.execute(select(User).where(User.id == body.friend_id))
+    friend = friend_result.scalar_one_or_none()
+    if friend is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    # Check for existing pending invite
+    existing = await db.execute(
+        select(CampaignInvite).where(
+            CampaignInvite.campaign_id == campaign_id,
+            CampaignInvite.to_user_id == body.friend_id,
+            CampaignInvite.status == "pending",
+        )
+    )
+    if existing.scalar_one_or_none() is not None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invite already pending for this user.",
+        )
+
+    invite = CampaignInvite(
+        campaign_id=str(campaign.id),
+        from_user_id=str(user.id),
+        to_user_id=body.friend_id,
+    )
+    db.add(invite)
+    await db.flush()
+
+    # Create notification for the invited user
+    notification = Notification(
+        user_id=body.friend_id,
+        type="campaign_invite",
+        title=f"Campaign invite from {user.username}",
+        body=f"You've been invited to join \"{campaign.name}\".",
+        data={"invite_id": str(invite.id), "campaign_id": str(campaign.id)},
+    )
+    db.add(notification)
+    await db.flush()
+
+    return {"status": "invited", "invite_id": str(invite.id)}
+
+
+# ---------------------------------------------------------------------------
+# Campaign invite accept / decline
+# ---------------------------------------------------------------------------
+@router.post("/campaigns/invites/{invite_id}/accept")
+async def accept_campaign_invite(
+    invite_id: str,
+    user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Accept a campaign invite."""
+    result = await db.execute(select(CampaignInvite).where(CampaignInvite.id == invite_id))
+    invite = result.scalar_one_or_none()
+    if invite is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Invite not found")
+    if str(invite.to_user_id) != str(user.id):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not your invite")
+    if invite.status != "pending":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invite is no longer pending")
+
+    invite.status = "accepted"
+    db.add(invite)
+
+    # Create CampaignPlayer record
+    player = CampaignPlayer(
+        campaign_id=str(invite.campaign_id),
+        user_id=str(user.id),
+    )
+    db.add(player)
+
+    # Mark campaign as multiplayer
+    campaign_result = await db.execute(select(Campaign).where(Campaign.id == invite.campaign_id))
+    campaign = campaign_result.scalar_one_or_none()
+    if campaign:
+        campaign.is_multiplayer = True
+        db.add(campaign)
+
+    await db.flush()
+
+    # Notify the campaign owner
+    notification = Notification(
+        user_id=str(invite.from_user_id),
+        type="campaign_invite_accepted",
+        title=f"{user.username} joined your campaign",
+        body=f"{user.username} accepted the invite to \"{campaign.name}\"." if campaign else None,
+        data={"campaign_id": str(invite.campaign_id), "user_id": str(user.id)},
+    )
+    db.add(notification)
+    await db.flush()
+
+    return {"status": "accepted", "campaign_id": str(invite.campaign_id)}
+
+
+@router.post("/campaigns/invites/{invite_id}/decline")
+async def decline_campaign_invite(
+    invite_id: str,
+    user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Decline a campaign invite."""
+    result = await db.execute(select(CampaignInvite).where(CampaignInvite.id == invite_id))
+    invite = result.scalar_one_or_none()
+    if invite is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Invite not found")
+    if str(invite.to_user_id) != str(user.id):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not your invite")
+    if invite.status != "pending":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invite is no longer pending")
+
+    invite.status = "declined"
+    db.add(invite)
+    await db.flush()
+
+    return {"status": "declined"}
+
+
+# ---------------------------------------------------------------------------
+# Player character save endpoint
+# ---------------------------------------------------------------------------
+@router.put("/campaigns/{campaign_id}/player/character")
+async def save_player_character(
+    campaign_id: str,
+    body: Dict[str, Any],
+    user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Save character_data JSON to the CampaignPlayer record for an invited player."""
+    result = await db.execute(
+        select(CampaignPlayer).where(
+            CampaignPlayer.campaign_id == campaign_id,
+            CampaignPlayer.user_id == user.id,
+        )
+    )
+    player = result.scalar_one_or_none()
+    if player is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="You are not a player in this campaign.",
+        )
+
+    player.character_data = body
+    db.add(player)
+    await db.flush()
+
+    return {"status": "saved", "campaign_id": campaign_id}
