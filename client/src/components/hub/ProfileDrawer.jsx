@@ -118,6 +118,7 @@ export default function ProfileDrawer({ isOpen, onClose }) {
               placeholder={user.username}
               maxLength={100}
             />
+            <div className="profile-field-hint-text">This is what your friends see.</div>
           </div>
 
           {/* Username (read-only) */}

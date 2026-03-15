@@ -33,7 +33,7 @@ export default function HubPage() {
         onProfileClick={() => setProfileOpen(true)}
       />
       <div className="hub-main">
-        <HubTopBar title={titles[activeView]} />
+        <HubTopBar title={titles[activeView]} onProfileClick={() => setProfileOpen(true)} />
         <div className="hub-content">
           <ActiveView />
         </div>

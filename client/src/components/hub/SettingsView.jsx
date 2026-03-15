@@ -53,11 +53,12 @@ export default function SettingsView() {
         body: JSON.stringify({ apiKey, model, provider: 'openrouter' }),
       });
       const data = await resp.json();
-      if (data.status === 'ok') {
+      if (resp.ok && data.status === 'ok') {
         setTestStatus('\u2713 Connected: ' + data.message);
         setApiStatus('connected');
       } else {
-        setTestStatus('\u2717 Error: ' + data.message);
+        const errMsg = data.detail || data.message || 'Unknown error';
+        setTestStatus('\u2717 Error: ' + errMsg);
         setApiStatus('error');
       }
     } catch (e) {

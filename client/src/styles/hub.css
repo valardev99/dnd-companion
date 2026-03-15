@@ -267,6 +267,22 @@
   letter-spacing: 0.5px;
 }
 
+.notification-dropdown-close {
+  background: none;
+  border: 1px solid var(--border-dim);
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 0.9rem;
+  padding: 4px 10px;
+  transition: all 0.2s;
+  line-height: 1;
+}
+
+.notification-dropdown-close:hover {
+  color: var(--parchment);
+  border-color: var(--border-gold);
+}
+
 .notification-dropdown-list {
   overflow-y: auto;
   max-height: 360px;
@@ -982,13 +998,62 @@
 }
 
 .archive-modal {
-  width: 460px;
+  width: 500px;
   max-width: 95vw;
+  max-height: 90vh;
+  overflow-y: auto;
   background: var(--deep-stone);
   border: 2px solid var(--border-gold);
   padding: 28px 32px;
   box-shadow: 0 8px 40px rgba(0, 0, 0, 0.7), 0 0 30px rgba(201, 168, 76, 0.08);
   animation: auth-modal-appear 0.3s ease-out;
+  scrollbar-width: thin;
+  scrollbar-color: var(--gold-dim) var(--void);
+}
+
+/* Archive — AI Generate Button */
+.archive-generate-btn {
+  width: 100%;
+  padding: 12px 20px;
+  margin-bottom: 16px;
+  font-family: 'Cinzel', serif;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--gold);
+  background: linear-gradient(180deg, rgba(201, 168, 76, 0.12) 0%, rgba(201, 168, 76, 0.04) 100%);
+  border: 1px solid var(--gold-dim);
+  cursor: pointer;
+  transition: all 0.25s;
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.archive-generate-btn:hover:not(:disabled) {
+  background: linear-gradient(180deg, rgba(201, 168, 76, 0.22) 0%, rgba(201, 168, 76, 0.08) 100%);
+  border-color: var(--gold);
+  box-shadow: 0 0 16px rgba(201, 168, 76, 0.15);
+}
+
+.archive-generate-btn:disabled {
+  opacity: 0.7;
+  cursor: wait;
+}
+
+.archive-generate-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--gold-dim);
+  border-top-color: var(--gold-bright);
+  border-radius: 50%;
+  animation: archive-spin 0.8s linear infinite;
+}
+
+@keyframes archive-spin {
+  to { transform: rotate(360deg); }
 }
 
 .archive-modal-title {
@@ -1514,24 +1579,66 @@
   }
 }
 
+/* ═══ DESKTOP/MOBILE VISIBILITY ═══ */
+.hub-desktop-only { display: flex; }
+.hub-mobile-only { display: none; }
+
+/* ═══ TOP BAR LEFT — Back + Title ═══ */
+.hub-topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.hub-topbar-back {
+  display: none; /* hidden on desktop — sidebar has nav */
+}
+
+/* ═══ MOBILE AVATAR BUTTON ═══ */
+.hub-topbar-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(201, 168, 76, 0.12);
+  border: 1px solid var(--gold-dim);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.hub-topbar-avatar:hover {
+  border-color: var(--gold);
+  box-shadow: 0 0 8px rgba(201, 168, 76, 0.3);
+}
+
 /* ═══ RESPONSIVE — Mobile ═══ */
 @media (max-width: 768px) {
+  .hub-desktop-only { display: none !important; }
+  .hub-mobile-only { display: flex !important; }
+
   .hub-layout {
     grid-template-columns: 1fr;
   }
 
+  /* ─── Bottom Nav ─── */
   .hub-nav {
     position: fixed;
     bottom: 0;
+    top: auto !important;
     left: 0;
     right: 0;
-    height: auto;
+    height: auto !important;
+    width: 100% !important;
     flex-direction: row;
     border-right: none;
-    border-top: 1px solid var(--border-gold);
-    z-index: var(--z-mobile-nav);
+    border-top: 2px solid var(--border-gold);
+    z-index: 100;
     padding: 0;
-    background: var(--deep-stone);
+    background: var(--stone);
+    box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.5);
   }
 
   .hub-nav-logo,
@@ -1569,30 +1676,52 @@
     height: 2px;
   }
 
-  .hub-nav-item-icon {
-    font-size: 1.2rem;
-  }
+  .hub-nav-item-icon { font-size: 1.2rem; }
+  .hub-nav-item-label { font-size: 0.65rem; }
 
-  .hub-nav-item-label {
-    font-size: 0.65rem;
-  }
-
+  /* ─── Main content ─── */
   .hub-main {
-    padding-bottom: 72px;
+    padding-bottom: 72px; /* room for bottom nav */
   }
 
   .hub-content {
     padding: 20px 16px;
   }
 
+  /* ─── Top Bar — full width header ─── */
   .hub-topbar {
     padding: 12px 16px;
+    gap: 8px;
   }
+
+  .hub-topbar-back {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--gold);
+    text-decoration: none;
+    font-size: 1.2rem;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+  }
+  .hub-topbar-back:hover { opacity: 1; }
 
   .hub-topbar-title {
     font-size: 1.1rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
+  .hub-topbar-right {
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  /* ─── Campaigns ─── */
   .campaigns-grid {
     grid-template-columns: 1fr;
   }
@@ -1610,6 +1739,12 @@
     gap: 16px;
   }
 
+  .campaign-detail-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  /* ─── Notifications ─── */
   .notification-dropdown {
     position: fixed;
     top: 0;
@@ -1621,20 +1756,24 @@
     border-radius: 0;
     border: none;
     z-index: 9999;
+    background: var(--obsidian);
+  }
+
+  .notification-dropdown-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
   }
 
   .notification-dropdown-list {
     max-height: calc(100vh - 60px);
   }
 
-  .hub-topbar-right {
-    gap: 8px;
-  }
-
   .hub-topbar-btn span {
     display: none;
   }
 
+  /* ─── Modals ─── */
   .archive-modal {
     width: calc(100vw - 32px);
     max-width: 100%;
@@ -1650,9 +1789,22 @@
     font-size: 1.3rem;
   }
 
-  .campaign-detail-header {
-    flex-direction: column;
-    align-items: flex-start;
+  /* ─── Profile Drawer — full-screen on mobile ─── */
+  .profile-drawer {
+    left: 0 !important;
+    right: 0;
+    width: 100% !important;
+    max-width: 100% !important;
+    transform: translateX(100%) !important;
+    border-right: none;
+    border-left: none;
+  }
+  .profile-drawer.open {
+    transform: translateX(0) !important;
+  }
+
+  .profile-drawer-backdrop.open {
+    z-index: 998;
   }
 }
 
@@ -2267,6 +2419,14 @@
   color: var(--muted);
   margin-left: 8px;
   opacity: 0.6;
+}
+
+.profile-field-hint-text {
+  font-family: 'Crimson Text', serif;
+  font-size: 0.78rem;
+  color: var(--muted);
+  margin-top: 6px;
+  font-style: italic;
 }
 
 /* Friend Code */

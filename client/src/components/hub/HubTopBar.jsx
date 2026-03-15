@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext.jsx';
+import { getAvatarEmoji } from './avatarPresets.js';
 
 function NotificationItem({ notification, onAction }) {
   // Backend returns: { id, type, title, body, data, read, created_at }
@@ -56,6 +58,11 @@ function NotificationDropdown({ notifications, onAction, onClose }) {
     <div className="notification-dropdown" ref={dropdownRef}>
       <div className="notification-dropdown-header">
         <h3>Notifications</h3>
+        <button
+          className="notification-dropdown-close"
+          onClick={onClose}
+          aria-label="Close notifications"
+        >✕</button>
       </div>
       <div className="notification-dropdown-list">
         {notifications.length === 0 ? (
@@ -70,7 +77,7 @@ function NotificationDropdown({ notifications, onAction, onClose }) {
   );
 }
 
-export default function HubTopBar({ title }) {
+export default function HubTopBar({ title, onProfileClick }) {
   const { user, token, authFetch } = useAuth();
   const [notifications, setNotifications] = useState([]);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -99,21 +106,17 @@ export default function HubTopBar({ title }) {
     const { id, type, data } = notification;
     try {
       if (type === 'friend_request' && data?.friend_request_id) {
-        // Accept/decline the friend request
         const endpoint = action === 'accept'
           ? `/api/friends/request/${data.friend_request_id}/accept`
           : `/api/friends/request/${data.friend_request_id}/decline`;
         await authFetch(endpoint, { method: 'POST' });
       } else if (type === 'campaign_invite' && data?.invite_id) {
-        // Accept/decline the campaign invite
         const endpoint = action === 'accept'
           ? `/api/campaigns/invites/${data.invite_id}/accept`
           : `/api/campaigns/invites/${data.invite_id}/decline`;
         await authFetch(endpoint, { method: 'POST' });
       }
-      // Mark notification as read
       await authFetch(`/api/notifications/${id}/read`, { method: 'POST' });
-      // Remove from list
       setNotifications(prev => prev.filter(n => n.id !== id));
     } catch (e) {
       // Silently fail
@@ -132,7 +135,13 @@ export default function HubTopBar({ title }) {
 
   return (
     <div className="hub-topbar">
-      <h1 className="hub-topbar-title">{title}</h1>
+      {/* Mobile: back arrow + brand */}
+      <div className="hub-topbar-left">
+        <Link to="/" className="hub-topbar-back" title="Back to Home">
+          {'\u27F5'}
+        </Link>
+        <h1 className="hub-topbar-title">{title}</h1>
+      </div>
 
       <div className="hub-topbar-right">
         {/* Notification Bell */}
@@ -159,8 +168,8 @@ export default function HubTopBar({ title }) {
           )}
         </div>
 
-        {/* Profile + Friend Code */}
-        <div className="hub-profile">
+        {/* Desktop: Profile + Friend Code */}
+        <div className="hub-profile hub-desktop-only">
           <span className="hub-profile-name">{user?.display_name || user?.username || 'Adventurer'}</span>
           {user?.friend_code && (
             <button className="hub-friend-code" onClick={copyFriendCode} title="Copy friend code">
@@ -169,6 +178,15 @@ export default function HubTopBar({ title }) {
             </button>
           )}
         </div>
+
+        {/* Mobile: Profile avatar button */}
+        <button
+          className="hub-topbar-avatar hub-mobile-only"
+          onClick={onProfileClick}
+          title="Profile"
+        >
+          {getAvatarEmoji(user?.avatar_url)}
+        </button>
       </div>
     </div>
   );
