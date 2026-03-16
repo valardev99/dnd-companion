@@ -3,14 +3,15 @@ import { useGame } from '../../contexts/GameContext.jsx';
 import { PANELS } from '../../data/panels.js';
 import GAME_ICONS from '../shared/GameIcons.jsx';
 
-export default function Sidebar({ onMobilePanelSelect, mobilePanelOpen }) {
+export default function Sidebar({ onMobilePanelSelect, mobilePanelOpen, onToggleCompanion, isTablet }) {
   const { state, dispatch } = useGame();
 
   const handleClick = (panelId) => {
     dispatch({ type: 'SET_PANEL', payload: panelId });
-    // On mobile, also trigger full-screen panel
-    if (onMobilePanelSelect) {
+    if (onMobilePanelSelect && window.innerWidth < 768) {
       onMobilePanelSelect(panelId);
+    } else if (onToggleCompanion && isTablet) {
+      onToggleCompanion();
     }
   };
 

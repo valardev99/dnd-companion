@@ -149,6 +149,8 @@ function App() {
         <Sidebar
           onMobilePanelSelect={handleMobilePanelSelect}
           mobilePanelOpen={mobilePanelOpen}
+          onToggleCompanion={() => setCompanionOpen(true)}
+          isTablet={isTablet}
         />
 
         {/* Tablet backdrop — rendered when companion overlays on tablet */}
