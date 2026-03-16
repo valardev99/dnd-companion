@@ -100,8 +100,6 @@
   --z-modal: 2000;
 
   /* Sizing */
-  --sidebar-width: 64px;
-  --sidebar-expanded: 220px;
   --header-height: 56px;
   --context-width: 340px;
   --notification-width: 400px;
