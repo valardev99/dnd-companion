@@ -69,90 +69,164 @@
 .chat-messages::-webkit-scrollbar-thumb { background: var(--ash); border-radius: 3px; }
 .chat-messages::-webkit-scrollbar-thumb:hover { background: var(--muted); }
 
-/* ═══ MESSAGE BUBBLES ═══ */
-.message-bubble {
-  max-width: 90%;
-  padding: 14px 18px;
-  border-radius: 12px;
-  line-height: 1.7;
-  font-size: 0.88rem;
-  position: relative;
+/* ═══ MESSAGE STYLES — Hybrid Format ═══ */
+
+/* Base message */
+.chat-message {
+  margin-bottom: 8px;
   animation: message-appear 0.3s ease-out;
 }
 
-.message-bubble.dm {
-  align-self: flex-start;
-  background: linear-gradient(135deg, #2a1f10, rgba(42, 31, 16, 0.95));
-  border: 2px solid var(--gold-dim);
-  color: #f0e6d0;
-  font-family: 'Crimson Text', Georgia, serif;
-  font-size: var(--chat-text-size, 0.95rem);
-  border-bottom-left-radius: 4px;
-  box-shadow: inset 0 1px 0 rgba(201, 168, 76, 0.08), inset 0 -1px 0 rgba(0, 0, 0, 0.3), 0 4px 12px rgba(0, 0, 0, 0.5);
-  animation: dm-message-appear 0.6s ease-out;
+/* DM Narration — left border, clean */
+.chat-message.dm-narration {
+  background: var(--msg-dm-bg);
+  border-left: 3px solid var(--msg-dm-border);
+  border-radius: 0 4px 4px 0;
+  padding: 10px 12px;
 }
 
-.message-bubble.dm::before {
-  content: '⚔ DM';
-  display: block;
-  font-family: 'Fira Code', monospace;
-  font-size: 0.6rem;
-  color: var(--gold-dim);
-  text-transform: uppercase;
-  letter-spacing: 0.15em;
-  margin-bottom: 8px;
-}
-
-.message-bubble.player {
-  align-self: flex-end;
-  background: linear-gradient(135deg, #2a2015, #362a1c);
-  border: 2px solid var(--gold-dim);
-  color: var(--parchment);
-  font-family: 'Inter', sans-serif;
-  border-bottom-right-radius: 4px;
-  box-shadow: inset 0 1px 0 rgba(201, 168, 76, 0.06), 0 4px 12px rgba(0, 0, 0, 0.4);
-}
-
-.message-bubble.player::before {
-  content: 'You';
-  display: block;
-  font-family: 'Fira Code', monospace;
-  font-size: 0.6rem;
-  color: var(--frost-dim);
-  text-transform: uppercase;
-  letter-spacing: 0.15em;
-  margin-bottom: 8px;
-  text-align: right;
-}
-
-.message-bubble.system-msg {
-  align-self: center;
-  max-width: 80%;
-  background: rgba(12, 10, 6, 0.95);
-  border: 2px solid var(--gold);
-  border-radius: 2px;
+.chat-message.dm-narration .msg-sender {
+  font-size: 0.65rem;
   color: var(--gold);
-  font-family: 'Fira Code', monospace;
-  font-size: 0.75rem;
-  text-align: center;
-  padding: 10px 16px;
-  box-shadow: 0 0 20px rgba(201, 168, 76, 0.15), inset 0 0 15px rgba(201, 168, 76, 0.05);
+  font-family: Cinzel, serif;
+  margin-bottom: 3px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
-.message-bubble.dm .dm-text {
+.chat-message.dm-narration .msg-body {
+  font-size: 0.8rem;
+  color: var(--msg-dm-text);
+  font-style: italic;
+  font-family: 'Crimson Text', serif;
+  line-height: 1.5;
+}
+
+/* Player Action — WoW framed bubble */
+.chat-message.player-action {
+  background: linear-gradient(135deg, var(--msg-player-bg-start), var(--msg-player-bg-end));
+  border: 2px solid var(--msg-player-border);
+  border-radius: 6px;
+  padding: 10px 12px;
+  margin-left: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.chat-message.player-action .msg-sender {
+  font-size: 0.65rem;
+  color: var(--gold);
+  font-family: Cinzel, serif;
+  margin-bottom: 3px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.chat-message.player-action .msg-body {
+  font-size: 0.8rem;
+  color: var(--msg-player-text);
+  font-family: 'Crimson Text', serif;
+  line-height: 1.5;
+}
+
+/* Other Player — purple left border (multiplayer) */
+.chat-message.other-player {
+  background: var(--msg-other-bg);
+  border-left: 3px solid var(--msg-other-purple);
+  border-radius: 0 4px 4px 0;
+  padding: 10px 12px;
+}
+
+.chat-message.other-player .msg-sender {
+  font-size: 0.65rem;
+  color: var(--msg-other-purple);
+  font-family: Cinzel, serif;
+  margin-bottom: 3px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.chat-message.other-player .msg-body {
+  font-size: 0.8rem;
+  color: var(--msg-other-purple-light);
+  font-family: 'Crimson Text', serif;
+  line-height: 1.5;
+}
+
+/* System Message — centered, minimal */
+.chat-message.system-msg {
+  background: var(--msg-system-bg);
+  border: 1px solid var(--msg-system-border);
+  border-radius: 4px;
+  padding: 4px 8px;
+  text-align: center;
+  align-self: center;
+  margin: 4px auto;
+  width: fit-content;
+}
+
+.chat-message.system-msg .msg-body {
+  font-size: 0.7rem;
+  color: var(--msg-system-text);
+  font-family: 'Fira Code', monospace;
+}
+
+.chat-message.system-msg .msg-highlight {
+  color: var(--gold);
+  font-weight: bold;
+}
+
+/* Enemy HP — combat inline */
+.chat-message.enemy-hp {
+  background: var(--msg-enemy-bg);
+  border: 1px solid var(--msg-enemy-border);
+  border-radius: 4px;
+  padding: 6px 10px;
+  margin: 4px 0;
+}
+
+.enemy-hp-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 3px;
+}
+
+.enemy-hp-name {
+  font-size: 0.65rem;
+  color: #e8c0c0;
+  font-family: Cinzel, serif;
+}
+
+.enemy-hp-status {
+  font-size: 0.65rem;
+  color: var(--crimson-bright);
+}
+
+.enemy-hp-bar {
+  width: 100%;
+  height: 4px;
+  background: var(--deep-stone);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.enemy-hp-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--crimson-bright), var(--crimson));
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+/* DM text formatting */
+.chat-message.dm-narration .msg-body .dm-text {
   white-space: pre-wrap;
 }
 
-.message-bubble.dm .message-content {
-  max-width: 720px;
-  line-height: 1.75;
-}
-
-.message-bubble.dm .message-content p {
+.chat-message.dm-narration .msg-body p {
   margin: 0 0 0.8em 0;
 }
 
-.message-bubble.dm .message-content p:last-child {
+.chat-message.dm-narration .msg-body p:last-child {
   margin-bottom: 0;
 }
 

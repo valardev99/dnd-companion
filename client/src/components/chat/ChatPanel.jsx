@@ -104,25 +104,45 @@ function ChatPanel({ multiplayer, campaignId, className }) {
           </div>
         )}
 
-        {state.chatMessages.map((msg, i) => (
-          <React.Fragment key={msg.id || i}>
-            <div className={`message-bubble ${msg.role === 'player' ? 'player' : msg.role === 'system' ? 'system-msg' : 'dm'} ${msg.isMultiplayer ? 'multiplayer-msg' : ''}`}>
-              {msg.role === 'dm' && !msg.playerName && <div className="message-sender">The DM</div>}
-              {msg.role === 'dm' && msg.playerName && (
-                <div className="message-sender multiplayer-sender" style={{ color: 'var(--frost)' }}>
-                  {msg.playerName}
+        {state.chatMessages.map((msg, i) => {
+          // Determine message type for styling
+          let messageClass = 'chat-message';
+          let senderName = '';
+
+          if (msg.role === 'dm' && msg.isMultiplayer && msg.playerName) {
+            // Other player's action relayed by DM (multiplayer)
+            messageClass += ' other-player';
+            senderName = msg.playerName;
+          } else if (msg.role === 'dm') {
+            messageClass += ' dm-narration';
+            senderName = 'Dungeon Master';
+          } else if (msg.role === 'player') {
+            messageClass += ' player-action';
+            senderName = multiplayer && msg.playerName ? msg.playerName : (state.gameData.character.name || 'You');
+          } else if (msg.role === 'system') {
+            messageClass += ' system-msg';
+          }
+
+          const isStreaming = state.isStreaming && i === state.chatMessages.length - 1;
+          const content = msg.content || (isStreaming ? '' : '');
+
+          return (
+            <React.Fragment key={msg.id || i}>
+              <div className={messageClass}>
+                {msg.role !== 'system' && (
+                  <div className="msg-sender">{senderName}</div>
+                )}
+                <div className="msg-body">
+                  {msg.role === 'dm' && !msg.isMultiplayer ? formatDMText(content) : content}
                 </div>
+              </div>
+              {/* Preserve SessionRating after completed DM messages */}
+              {msg.role === 'dm' && msg.content && !isStreaming && i === state.chatMessages.length - 1 && (
+                <SessionRating messageId={msg.id} />
               )}
-              {msg.role === 'player' && <div className="message-sender">{multiplayer && msg.playerName ? msg.playerName : 'You'}</div>}
-              {msg.role === 'system' && <div className="message-sender">System</div>}
-              <div className="message-content">{msg.role === 'dm' ? formatDMText(msg.content) : (msg.content || (state.isStreaming && i === state.chatMessages.length - 1 ? '' : ''))}</div>
-            </div>
-            {/* Show rating widget after completed DM messages (not during streaming) */}
-            {msg.role === 'dm' && msg.content && !(state.isStreaming && i === state.chatMessages.length - 1) && i === state.chatMessages.length - 1 && (
-              <SessionRating messageId={msg.id} />
-            )}
-          </React.Fragment>
-        ))}
+            </React.Fragment>
+          );
+        })}
 
         {state.isStreaming && (
           <div className="typing-indicator">
