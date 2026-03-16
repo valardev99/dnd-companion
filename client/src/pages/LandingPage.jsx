@@ -461,7 +461,7 @@ export default function LandingPage() {
               </>
             )}
           </div>
-          <Link to="/play" className="landing-cta-btn landing-cta-btn-secondary" style={{ padding: '6px 16px', fontSize: '1.2rem' }}>
+          <Link to="/play/free" className="landing-cta-btn landing-cta-btn-secondary" style={{ padding: '6px 16px', fontSize: '1.2rem' }}>
             Play Free
           </Link>
         </div>
@@ -492,7 +492,7 @@ export default function LandingPage() {
             and every choice you make has impact and consequence.
           </p>
           <div className="landing-hero-cta">
-            <Link to="/play" className="landing-cta-btn">
+            <Link to="/play/free" className="landing-cta-btn">
               Play Free
             </Link>
           </div>
@@ -671,7 +671,7 @@ export default function LandingPage() {
           No downloads. No sign-up required. Step into a world that remembers
           every choice you make.
         </p>
-        <Link to="/play" className="landing-cta-btn">
+        <Link to="/play/free" className="landing-cta-btn">
           Start Your Adventure
         </Link>
       </section>
