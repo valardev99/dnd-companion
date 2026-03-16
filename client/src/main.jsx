@@ -6,7 +6,7 @@ import { NotificationProvider } from './contexts/NotificationContext.jsx';
 import NotificationToast from './components/effects/NotificationToast.jsx';
 import LandingPage from './pages/LandingPage.jsx';
 import HubPage from './pages/HubPage.jsx';
-import PlayPage from './pages/PlayPage.jsx';
+
 import GameSessionPage from './pages/GameSessionPage.jsx';
 import LobbyPage from './pages/LobbyPage.jsx';
 import StoriesPage from './pages/StoriesPage.jsx';
@@ -21,7 +21,7 @@ createRoot(document.getElementById('root')).render(
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/play" element={<HubPage />} />
-          <Route path="/play/free" element={<PlayPage />} />
+
           <Route path="/play/campaign/:id" element={<GameSessionPage />} />
           <Route path="/play/lobby/:id" element={<LobbyPage />} />
           <Route path="/stories" element={<StoriesPage />} />

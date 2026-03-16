@@ -461,9 +461,13 @@ export default function LandingPage() {
               </>
             )}
           </div>
-          <Link to="/play/free" className="landing-cta-btn landing-cta-btn-secondary" style={{ padding: '6px 16px', fontSize: '1.2rem' }}>
-            Play Free
-          </Link>
+          <button
+            onClick={() => isAuthenticated ? navigate('/play') : setAuthModal('register')}
+            className="landing-cta-btn landing-cta-btn-secondary"
+            style={{ padding: '6px 16px', fontSize: '1.2rem' }}
+          >
+            Play Now
+          </button>
         </div>
       </nav>
 
@@ -492,9 +496,12 @@ export default function LandingPage() {
             and every choice you make has impact and consequence.
           </p>
           <div className="landing-hero-cta">
-            <Link to="/play/free" className="landing-cta-btn">
-              Play Free
-            </Link>
+            <button
+              onClick={() => isAuthenticated ? navigate('/play') : setAuthModal('register')}
+              className="landing-cta-btn"
+            >
+              Play Now
+            </button>
           </div>
         </div>
         <div className="landing-scroll-indicator">
@@ -668,12 +675,15 @@ export default function LandingPage() {
         <LandingParticles />
         <h2 className="landing-cta-footer-title">Your Story Begins Now</h2>
         <p className="landing-cta-footer-subtitle">
-          No downloads. No sign-up required. Step into a world that remembers
+          No downloads. Free to play. Step into a world that remembers
           every choice you make.
         </p>
-        <Link to="/play/free" className="landing-cta-btn">
+        <button
+          onClick={() => isAuthenticated ? navigate('/play') : setAuthModal('register')}
+          className="landing-cta-btn"
+        >
           Start Your Adventure
-        </Link>
+        </button>
       </section>
 
       <div className="landing-divider" />
