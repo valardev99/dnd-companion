@@ -30,6 +30,10 @@
   .two-col {
     grid-template-columns: 160px 1fr;
   }
+
+  .icon-sidebar-btn::after {
+    display: none;
+  }
 }
 
 /* ═══ MOBILE: <768px ═══ */
@@ -74,6 +78,10 @@
   .icon-sidebar-btn.active {
     border-right: none;
     border-bottom-color: var(--gold);
+  }
+
+  .icon-sidebar-btn::after {
+    display: none;
   }
 
   /* Fade gradient for scrollable icon bar */

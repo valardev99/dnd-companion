@@ -58,6 +58,35 @@
   background: rgba(201, 168, 76, 0.06);
 }
 
+/* Styled tooltip — positioned left of sidebar */
+.icon-sidebar-btn {
+  position: relative;
+}
+
+.icon-sidebar-btn::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  right: calc(100% + 8px);
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--void);
+  color: var(--gold);
+  font-family: 'Cinzel', serif;
+  font-size: 0.65rem;
+  padding: 4px 8px;
+  border: 1px solid var(--border-gold);
+  border-radius: 2px;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s;
+  z-index: var(--z-header);
+}
+
+.icon-sidebar-btn:hover::after {
+  opacity: 1;
+}
+
 .icon-sidebar-btn.active {
   color: var(--gold);
   background: rgba(201, 168, 76, 0.1);

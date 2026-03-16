@@ -25,7 +25,7 @@ export default function Sidebar({ onMobilePanelSelect, mobilePanelOpen, onToggle
             key={panel.id}
             className={`icon-sidebar-btn ${isActive ? 'active' : ''}`}
             onClick={() => handleClick(panel.id)}
-            title={panel.label}
+            data-tooltip={panel.label}
             aria-label={panel.label}
             aria-current={isActive ? 'true' : undefined}
           >
