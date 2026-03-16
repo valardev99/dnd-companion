@@ -13,10 +13,10 @@
 @import './animations.css';
 @import './landing.css';
 @import './stories.css';
-@import './responsive.css';
 @import './hub.css';
 @import './lobby.css';
 @import './statusbar.css';
 @import './channel-tabs.css';
 @import './combat-banner.css';
 @import './nav-rail.css';
+@import './responsive.css';
