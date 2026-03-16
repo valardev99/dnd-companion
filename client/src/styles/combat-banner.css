@@ -1,0 +1,22 @@
+/* ═══ COMBAT BANNER ═══ */
+.combat-banner {
+  padding: 5px 12px;
+  background: linear-gradient(90deg, rgba(139, 42, 26, 0.3), rgba(139, 42, 26, 0.15));
+  border-bottom: 1px solid rgba(139, 42, 26, 0.5);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.combat-banner-label {
+  font-size: 0.75rem;
+  color: #e8c0c0;
+  font-family: Cinzel, serif;
+  letter-spacing: 0.06em;
+}
+
+.combat-banner-enemies {
+  font-size: 0.7rem;
+  color: #e8c0c0;
+  font-family: 'Crimson Text', serif;
+}
