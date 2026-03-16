@@ -1,15 +1,137 @@
 /* ═══════════════════════════════════════════════════════════════
-   LAYOUT — Page structure, main content, context panel, footer
+   LAYOUT — Redesigned 4-column grid
    ═══════════════════════════════════════════════════════════════ */
 
-/* ═══ APP LAYOUT ═══ */
+/* ═══ APP LAYOUT (legacy — kept for non-game pages) ═══ */
 .app-layout {
   display: flex;
   flex: 1;
   overflow: hidden;
 }
 
-/* ═══ MAIN CONTENT ═══ */
+/* ═══ REDESIGNED LAYOUT ═══ */
+.redesigned-layout {
+  display: grid;
+  grid-template-columns: var(--nav-rail-width) 1fr var(--icon-sidebar-width) minmax(280px, 35%);
+  flex: 1;
+  overflow: hidden;
+}
+
+/* ═══ CHAT AREA ═══ */
+.chat-area {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+}
+
+/* ═══ ICON SIDEBAR ═══ */
+.icon-sidebar {
+  background: var(--obsidian);
+  border-left: 1px solid rgba(201, 168, 76, 0.08);
+  border-right: 1px solid rgba(201, 168, 76, 0.08);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 0;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.icon-sidebar-btn {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  border-right: 2px solid transparent;
+  color: var(--ash);
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 0.75rem;
+}
+
+.icon-sidebar-btn:hover {
+  color: var(--gold);
+  background: rgba(201, 168, 76, 0.06);
+}
+
+.icon-sidebar-btn.active {
+  color: var(--gold);
+  background: rgba(201, 168, 76, 0.1);
+  border-right-color: var(--gold);
+}
+
+.icon-sidebar-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* ═══ COMPANION WRAPPER ═══ */
+.companion-wrapper {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--void);
+}
+
+.companion-header {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-dim);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.companion-title {
+  font-family: Cinzel, serif;
+  font-size: 0.7rem;
+  color: var(--gold);
+  letter-spacing: 0.08em;
+}
+
+.companion-close {
+  background: none;
+  border: none;
+  color: var(--ash);
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.companion-close:hover {
+  color: var(--gold);
+}
+
+.companion-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.companion-main {
+  flex: 1 0 auto;
+  overflow-x: hidden;
+  padding: 16px 18px;
+  position: relative;
+}
+
+/* Context panel inside companion */
+.companion-content > .context-panel {
+  width: 100%;
+  background: var(--void);
+  border-top: 1px solid var(--border-dim);
+  border-left: none;
+  overflow-y: visible;
+  padding: 14px 18px;
+  flex-shrink: 0;
+}
+
+/* ═══ MAIN CONTENT (non-game pages) ═══ */
 .main-content {
   flex: 1;
   overflow-y: auto;
@@ -18,7 +140,7 @@
   position: relative;
 }
 
-/* ═══ CONTEXT PANEL ═══ */
+/* ═══ CONTEXT PANEL (standalone) ═══ */
 .context-panel {
   width: var(--context-width);
   background: var(--void);
@@ -38,68 +160,49 @@
   letter-spacing: 0.1em;
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   TWO-SCREEN LAYOUT — Chat + Companion
-   ═══════════════════════════════════════════════════════════════ */
-
-.two-screen-layout {
-  display: grid;
-  grid-template-columns: 1fr 48px minmax(380px, 35%);
-  flex: 1;
-  overflow: hidden;
+/* ═══ MOBILE PANEL OVERLAY ═══ */
+.mobile-panel-overlay {
+  display: none; /* Shown via responsive.css on mobile */
 }
 
-/* ═══ COMPANION WRAPPER ═══ */
-.companion-wrapper {
+.mobile-panel-header {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border-dim);
   display: flex;
-  flex-direction: column;
-  overflow: hidden;
+  justify-content: space-between;
+  align-items: center;
+  background: linear-gradient(180deg, rgba(20, 16, 8, 0.9), rgba(10, 10, 15, 0.9));
 }
 
-.companion-content {
-  display: flex;
-  flex-direction: column;
+.mobile-panel-back,
+.mobile-panel-close {
+  background: none;
+  border: none;
+  color: var(--ash);
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.mobile-panel-back:hover,
+.mobile-panel-close:hover {
+  color: var(--gold);
+}
+
+.mobile-panel-title {
+  font-family: Cinzel, serif;
+  font-size: 0.7rem;
+  color: var(--gold);
+  letter-spacing: 0.05em;
+}
+
+.mobile-panel-content {
   flex: 1;
   overflow-y: auto;
-  overflow-x: hidden;
+  padding: 12px;
 }
 
-.companion-main {
-  flex: 1 0 auto;
-  overflow-x: hidden;
-  padding: 16px 18px;
-  position: relative;
-}
-
-/* Hide the original context-panel inside companion — use inline context instead */
-.companion-content > .context-panel {
-  width: 100%;
-  background: var(--void);
-  border-top: 1px solid var(--border-dim);
-  border-left: none;
-  overflow-y: visible;
-  padding: 14px 18px;
-  flex-shrink: 0;
-}
-
-.companion-context h3 {
-  font-size: 0.82rem;
-  color: var(--gold);
-  margin-bottom: 10px;
-  padding-bottom: 6px;
-  border-bottom: 1px solid var(--border-dim);
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-}
-
-/* ═══ TWO COLUMN LAYOUT (for panels like codex) ═══ */
-.two-col {
-  display: grid;
-  grid-template-columns: 200px 1fr;
-  gap: 16px;
-}
-
-/* ═══ SEARCH ═══ */
+/* ═══ SEARCH (shared) ═══ */
 .search-input {
   width: 100%;
   padding: 8px 12px;
@@ -145,7 +248,7 @@
   opacity: 0.4;
 }
 
-/* Subtle parchment texture overlay for main content */
+/* Subtle parchment texture overlay */
 .main-content::before,
 .companion-main::before {
   content: '';
@@ -213,3 +316,45 @@
 .footer-api-dot.connected { background: var(--emerald); animation: pulse-subtle 2s ease-in-out infinite; }
 .footer-api-dot.disconnected { background: var(--crimson); }
 .footer-api-dot.streaming { background: var(--gold); animation: pulse-subtle 0.5s ease-in-out infinite; }
+
+/* ═══ COMPANION VISIBILITY ═══ */
+.companion-wrapper.companion-hidden {
+  display: none;
+}
+
+.companion-wrapper.companion-visible {
+  display: flex;
+}
+
+/* Tablet overlay mode */
+.companion-wrapper.tablet-mode {
+  position: fixed;
+  right: 0;
+  top: var(--header-height);
+  bottom: 28px;
+  width: min(380px, 85vw);
+  z-index: var(--z-context);
+  border-left: 1px solid var(--border-dim);
+  box-shadow: -4px 0 20px rgba(0, 0, 0, 0.5);
+  transform: translateX(100%);
+  transition: transform 0.3s ease;
+}
+
+.companion-wrapper.tablet-mode.companion-visible {
+  transform: translateX(0);
+  display: flex;
+}
+
+.companion-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: calc(var(--z-context) - 1);
+}
+
+/* ═══ TWO COLUMN LAYOUT (for panels like codex) ═══ */
+.two-col {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: 16px;
+}
