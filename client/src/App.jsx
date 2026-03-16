@@ -130,7 +130,7 @@ function App() {
       <ParticleBackground />
       <Header />
 
-      <div className="redesigned-layout">
+      <div className={`redesigned-layout ${state.gameData.combat.active ? 'combat-active' : ''}`}>
         {/* Nav Rail — campaign switching (hidden on mobile via CSS) */}
         <NavRail activeCampaignId={state.campaignId} campaigns={[]} />
 
