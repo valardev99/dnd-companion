@@ -1,0 +1,41 @@
+/* ═══ CHANNEL TABS ═══ */
+.channel-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border-dim);
+  background: var(--obsidian);
+}
+
+.channel-tab {
+  flex: 1;
+  padding: 6px 16px;
+  font-size: 0.75rem;
+  font-family: Cinzel, serif;
+  color: var(--tab-color, var(--ash));
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  opacity: 0.6;
+  transition: opacity 0.2s, border-color 0.2s;
+  position: relative;
+  text-align: center;
+}
+
+.channel-tab:hover {
+  opacity: 0.8;
+}
+
+.channel-tab.active {
+  opacity: 1;
+  border-bottom-color: var(--tab-color, var(--gold));
+}
+
+.channel-unread-dot {
+  position: absolute;
+  top: 4px;
+  right: 8px;
+  width: 6px;
+  height: 6px;
+  background: var(--tab-color, var(--gold));
+  border-radius: 50%;
+}
