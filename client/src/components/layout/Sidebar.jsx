@@ -1,58 +1,37 @@
-import React, { useState, useRef } from 'react';
+import React from 'react';
 import { useGame } from '../../contexts/GameContext.jsx';
 import { PANELS } from '../../data/panels.js';
 import GAME_ICONS from '../shared/GameIcons.jsx';
 
-function Sidebar() {
+export default function Sidebar({ onMobilePanelSelect, mobilePanelOpen }) {
   const { state, dispatch } = useGame();
-  const [tooltip, setTooltip] = useState(null);
 
-  const handleMouseEnter = (e, label) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    setTooltip({
-      label,
-      top: rect.top + rect.height / 2,
-      right: window.innerWidth - rect.left + 10,
-    });
+  const handleClick = (panelId) => {
+    dispatch({ type: 'SET_PANEL', payload: panelId });
+    // On mobile, also trigger full-screen panel
+    if (onMobilePanelSelect) {
+      onMobilePanelSelect(panelId);
+    }
   };
 
-  const handleMouseLeave = () => setTooltip(null);
-
   return (
-    <nav className="center-sidebar">
-      {PANELS.map(p => {
-        const IconComponent = GAME_ICONS[p.id];
+    <div className="icon-sidebar" role="navigation" aria-label="Panel navigation">
+      {PANELS.map(panel => {
+        const Icon = GAME_ICONS[panel.id];
+        const isActive = state.activePanel === panel.id;
         return (
-          <div key={p.id}
-            className={`sidebar-item ${state.activePanel === p.id ? 'active' : ''}`}
-            onClick={() => dispatch({ type: 'SET_PANEL', payload: p.id })}
-            onMouseEnter={e => handleMouseEnter(e, p.label)}
-            onMouseLeave={handleMouseLeave}
+          <button
+            key={panel.id}
+            className={`icon-sidebar-btn ${isActive ? 'active' : ''}`}
+            onClick={() => handleClick(panel.id)}
+            title={panel.label}
+            aria-label={panel.label}
+            aria-current={isActive ? 'true' : undefined}
           >
-            <span className="icon">
-              {IconComponent ? <IconComponent size={20} /> : p.icon}
-            </span>
-          </div>
+            {Icon ? <Icon /> : panel.icon}
+          </button>
         );
       })}
-
-      {/* Fixed-position tooltip — escapes overflow clipping */}
-      {tooltip && (
-        <div
-          className="sidebar-tooltip-fixed"
-          style={{
-            position: 'fixed',
-            top: tooltip.top,
-            right: tooltip.right,
-            transform: 'translateY(-50%)',
-            zIndex: 9999,
-          }}
-        >
-          {tooltip.label}
-        </div>
-      )}
-    </nav>
+    </div>
   );
 }
-
-export default Sidebar;
