@@ -56,6 +56,34 @@
   --border-dim: rgba(201, 168, 76, 0.15);
   --border-gold: rgba(201, 168, 76, 0.35);
   --border-bright: rgba(201, 168, 76, 0.6);
+
+  /* ═══ Message styling ═══ */
+  --msg-dm-border: var(--gold-dim);
+  --msg-dm-bg: rgba(42, 38, 28, 0.6);
+  --msg-dm-text: var(--parchment);
+
+  --msg-player-bg-start: rgba(42, 38, 28, 0.95);
+  --msg-player-bg-end: rgba(30, 25, 15, 0.95);
+  --msg-player-border: var(--gold-dim);
+  --msg-player-text: var(--gold-bright);
+
+  --msg-other-purple: #7b6bc4;
+  --msg-other-purple-light: #b8aee0;
+  --msg-other-bg: rgba(123, 107, 196, 0.08);
+
+  --msg-system-bg: rgba(201, 168, 76, 0.05);
+  --msg-system-border: var(--stone-light);
+  --msg-system-text: var(--muted);
+
+  --msg-enemy-bg: rgba(139, 42, 26, 0.1);
+  --msg-enemy-border: rgba(139, 42, 26, 0.3);
+
+  --channel-ooc: #5a8ab5;
+
+  /* ═══ Layout — redesign ═══ */
+  --nav-rail-width: 40px;
+  --icon-sidebar-width: 48px;
+
   --shadow-dark: 0 4px 20px rgba(0, 0, 0, 0.6);
   --shadow-gold: 0 0 15px rgba(201, 168, 76, 0.15);
   --shadow-arcane: 0 0 20px rgba(29, 185, 84, 0.2);
