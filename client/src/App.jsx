@@ -142,7 +142,7 @@ function App() {
             activeChannel={activeChannel}
             onChannelChange={setActiveChannel}
           />
-          <ChatPanel />
+          <ChatPanel activeChannel={activeChannel} />
         </div>
 
         {/* Icon Sidebar — vertical on desktop/tablet, horizontal on mobile via CSS */}

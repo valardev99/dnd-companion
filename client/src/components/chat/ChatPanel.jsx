@@ -5,13 +5,15 @@ import { formatDMText } from '../../utils/textFormatter.jsx';
 import SessionRating from '../shared/SessionRating.jsx';
 import { sendPlayerAction, onMultiplayerMessage } from '../../services/socketService.js';
 
-function ChatPanel({ multiplayer, campaignId, className }) {
+function ChatPanel({ multiplayer, campaignId, className, activeChannel }) {
   const { state, dispatch } = useGame();
   const [input, setInput] = useState('');
   const [showScrollBtn, setShowScrollBtn] = useState(false);
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
   const textareaRef = useRef(null);
+  const scrollPositionsRef = useRef({});
+  const prevChannelRef = useRef(null);
 
   // Multiplayer: listen for other player's messages via WebSocket
   useEffect(() => {
@@ -49,6 +51,28 @@ function ChatPanel({ multiplayer, campaignId, className }) {
     container.addEventListener('scroll', onScroll);
     return () => container.removeEventListener('scroll', onScroll);
   }, []);
+
+  // Save/restore scroll position when switching channels
+  useEffect(() => {
+    const container = messagesContainerRef.current;
+    if (!container) return;
+
+    // Save current channel's scroll position
+    if (prevChannelRef.current && prevChannelRef.current !== activeChannel) {
+      scrollPositionsRef.current[prevChannelRef.current] = container.scrollTop;
+    }
+
+    // Restore new channel's scroll position (default to bottom)
+    const saved = scrollPositionsRef.current[activeChannel];
+    if (saved !== undefined) {
+      container.scrollTop = saved;
+    } else {
+      // First visit to this channel — scroll to bottom
+      container.scrollTop = container.scrollHeight;
+    }
+
+    prevChannelRef.current = activeChannel;
+  }, [activeChannel]);
 
   // Auto-send opening scene message when a new campaign starts
   useEffect(() => {
