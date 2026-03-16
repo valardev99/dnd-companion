@@ -1,0 +1,63 @@
+/* === STATUS BAR === */
+.status-bar {
+  padding: 4px 12px;
+  background: rgba(42, 38, 28, 0.8);
+  border-bottom: 1px solid var(--border-dim);
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.status-bar:hover {
+  background: rgba(42, 38, 28, 0.95);
+}
+
+.status-bar-left {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.status-char-name {
+  color: var(--gold);
+  font-family: Cinzel, serif;
+  font-size: 0.75rem;
+}
+
+.status-level {
+  color: var(--ash);
+  font-size: 0.7rem;
+}
+
+.status-label {
+  color: var(--ash);
+  font-size: 0.65rem;
+}
+
+.status-hp-bar {
+  width: 60px;
+  height: 5px;
+  background: var(--deep-stone);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.status-hp-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #4a8a4a, var(--emerald-bright));
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.status-hp-text {
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-family: 'Fira Code', monospace;
+}
+
+.status-ac {
+  color: var(--gold);
+  font-size: 0.7rem;
+  font-weight: bold;
+}
