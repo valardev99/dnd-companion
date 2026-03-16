@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useGame } from './contexts/GameContext.jsx';
 
 // Layout
-import { Header, Sidebar, Footer, MobileNav } from './components/layout';
+import { Header, Sidebar, Footer, NavRail, StatusBar, ChannelTabs, CombatBanner } from './components/layout';
 
 // Effects
 import { ParticleBackground, NotificationOverlay, LevelUpOverlay } from './components/effects';
@@ -32,30 +32,65 @@ import ChatPanel from './components/chat/ChatPanel.jsx';
 // Campaign Wizard
 import CampaignWizard from './components/CampaignWizard.jsx';
 
+// Panel registry
+const PANEL_MAP = {
+  dashboard: DashboardPanel,
+  character: CharacterPanel,
+  inventory: InventoryPanel,
+  quests: QuestPanel,
+  npcs: NPCPanel,
+  combat: CombatPanel,
+  map: MapPanel,
+  codex: CodexPanel,
+  journal: JournalPanel,
+  settings: SettingsPanel,
+};
 
 // ═══════════════════════════════════════════════════════════════
-// MAIN APP — Two-Screen Layout
+// MAIN APP — Redesigned Layout
 // ═══════════════════════════════════════════════════════════════
 
 function App() {
-  const { state } = useGame();
+  const { state, dispatch } = useGame();
 
-  const panels = {
-    dashboard: DashboardPanel,
-    character: CharacterPanel,
-    inventory: InventoryPanel,
-    quests: QuestPanel,
-    npcs: NPCPanel,
-    combat: CombatPanel,
-    map: MapPanel,
-    codex: CodexPanel,
-    journal: JournalPanel,
-    settings: SettingsPanel,
-  };
+  // Channel state
+  const [activeChannel, setActiveChannel] = useState('story');
 
-  // Mobile view toggle: 'chat' or 'companion'
-  const [mobileView, setMobileView] = useState('chat');
+  // Companion visibility (desktop: open, tablet: closed, mobile: full-screen)
+  const [companionOpen, setCompanionOpen] = useState(true);
 
+  // Tablet detection for overlay behavior
+  const [isTablet, setIsTablet] = useState(false);
+
+  // Mobile panel view — null means chat is showing, string means panel is open
+  const [mobilePanelOpen, setMobilePanelOpen] = useState(null);
+
+  // Breakpoint listener — manages companion visibility by screen width
+  useEffect(() => {
+    const checkBreakpoint = () => {
+      const width = window.innerWidth;
+      const tablet = width >= 768 && width < 1200;
+      setIsTablet(tablet);
+      if (width >= 1200) setCompanionOpen(true);
+      if (tablet) setCompanionOpen(false);
+    };
+    checkBreakpoint();
+    window.addEventListener('resize', checkBreakpoint);
+    return () => window.removeEventListener('resize', checkBreakpoint);
+  }, []);
+
+  // Escape key closes tablet overlay
+  useEffect(() => {
+    const handleEscape = (e) => {
+      if (e.key === 'Escape' && isTablet && companionOpen) {
+        setCompanionOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [isTablet, companionOpen]);
+
+  // Panel transition animation
   const [panelFade, setPanelFade] = useState('panel-active');
   const [ctxFade, setCtxFade] = useState('ctx-active');
   const [renderedPanel, setRenderedPanel] = useState(state.activePanel);
@@ -78,16 +113,66 @@ function App() {
     }
   }, [state.activePanel]);
 
-  const RenderedPanel = panels[renderedPanel] || DashboardPanel;
+  // On mobile, opening a panel via the icon bar
+  const handleMobilePanelSelect = (panelId) => {
+    dispatch({ type: 'SET_PANEL', payload: panelId });
+    setMobilePanelOpen(panelId);
+  };
+
+  const handleMobilePanelClose = () => {
+    setMobilePanelOpen(null);
+  };
+
+  const RenderedPanel = PANEL_MAP[renderedPanel] || DashboardPanel;
 
   return (
     <React.Fragment>
       <ParticleBackground />
       <Header />
-      <div className={`two-screen-layout ${state.gameData.combat.active ? 'combat-active' : ''}`}>
-        <ChatPanel className={mobileView !== 'chat' ? 'hidden-mobile' : ''} />
-        <Sidebar />
-        <div className={`companion-wrapper ${mobileView !== 'companion' ? 'hidden-mobile' : ''}`}>
+
+      <div className="redesigned-layout">
+        {/* Nav Rail — campaign switching (hidden on mobile via CSS) */}
+        <NavRail activeCampaignId={state.campaignId} campaigns={[]} />
+
+        {/* Chat Area — always visible on desktop/tablet, hidden when mobile panel open */}
+        <div className={`chat-area ${mobilePanelOpen ? 'mobile-hidden' : ''}`}>
+          <StatusBar />
+          <CombatBanner />
+          <ChannelTabs
+            activeChannel={activeChannel}
+            onChannelChange={setActiveChannel}
+          />
+          <ChatPanel />
+        </div>
+
+        {/* Icon Sidebar — vertical on desktop/tablet, horizontal on mobile via CSS */}
+        <Sidebar
+          onMobilePanelSelect={handleMobilePanelSelect}
+          mobilePanelOpen={mobilePanelOpen}
+        />
+
+        {/* Tablet backdrop — rendered when companion overlays on tablet */}
+        {isTablet && companionOpen && (
+          <div
+            className="companion-backdrop visible"
+            onClick={() => setCompanionOpen(false)}
+          />
+        )}
+
+        {/* Companion Panel — always in DOM, visibility controlled via CSS classes
+            (conditional rendering would break CSS transitions for tablet overlay) */}
+        <div className={`companion-wrapper ${companionOpen ? 'companion-visible' : 'companion-hidden'} ${isTablet ? 'tablet-mode' : ''}`}>
+          <div className="companion-header">
+            <span className="companion-title">
+              {(renderedPanel || 'dashboard').toUpperCase()}
+            </span>
+            <button
+              className="companion-close"
+              onClick={() => setCompanionOpen(false)}
+            >
+              ✕
+            </button>
+          </div>
           <div className="companion-content" style={{ zoom: (parseInt(state.companionTextSize || '100', 10) / 100) || 1 }}>
             <main className={`companion-main ${panelFade}`}>
               <RenderedPanel />
@@ -97,9 +182,25 @@ function App() {
             </aside>
           </div>
         </div>
+
+        {/* Mobile full-screen panel overlay */}
+        {mobilePanelOpen && (
+          <div className="mobile-panel-overlay">
+            <div className="mobile-panel-header">
+              <button className="mobile-panel-back" onClick={handleMobilePanelClose}>←</button>
+              <span className="mobile-panel-title">
+                {(renderedPanel || 'dashboard').toUpperCase()}
+              </span>
+              <button className="mobile-panel-close" onClick={handleMobilePanelClose}>✕</button>
+            </div>
+            <div className="mobile-panel-content" style={{ zoom: (parseInt(state.companionTextSize || '100', 10) / 100) || 1 }}>
+              <RenderedPanel />
+            </div>
+          </div>
+        )}
       </div>
+
       <Footer />
-      <MobileNav activeView={mobileView} onViewChange={setMobileView} />
       <NotificationOverlay />
       <LevelUpOverlay />
       {state.showCampaignWizard && <CampaignWizard />}
