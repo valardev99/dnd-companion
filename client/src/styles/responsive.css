@@ -1,82 +1,245 @@
 /* ═══════════════════════════════════════════════════════════════
-   RESPONSIVE — Mobile & Tablet breakpoints
-   Breakpoints: >1024px desktop, 768-1024 tablet, <768 mobile
+   RESPONSIVE — New breakpoints: 1200px (desktop), 768px (mobile)
    ═══════════════════════════════════════════════════════════════ */
 
-/* ═══════════════════════════════════════════════════════════════
-   TABLET — 768px to 1024px
-   ═══════════════════════════════════════════════════════════════ */
-@media (max-width: 1024px) and (min-width: 769px) {
-
-  /* --- Two-Screen Layout: chat 55%, companion 45% --- */
-  .two-screen-layout {
-    grid-template-columns: 55% 48px 1fr;
+/* ═══ TABLET: 768px – 1199px ═══ */
+@media (max-width: 1199px) {
+  /* Companion removed from grid — handled via fixed positioning in layout.css tablet-mode class */
+  .redesigned-layout {
+    grid-template-columns: var(--nav-rail-width) 1fr var(--icon-sidebar-width);
   }
 
-  /* --- Header: condense stats --- */
-  .app-header {
-    padding: 0 14px;
-    gap: 10px;
+  /* Chat message indent reduction */
+  .chat-message.player-action {
+    margin-left: 16px;
   }
 
-  .header-title {
-    font-size: 0.95rem;
+  /* ── Panel content responsive (tablet) ── */
+  .stat-grid {
+    grid-template-columns: repeat(3, 1fr);
   }
 
-  .header-stat .label {
+  .combat-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .map-container {
+    height: 300px;
+  }
+
+  .two-col {
+    grid-template-columns: 160px 1fr;
+  }
+}
+
+/* ═══ MOBILE: <768px ═══ */
+@media (max-width: 767px) {
+  /* Full-screen chat, no grid */
+  .redesigned-layout {
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Hide nav rail on mobile */
+  .nav-rail {
     display: none;
   }
 
-  .header-stat .value {
-    font-size: 0.75rem;
+  /* Icon sidebar becomes horizontal top bar */
+  .icon-sidebar {
+    flex-direction: row;
+    width: 100%;
+    padding: 4px 8px;
+    gap: 2px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    border-left: none;
+    border-right: none;
+    border-bottom: 1px solid rgba(201, 168, 76, 0.08);
+    order: -1; /* Move to top */
   }
 
-  .header-alerts {
+  .icon-sidebar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .icon-sidebar-btn {
+    width: 26px;
+    height: 26px;
+    flex-shrink: 0;
+    border-right: none;
+    border-bottom: 2px solid transparent;
+  }
+
+  .icon-sidebar-btn.active {
+    border-right: none;
+    border-bottom-color: var(--gold);
+  }
+
+  /* Fade gradient for scrollable icon bar */
+  .icon-sidebar::after {
+    content: '';
+    position: sticky;
+    right: 0;
+    flex-shrink: 0;
+    width: 20px;
+    background: linear-gradient(to left, var(--obsidian), transparent);
+    pointer-events: none;
+  }
+
+  /* Chat area fills remaining space */
+  .chat-area {
+    flex: 1;
+    order: 0;
+  }
+
+  .chat-area.mobile-hidden {
+    display: none;
+  }
+
+  /* Hide companion wrapper on mobile — use overlay instead */
+  .companion-wrapper {
+    display: none !important;
+  }
+
+  /* Mobile panel overlay */
+  .mobile-panel-overlay {
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--void);
+    z-index: var(--z-context);
+  }
+
+  /* Mobile-specific message adjustments */
+  .chat-message.player-action {
+    margin-left: 16px;
+  }
+
+  /* Status bar compact */
+  .status-bar {
+    padding: 3px 10px;
+  }
+
+  .status-hp-bar {
+    width: 40px;
+    height: 4px;
+  }
+
+  .status-bar-left {
     gap: 6px;
   }
 
-  .alert-badge {
+  .status-char-name {
+    font-size: 0.7rem;
+  }
+
+  /* Channel tabs compact */
+  .channel-tab {
+    padding: 5px 10px;
+    font-size: 0.7rem;
+  }
+
+  /* Hide footer on mobile */
+  .app-footer {
+    display: none;
+  }
+
+  /* Adjust header for mobile */
+  .app-header {
+    height: 48px;
+  }
+
+  /* ── Panel content responsive (mobile) ── */
+  .stat-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .stat-block .stat-value {
+    font-size: 1.2rem;
+  }
+
+  .combat-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .map-container {
+    height: 250px;
+  }
+
+  .two-col {
+    grid-template-columns: 1fr;
+  }
+
+  .codex-sidebar {
+    max-height: 150px;
+    overflow-y: auto;
+    margin-bottom: 12px;
+  }
+
+  .npc-card {
+    padding: 8px;
+  }
+
+  .quest-entry {
+    padding: 8px;
+  }
+
+  .wizard-container {
+    padding: 16px;
+  }
+
+  .wizard-option-grid.cols-2,
+  .wizard-option-grid.cols-3,
+  .wizard-option-grid.cols-4,
+  .wizard-option-grid.cols-5 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ═══ SMALL PHONE: <360px ═══ */
+@media (max-width: 359px) {
+  .status-bar-left {
+    gap: 4px;
+  }
+
+  .status-char-name {
     font-size: 0.65rem;
+  }
+
+  .status-hp-bar {
+    width: 30px;
+  }
+
+  .chat-message.dm-narration .msg-body,
+  .chat-message.player-action .msg-body {
+    font-size: 0.75rem;
+  }
+}
+
+/* ═══ LANDSCAPE SHORT SCREENS ═══ */
+@media (max-height: 500px) and (max-width: 767px) {
+  .app-header {
+    height: 40px;
+  }
+
+  .status-bar {
+    padding: 2px 10px;
+  }
+
+  .icon-sidebar {
     padding: 2px 8px;
   }
+}
 
-  /* --- Context panel: overlay from right --- */
-  .context-panel,
-  .companion-content > .context-panel {
-    position: fixed;
-    top: var(--header-height);
-    right: 0;
-    left: auto;
-    bottom: 0;
-    width: 320px;
-    z-index: 80;
-    transform: translateX(100%);
-    transition: transform 0.3s ease;
-    box-shadow: -4px 0 20px rgba(0, 0, 0, 0.5);
-  }
+/* ═══ PANEL CONTENT RESPONSIVE (preserved from old file) ═══ */
 
-  /* Override animation classes in tablet — keep hidden unless toggled */
-  .context-panel.ctx-active,
-  .context-panel.ctx-entering {
-    transform: translateX(100%);
-  }
-
-  .context-panel.open,
-  .context-panel.open.ctx-active {
-    transform: translateX(0);
-  }
-
-  /* --- Companion: tighter padding --- */
-  .companion-main {
-    padding: 12px 14px;
-  }
-
-  /* --- Chat: tighter padding --- */
-  .chat-messages {
-    padding: 16px 18px;
-  }
-
-  /* --- Wizard: reduce columns --- */
+/* ── Tablet panel content ── */
+@media (max-width: 1199px) {
   .wizard-option-grid.cols-5 {
     grid-template-columns: repeat(3, 1fr);
   }
@@ -89,30 +252,14 @@
     width: 600px;
   }
 
-  /* --- Stat grid: 3 columns --- */
   .stat-grid {
-    grid-template-columns: repeat(3, 1fr);
     gap: 10px;
   }
 
-  /* --- Combat grid: keep 2-col but tighter --- */
   .combat-grid {
     gap: 12px;
   }
 
-  /* --- Map container: slightly shorter --- */
-  .map-container {
-    min-height: 350px;
-    padding: 16px;
-  }
-
-  /* --- Two-column layout (codex): narrower sidebar --- */
-  .two-col {
-    grid-template-columns: 160px 1fr;
-    gap: 12px;
-  }
-
-  /* --- Notifications: narrower --- */
   .notification-overlay {
     right: 12px;
   }
@@ -121,257 +268,21 @@
     width: 340px;
   }
 
-  /* --- Cards: tighter padding --- */
   .card {
     padding: 16px;
     border-width: 36px;
   }
-
-  /* --- Main content: tighter padding --- */
-  .main-content {
-    padding: 16px 18px;
-  }
-
-  /* --- Footer: smaller --- */
-  .app-footer {
-    font-size: 0.6rem;
-    padding: 0 12px;
-  }
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   PHONE — Under 768px
-   ═══════════════════════════════════════════════════════════════ */
-@media (max-width: 768px) {
-
-  /* --- Root variable overrides --- */
+/* ── Mobile panel content ── */
+@media (max-width: 767px) {
+  /* Root variable overrides */
   :root {
-    --header-height: 48px;
     --notification-width: 100%;
   }
 
-  /* --- Two-Screen Layout: single column, full-screen panels --- */
-  .two-screen-layout {
-    display: flex;
-    flex-direction: column;
-    position: relative;
-  }
-
-  /* --- Chat panel: full screen with room for bottom nav --- */
-  .chat-panel {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 56px;
-    z-index: 10;
-    border-right: none;
-    transition: transform 0.3s ease;
-  }
-
-  .chat-panel.hidden-mobile {
-    transform: translateX(-100%);
-    pointer-events: none;
-  }
-
-  /* --- Companion wrapper: full screen overlay with room for bottom nav --- */
-  .companion-wrapper {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 56px;
-    z-index: 10;
-    background: var(--obsidian);
-    transition: transform 0.3s ease;
-  }
-
-  .companion-wrapper.hidden-mobile {
-    transform: translateX(100%);
-    pointer-events: none;
-  }
-
-  /* --- Center sidebar: hidden on mobile (replaced by bottom nav) --- */
-  .center-sidebar {
-    display: none;
-  }
-
-  /* --- App sidebar: hidden on mobile --- */
-  .app-sidebar {
-    display: none;
-  }
-
-  /* --- App layout: full width --- */
-  .app-layout {
-    flex-direction: column;
-  }
-
-  /* --- Header: abbreviated mobile version --- */
-  .app-header {
-    height: var(--header-height);
-    padding: 0 12px;
-    gap: 8px;
-  }
-
-  .header-title {
-    font-size: 0.85rem;
-    letter-spacing: 0.04em;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 140px;
-  }
-
-  .header-divider {
-    height: 20px;
-  }
-
-  .header-stat {
-    font-size: 0.7rem;
-  }
-
-  .header-stat .label {
-    display: none;
-  }
-
-  .header-stat .value {
-    font-size: 0.7rem;
-  }
-
-  .header-alerts {
-    gap: 4px;
-  }
-
-  .alert-badge {
-    font-size: 0.6rem;
-    padding: 2px 6px;
-    border-radius: 8px;
-  }
-
-  /* Header tap-to-expand support */
-  .header-expandable-stats {
-    display: none;
-  }
-
-  .app-header.expanded .header-expandable-stats {
-    display: flex;
-    position: absolute;
-    top: var(--header-height);
-    left: 0;
-    right: 0;
-    background: var(--deep-stone);
-    border-bottom: 1px solid var(--border-gold);
-    padding: 8px 12px;
-    gap: 12px;
-    z-index: 60;
-    flex-wrap: wrap;
-    justify-content: center;
-  }
-
-  /* --- Chat messages: adjust padding --- */
-  .chat-messages {
-    padding: 12px 12px 80px 12px;
-    gap: 12px;
-  }
-
-  /* --- Chat input: sticky above keyboard --- */
-  .chat-input-area {
-    position: sticky;
-    bottom: 0;
-    padding: 10px 12px;
-    padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
-    z-index: 20;
-    background: var(--void);
-    border-top: 1px solid var(--border-dim);
-  }
-
-  .chat-textarea {
-    font-size: 16px; /* Prevents iOS zoom on focus */
-    min-height: 40px;
-    padding: 8px 12px;
-  }
-
-  .chat-send-btn {
-    width: 48px;
-    height: 48px;
-    min-height: 48px;
-  }
-
-  /* --- Message bubbles: full width --- */
-  .message-bubble {
-    max-width: 95%;
-    padding: 12px 14px;
-    font-size: 0.85rem;
-  }
-
-  .message-bubble.dm .message-content {
-    max-width: 100%;
-  }
-
-  .message-bubble.system-msg {
-    max-width: 95%;
-    font-size: 0.7rem;
-  }
-
-  /* --- Chat welcome: mobile --- */
-  .chat-welcome {
-    padding: 24px 16px;
-  }
-
-  .chat-welcome-title {
-    font-size: 1.3rem;
-  }
-
-  .chat-welcome-sub {
-    font-size: 0.85rem;
-  }
-
-  /* --- Companion content: full screen --- */
-  .companion-main {
-    padding: 12px;
-    padding-bottom: 80px; /* Room for bottom nav */
-  }
-
-  .companion-content > .context-panel {
-    padding: 12px;
-  }
-
-  /* --- Section headers: tighter --- */
-  .section-header {
-    margin-bottom: 12px;
-  }
-
-  .section-title {
-    font-size: 1rem;
-    gap: 8px;
-  }
-
-  /* --- Tab bars: scrollable horizontal --- */
-  .tab-bar {
-    overflow-x: auto;
-    overflow-y: hidden;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-    white-space: nowrap;
-    flex-wrap: nowrap;
-    margin-bottom: 12px;
-    padding-bottom: 2px;
-  }
-
-  .tab-bar::-webkit-scrollbar {
-    display: none;
-  }
-
-  .tab-item {
-    flex-shrink: 0;
-    min-height: 48px;
-    display: flex;
-    align-items: center;
-    padding: 8px 14px;
-  }
-
-  /* --- Stat grid: 2 columns --- */
+  /* Stat blocks */
   .stat-grid {
-    grid-template-columns: repeat(2, 1fr);
     gap: 8px;
   }
 
@@ -379,17 +290,12 @@
     padding: 12px 8px;
   }
 
-  .stat-block .stat-value {
-    font-size: 1.6rem;
-  }
-
   .stat-block .stat-name {
     font-size: 0.55rem;
   }
 
-  /* --- Combat grid: single column --- */
+  /* Combat */
   .combat-grid {
-    grid-template-columns: 1fr;
     gap: 12px;
   }
 
@@ -397,12 +303,12 @@
     max-height: 200px;
   }
 
-  /* --- Map container: reduced height --- */
-  .map-container {
-    min-height: 280px;
-    padding: 12px;
+  .combat-status {
+    font-size: 0.75rem;
+    padding: 8px 12px;
   }
 
+  /* Map */
   .map-node {
     width: 44px;
     height: 44px;
@@ -413,17 +319,12 @@
     font-size: 0.55rem;
   }
 
-  /* --- D3 Relationship Web: hide on mobile (list view only) --- */
+  /* Relationship web: hide on mobile (list view only) */
   .relationship-web {
     display: none;
   }
 
-  /* --- Two-column layout (codex): stack to single column --- */
-  .two-col {
-    grid-template-columns: 1fr;
-    gap: 8px;
-  }
-
+  /* Codex sidebar horizontal scroll */
   .codex-sidebar {
     display: flex;
     flex-direction: row;
@@ -433,6 +334,7 @@
     padding-bottom: 8px;
     border-bottom: 1px solid var(--border-dim);
     scrollbar-width: none;
+    max-height: none;
   }
 
   .codex-sidebar::-webkit-scrollbar {
@@ -447,7 +349,7 @@
     align-items: center;
   }
 
-  /* --- Cards: full width --- */
+  /* Cards */
   .card {
     padding: 14px;
     border-width: 28px;
@@ -462,23 +364,18 @@
     font-size: 0.85rem;
   }
 
-  /* --- NPC cards: tighter --- */
-  .npc-card {
-    padding: 10px;
-    gap: 10px;
-  }
-
+  /* NPC */
   .npc-avatar {
     width: 38px;
     height: 38px;
     font-size: 1.1rem;
   }
 
-  /* --- Quest entries: tighter --- */
-  .quest-entry {
-    padding: 10px 12px;
+  .npc-card {
+    gap: 10px;
   }
 
+  /* Quests */
   .quest-title {
     font-size: 0.85rem;
   }
@@ -488,7 +385,7 @@
     gap: 8px;
   }
 
-  /* --- Inventory items: touch-friendly --- */
+  /* Inventory */
   .item-row {
     padding: 10px 12px;
     gap: 10px;
@@ -500,7 +397,7 @@
     height: 40px;
   }
 
-  /* --- Session cards --- */
+  /* Session cards */
   .session-card {
     padding: 12px 14px;
   }
@@ -510,7 +407,7 @@
     gap: 8px;
   }
 
-  /* --- Notifications: full-width on mobile --- */
+  /* Notifications */
   .notification-overlay {
     top: calc(var(--header-height) + 8px);
     right: 8px;
@@ -521,7 +418,7 @@
     width: 100%;
   }
 
-  /* --- Level up overlay: mobile-friendly --- */
+  /* Level up */
   .levelup-title {
     font-size: 2rem;
   }
@@ -534,24 +431,16 @@
     font-size: 0.75rem;
   }
 
-  /* --- Wizard: mobile-friendly --- */
+  /* Wizard */
   .wizard-container {
     width: 100%;
     max-width: 100vw;
     max-height: 100vh;
     border-width: 24px;
-    padding: 16px 16px 12px;
   }
 
   .wizard-title {
     font-size: 1.15rem;
-  }
-
-  .wizard-option-grid.cols-2,
-  .wizard-option-grid.cols-3,
-  .wizard-option-grid.cols-4,
-  .wizard-option-grid.cols-5 {
-    grid-template-columns: 1fr 1fr;
   }
 
   .wizard-option-card {
@@ -607,7 +496,7 @@
     gap: 6px;
   }
 
-  /* --- Settings: touch-friendly --- */
+  /* Settings */
   .setting-row {
     padding: 14px 0;
     min-height: 48px;
@@ -629,14 +518,14 @@
     left: 24px;
   }
 
-  /* --- Demo buttons: touch-friendly --- */
+  /* Demo buttons */
   .demo-btn {
     padding: 10px 16px;
     min-height: 48px;
     font-size: 0.75rem;
   }
 
-  /* --- Ability cards: tighter --- */
+  /* Ability cards */
   .ability-card {
     padding: 10px;
   }
@@ -646,61 +535,122 @@
     gap: 6px;
   }
 
-  /* --- Stat bars: slightly larger for touch --- */
+  /* Stat bars */
   .stat-bar {
     height: 12px;
   }
 
-  /* --- Hidden tracker --- */
+  /* Tracker */
   .tracker-mystery {
     padding: 10px;
   }
 
-  /* --- Context panel: full screen overlay --- */
-  .context-panel,
-  .companion-content > .context-panel {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    width: 100%;
-    z-index: 90;
-    transform: translateX(100%);
-    transition: transform 0.3s ease;
-    border-left: none;
+  /* Section headers */
+  .section-header {
+    margin-bottom: 12px;
   }
 
-  /* Override animation classes in mobile — keep hidden unless toggled */
-  .context-panel.ctx-active,
-  .context-panel.ctx-entering {
-    transform: translateX(100%);
+  .section-title {
+    font-size: 1rem;
+    gap: 8px;
   }
 
-  .context-panel.open,
-  .context-panel.open.ctx-active {
-    transform: translateX(0);
+  /* Tab bars: scrollable horizontal */
+  .tab-bar {
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    white-space: nowrap;
+    flex-wrap: nowrap;
+    margin-bottom: 12px;
+    padding-bottom: 2px;
   }
 
-  /* --- Main content: tighter padding, room for bottom nav --- */
-  .main-content {
-    padding: 12px;
-    padding-bottom: 80px;
-  }
-
-  /* --- Footer: hide on mobile (bottom nav replaces it) --- */
-  .app-footer {
+  .tab-bar::-webkit-scrollbar {
     display: none;
   }
 
-  /* --- Search input: touch-friendly --- */
+  .tab-item {
+    flex-shrink: 0;
+    min-height: 48px;
+    display: flex;
+    align-items: center;
+    padding: 8px 14px;
+  }
+
+  /* Chat messages */
+  .chat-messages {
+    padding: 12px 12px 80px 12px;
+    gap: 12px;
+  }
+
+  /* Chat input */
+  .chat-input-area {
+    position: sticky;
+    bottom: 0;
+    padding: 10px 12px;
+    padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+    z-index: 20;
+    background: var(--void);
+    border-top: 1px solid var(--border-dim);
+  }
+
+  .chat-textarea {
+    font-size: 16px; /* Prevents iOS zoom on focus */
+    min-height: 40px;
+    padding: 8px 12px;
+  }
+
+  .chat-send-btn {
+    width: 48px;
+    height: 48px;
+    min-height: 48px;
+  }
+
+  /* Message bubbles */
+  .message-bubble {
+    max-width: 95%;
+    padding: 12px 14px;
+    font-size: 0.85rem;
+  }
+
+  .message-bubble.dm .message-content {
+    max-width: 100%;
+  }
+
+  .message-bubble.system-msg {
+    max-width: 95%;
+    font-size: 0.7rem;
+  }
+
+  /* Chat welcome */
+  .chat-welcome {
+    padding: 24px 16px;
+  }
+
+  .chat-welcome-title {
+    font-size: 1.3rem;
+  }
+
+  .chat-welcome-sub {
+    font-size: 0.85rem;
+  }
+
+  /* Chat disconnected */
+  .chat-disconnected-overlay {
+    padding: 16px 12px;
+    font-size: 0.8rem;
+  }
+
+  /* Search input */
   .search-input {
     padding: 10px 12px 10px 36px;
     font-size: 16px; /* Prevents iOS zoom */
     min-height: 48px;
   }
 
-  /* --- Auth modal: full width --- */
+  /* Auth modal */
   .auth-modal {
     max-width: calc(100vw - 32px);
     padding: 24px 20px;
@@ -716,18 +666,18 @@
     font-size: 0.95rem;
   }
 
-  /* --- API inputs: touch-friendly --- */
+  /* API inputs */
   .api-input, .api-select {
     font-size: 16px;
     min-height: 48px;
   }
 
-  /* --- Progress containers --- */
+  /* Progress containers */
   .progress-container {
     gap: 6px;
   }
 
-  /* --- Condition tags: larger for touch --- */
+  /* Condition tags */
   .condition-tag {
     padding: 4px 12px;
     font-size: 0.72rem;
@@ -736,13 +686,13 @@
     align-items: center;
   }
 
-  /* --- Badges: slightly larger --- */
+  /* Badges */
   .badge {
     padding: 3px 10px;
     font-size: 0.72rem;
   }
 
-  /* --- Scroll to bottom button --- */
+  /* Scroll to bottom */
   .scroll-to-bottom {
     bottom: 100px;
     font-size: 0.65rem;
@@ -750,45 +700,13 @@
     min-height: 36px;
   }
 
-  /* --- Chat disconnected overlay --- */
-  .chat-disconnected-overlay {
-    padding: 16px 12px;
-    font-size: 0.8rem;
-  }
-
-  /* --- Combat status display --- */
-  .combat-status {
-    font-size: 0.75rem;
-    padding: 8px 12px;
-  }
-
-  /* --- Particles: reduce on mobile for performance --- */
-  .particles-canvas {
-    opacity: 0.2;
-  }
-
-  /* --- Touch target minimum: enforce 48px on all interactive elements --- */
-  button,
-  [role="button"],
-  .sidebar-item,
-  .codex-category,
-  .item-row,
-  .npc-card,
-  .quest-entry,
-  .session-card,
-  .wizard-option-card,
-  .mobile-nav-item,
-  .mobile-more-item {
-    min-height: 48px;
-  }
-
-  /* --- Typing indicator: tighter --- */
+  /* Typing indicator */
   .typing-indicator {
     padding: 10px 14px;
     gap: 6px;
   }
 
-  /* --- Feedback FAB: push above mobile nav --- */
+  /* Feedback */
   .feedback-fab {
     bottom: 72px !important;
   }
@@ -800,25 +718,34 @@
     max-width: 360px !important;
   }
 
-  /* --- Body: add bottom padding for mobile nav --- */
+  /* Particles: reduce on mobile for performance */
+  .particles-canvas {
+    opacity: 0.2;
+  }
+
+  /* Touch target minimum */
+  button,
+  [role="button"],
+  .codex-category,
+  .item-row,
+  .npc-card,
+  .quest-entry,
+  .session-card,
+  .wizard-option-card {
+    min-height: 48px;
+  }
+
+  /* Body: safe area padding */
   body {
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   VERY SMALL PHONES — Under 360px
-   ═══════════════════════════════════════════════════════════════ */
-@media (max-width: 360px) {
-
+/* ── Small phone panel content ── */
+@media (max-width: 359px) {
   .app-header {
     padding: 0 8px;
     gap: 6px;
-  }
-
-  .header-title {
-    font-size: 0.75rem;
-    max-width: 100px;
   }
 
   .message-bubble {
@@ -852,33 +779,10 @@
   }
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   LANDSCAPE PHONE — short height
-   ═══════════════════════════════════════════════════════════════ */
-@media (max-height: 500px) and (max-width: 768px) {
-
-  .app-header {
-    height: 40px;
-  }
-
+/* ── Landscape panel content ── */
+@media (max-height: 500px) and (max-width: 767px) {
   .chat-messages {
     padding-bottom: 60px;
-  }
-
-  .companion-main {
-    padding-bottom: 60px;
-  }
-
-  .mobile-nav {
-    padding: 4px 0 env(safe-area-inset-bottom, 0);
-  }
-
-  .mobile-nav-icon {
-    font-size: 1.1rem;
-  }
-
-  .mobile-nav-label {
-    display: none;
   }
 
   .wizard-container {
@@ -891,16 +795,12 @@
   }
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   PRINT — Hide non-essential elements
-   ═══════════════════════════════════════════════════════════════ */
+/* ═══ PRINT ═══ */
 @media print {
   .app-header,
   .app-footer,
-  .center-sidebar,
-  .app-sidebar,
-  .mobile-nav,
-  .mobile-more-menu,
+  .nav-rail,
+  .icon-sidebar,
   .chat-input-area,
   .particles-canvas,
   .notification-overlay,
@@ -908,168 +808,16 @@
     display: none !important;
   }
 
-  .two-screen-layout {
+  .redesigned-layout {
     display: block;
   }
-
-  .chat-panel,
-  .companion-wrapper {
-    position: static;
-    transform: none;
-  }
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   MOBILE NAVIGATION — Bottom nav bar for phone
-   ═══════════════════════════════════════════════════════════════ */
-
-/* Mobile nav: hidden by default, shown on mobile */
-.mobile-nav {
-  display: none;
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: var(--stone);
-  border-top: 2px solid var(--border-gold);
-  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.6);
-  z-index: 100;
-  padding: 6px 0 env(safe-area-inset-bottom, 0);
-}
-
-/* Show mobile nav at phone breakpoint */
-@media (max-width: 768px) {
-  .mobile-nav {
-    display: flex;
-    justify-content: space-around;
-    align-items: center;
-  }
-}
-
-.mobile-nav-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  padding: 8px 12px;
-  min-width: 56px;
-  min-height: 48px;
-  justify-content: center;
-  cursor: pointer;
-  color: var(--silver);
-  transition: color 0.2s;
-  -webkit-tap-highlight-color: transparent;
-  user-select: none;
-}
-
-.mobile-nav-item:active {
-  color: var(--gold);
-}
-
-.mobile-nav-item.active {
-  color: var(--gold-bright);
-}
-
-.mobile-nav-icon {
-  font-size: 1.3rem;
-  line-height: 1;
-}
-
-.mobile-nav-label {
-  font-size: 0.6rem;
-  letter-spacing: 0.05em;
-  font-family: 'Inter', sans-serif;
-}
-
-/* More menu */
-.mobile-more-menu {
-  display: none;
-  position: fixed;
-  bottom: 64px;
-  left: 0;
-  right: 0;
-  background: var(--deep-stone);
-  border-top: 1px solid var(--border-gold);
-  z-index: 99;
-  padding: 12px;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 8px;
-  padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
-}
-
-@media (max-width: 768px) {
-  .mobile-more-menu.open {
-    display: grid;
-  }
-}
-
-.mobile-more-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  padding: 12px 8px;
-  border-radius: 8px;
-  cursor: pointer;
-  background: var(--stone);
-  min-height: 48px;
-  justify-content: center;
-  transition: background 0.2s;
-  -webkit-tap-highlight-color: transparent;
-  user-select: none;
-}
-
-.mobile-more-item:active {
-  background: var(--border-dim);
-}
-
-.mobile-more-icon {
-  font-size: 1.5rem;
-  line-height: 1;
-}
-
-.mobile-more-label {
-  font-size: 0.7rem;
-  color: var(--silver);
-  font-family: 'Inter', sans-serif;
-}
-
-/* Mobile-specific overlay backdrop */
-.mobile-overlay-backdrop {
-  display: none;
-}
-
-@media (max-width: 768px) {
-  .mobile-overlay-backdrop {
-    display: block;
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.6);
-    z-index: 85;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.3s;
-  }
-
-  .mobile-overlay-backdrop.visible {
-    opacity: 1;
-    pointer-events: auto;
-  }
-}
-
-/* ═══════════════════════════════════════════════════════════════
-   TOUCH INTERACTION UTILITIES
-   ═══════════════════════════════════════════════════════════════ */
+/* ═══ TOUCH INTERACTION UTILITIES ═══ */
 @media (hover: none) and (pointer: coarse) {
   /* Remove hover effects on touch devices — prevents sticky hover */
   .card:hover {
     transform: none;
-    filter: none;
-  }
-
-  .sidebar-item:hover {
-    transform: none;
-    text-shadow: none;
     filter: none;
   }
 
@@ -1089,33 +837,18 @@
   .card:active {
     filter: brightness(1.1);
   }
-
-  .sidebar-item:active {
-    background: rgba(201, 168, 76, 0.1);
-  }
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   PWA STANDALONE MODE — Extra adjustments when installed as app
-   ═══════════════════════════════════════════════════════════════ */
+/* ═══ PWA STANDALONE MODE ═══ */
 @media (display-mode: standalone) {
   .app-header {
     padding-top: env(safe-area-inset-top, 0px);
   }
-
-  .mobile-nav {
-    padding-bottom: env(safe-area-inset-bottom, 0px);
-  }
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   REDUCED MOTION — Accessibility
-   ═══════════════════════════════════════════════════════════════ */
+/* ═══ REDUCED MOTION — Accessibility ═══ */
 @media (prefers-reduced-motion: reduce) {
-  .chat-panel,
-  .companion-wrapper,
-  .context-panel,
-  .mobile-more-menu {
+  .context-panel {
     transition: none;
   }
 
