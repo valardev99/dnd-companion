@@ -66,3 +66,17 @@ export function onMultiplayerMessage(callback) {
 export function sendPlayerAction(campaignId, message) {
   socket?.emit('player_action', { campaign_id: campaignId, message });
 }
+
+// Typing indicators (multiplayer)
+export function emitTypingStart(campaignId, username) {
+  socket?.emit('typing_start', { campaign_id: campaignId, username });
+}
+
+export function emitTypingStop(campaignId, username) {
+  socket?.emit('typing_stop', { campaign_id: campaignId, username });
+}
+
+export function onPeerTyping(callback) {
+  socket?.on('peer_typing', callback);
+  return () => socket?.off('peer_typing', callback);
+}

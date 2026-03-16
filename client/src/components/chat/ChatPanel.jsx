@@ -3,12 +3,14 @@ import { useGame } from '../../contexts/GameContext.jsx';
 import { sendChatMessage } from '../../services/chatService.js';
 import { formatDMText } from '../../utils/textFormatter.jsx';
 import SessionRating from '../shared/SessionRating.jsx';
-import { sendPlayerAction, onMultiplayerMessage } from '../../services/socketService.js';
+import { sendPlayerAction, onMultiplayerMessage, emitTypingStart, emitTypingStop, onPeerTyping } from '../../services/socketService.js';
 
 function ChatPanel({ multiplayer, campaignId, className, activeChannel }) {
   const { state, dispatch } = useGame();
   const [input, setInput] = useState('');
   const [showScrollBtn, setShowScrollBtn] = useState(false);
+  const [peersTyping, setPeersTyping] = useState({});
+  const typingTimeoutRef = useRef(null);
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
   const textareaRef = useRef(null);
@@ -31,6 +33,33 @@ function ChatPanel({ multiplayer, campaignId, className, activeChannel }) {
     });
     return cleanup;
   }, [multiplayer, dispatch]);
+
+  // Multiplayer: listen for peer typing indicators
+  useEffect(() => {
+    if (!multiplayer) return;
+    const cleanup = onPeerTyping((data) => {
+      setPeersTyping(prev => {
+        const next = { ...prev };
+        if (data.typing) {
+          // Clear existing timeout for this user
+          if (next[data.username]) clearTimeout(next[data.username]);
+          // Auto-clear after 3s if no new typing_start
+          next[data.username] = setTimeout(() => {
+            setPeersTyping(p => {
+              const updated = { ...p };
+              delete updated[data.username];
+              return updated;
+            });
+          }, 3000);
+        } else {
+          if (next[data.username]) clearTimeout(next[data.username]);
+          delete next[data.username];
+        }
+        return next;
+      });
+    });
+    return cleanup;
+  }, [multiplayer]);
 
   // Auto-scroll to bottom on new messages (only if near bottom)
   useEffect(() => {
@@ -88,6 +117,12 @@ function ChatPanel({ multiplayer, campaignId, className, activeChannel }) {
     const msg = input.trim();
     if (!msg || state.isStreaming) return;
     setInput('');
+    // Clear typing indicator
+    if (multiplayer && campaignId) {
+      clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = null;
+      emitTypingStop(campaignId, state.gameData.character.name || 'Player');
+    }
     // In multiplayer, also broadcast the action to the other player via WebSocket
     if (multiplayer && campaignId) {
       sendPlayerAction(campaignId, msg);
@@ -99,6 +134,18 @@ function ChatPanel({ multiplayer, campaignId, className, activeChannel }) {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSend();
+      return;
+    }
+    // Emit typing indicator in multiplayer (debounced)
+    if (multiplayer && campaignId) {
+      if (!typingTimeoutRef.current) {
+        emitTypingStart(campaignId, state.gameData.character.name || 'Player');
+      }
+      clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = setTimeout(() => {
+        emitTypingStop(campaignId, state.gameData.character.name || 'Player');
+        typingTimeoutRef.current = null;
+      }, 2000);
     }
   };
 
@@ -171,6 +218,17 @@ function ChatPanel({ multiplayer, campaignId, className, activeChannel }) {
         {state.isStreaming && (
           <div className="typing-indicator">
             <span>The DM is writing</span>
+            <div className="typing-dots">
+              <span className="dot" />
+              <span className="dot" />
+              <span className="dot" />
+            </div>
+          </div>
+        )}
+
+        {multiplayer && Object.keys(peersTyping).length > 0 && !state.isStreaming && (
+          <div className="typing-indicator peer-typing">
+            <span>{Object.keys(peersTyping).join(', ')} {Object.keys(peersTyping).length === 1 ? 'is' : 'are'} typing</span>
             <div className="typing-dots">
               <span className="dot" />
               <span className="dot" />

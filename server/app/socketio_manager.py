@@ -101,6 +101,38 @@ async def session_start(sid, data):
     }, room=f"campaign:{campaign_id}")
 
 
+@sio.event
+async def typing_start(sid, data):
+    """Broadcast that a player started typing to others in the campaign room."""
+    session = await sio.get_session(sid)
+    user_id = session.get("user_id")
+    campaign_id = data.get("campaign_id")
+    username = data.get("username", "Someone")
+    if campaign_id:
+        await sio.emit(
+            "peer_typing",
+            {"user_id": user_id, "username": username, "typing": True},
+            room=f"campaign:{campaign_id}",
+            skip_sid=sid,
+        )
+
+
+@sio.event
+async def typing_stop(sid, data):
+    """Broadcast that a player stopped typing."""
+    session = await sio.get_session(sid)
+    user_id = session.get("user_id")
+    campaign_id = data.get("campaign_id")
+    username = data.get("username", "Someone")
+    if campaign_id:
+        await sio.emit(
+            "peer_typing",
+            {"user_id": user_id, "username": username, "typing": False},
+            room=f"campaign:{campaign_id}",
+            skip_sid=sid,
+        )
+
+
 def _build_multiplayer_system_prompt(
     campaign_name: str,
     world_bible: Optional[str],
