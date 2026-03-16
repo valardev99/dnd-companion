@@ -31,6 +31,7 @@ import ChatPanel from './components/chat/ChatPanel.jsx';
 
 // Campaign Wizard
 import CampaignWizard from './components/CampaignWizard.jsx';
+import MobileCampaignPicker from './components/layout/MobileCampaignPicker.jsx';
 
 // Panel registry
 const PANEL_MAP = {
@@ -64,6 +65,7 @@ function App() {
 
   // Mobile panel view — null means chat is showing, string means panel is open
   const [mobilePanelOpen, setMobilePanelOpen] = useState(null);
+  const [campaignPickerOpen, setCampaignPickerOpen] = useState(false);
 
   // Breakpoint listener — manages companion visibility by screen width
   useEffect(() => {
@@ -151,6 +153,7 @@ function App() {
           mobilePanelOpen={mobilePanelOpen}
           onToggleCompanion={() => setCompanionOpen(true)}
           isTablet={isTablet}
+          onOpenCampaignPicker={() => setCampaignPickerOpen(true)}
         />
 
         {/* Tablet backdrop — rendered when companion overlays on tablet */}
@@ -200,6 +203,11 @@ function App() {
             </div>
           </div>
         )}
+
+        <MobileCampaignPicker
+          open={campaignPickerOpen}
+          onClose={() => setCampaignPickerOpen(false)}
+        />
       </div>
 
       <Footer />

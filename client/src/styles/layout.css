@@ -87,6 +87,11 @@
   opacity: 1;
 }
 
+/* Campaign button — hidden by default, shown on mobile via responsive.css */
+.mobile-campaign-btn {
+  display: none;
+}
+
 .icon-sidebar-btn.active {
   color: var(--gold);
   background: rgba(201, 168, 76, 0.1);

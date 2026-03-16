@@ -84,6 +84,14 @@
     display: none;
   }
 
+  /* Show campaign picker button on mobile */
+  .mobile-campaign-btn {
+    display: flex;
+    border-right: 1px solid var(--border-dim);
+    padding-right: 6px;
+    margin-right: 2px;
+  }
+
   /* Fade gradient for scrollable icon bar */
   .icon-sidebar::after {
     content: '';
