@@ -11,13 +11,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth import (
     create_access_token,
     create_refresh_token,
+    create_verify_token,
     decode_token,
     encrypt_api_key,
     get_current_user,
     hash_password,
     verify_password,
 )
-from app.config import DATABASE_URL
+from app.config import DATABASE_URL, RESEND_API_KEY
+from app.email import send_verification_email
 from app.database import get_db
 from app.models import User
 
@@ -112,6 +114,16 @@ async def register(body: RegisterRequest, response: Response, db: AsyncSession =
     )
     db.add(user)
     await db.flush()  # Populate user.id
+
+    # Send verification email (skip in dev if no API key)
+    if RESEND_API_KEY:
+        verify_token = create_verify_token(str(user.id))
+        send_verification_email(user.email, verify_token)
+    else:
+        # Dev mode: auto-verify
+        user.email_verified = True
+        db.add(user)
+        await db.flush()
 
     access_token = create_access_token(str(user.id))
     refresh_token = create_refresh_token(str(user.id))

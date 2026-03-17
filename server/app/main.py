@@ -9,7 +9,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.config import ALLOWED_ORIGINS
 from app.database import init_db
-from app.routes import admin, auth, billing, campaigns, chat, errors, feedback, friends, images, notifications, quality, stories, submissions, test
+from app.routes import admin, auth, billing, campaigns, chat, email_auth, errors, feedback, friends, images, notifications, quality, stories, submissions, test
 
 
 @asynccontextmanager
@@ -45,6 +45,7 @@ app.add_middleware(
 app.include_router(chat.router)                      # /api/chat — path already prefixed
 app.include_router(test.router)                      # /api/test — path already prefixed
 app.include_router(auth.router)                      # /auth/*   — path already prefixed
+app.include_router(email_auth.router)              # /auth/verify-email, /auth/forgot-password, etc.
 app.include_router(feedback.router)                  # /api/feedback — path already prefixed
 app.include_router(images.router)                    # /api/generate-image — path already prefixed
 app.include_router(campaigns.router, prefix="/api")  # → /api/campaigns/*
