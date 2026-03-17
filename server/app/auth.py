@@ -48,6 +48,21 @@ def create_refresh_token(user_id: str) -> str:
     return jwt.encode({"sub": user_id, "exp": expire, "type": "refresh"}, SECRET_KEY, algorithm=ALGORITHM)
 
 
+def create_verify_token(user_id: str) -> str:
+    """24-hour email verification token."""
+    expire = datetime.utcnow() + timedelta(hours=24)
+    return jwt.encode({"sub": user_id, "exp": expire, "type": "verify"}, SECRET_KEY, algorithm=ALGORITHM)
+
+
+def create_reset_token(user_id: str, pw_hash_prefix: str) -> str:
+    """15-minute password reset token. Embeds pw hash prefix to auto-invalidate if password changes."""
+    expire = datetime.utcnow() + timedelta(minutes=15)
+    return jwt.encode(
+        {"sub": user_id, "exp": expire, "type": "reset", "phx": pw_hash_prefix[:8]},
+        SECRET_KEY, algorithm=ALGORITHM,
+    )
+
+
 def decode_token(token: str) -> dict:
     """Decode and validate a JWT token. Raises JWTError on failure."""
     return jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
