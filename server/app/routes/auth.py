@@ -56,6 +56,7 @@ class UserResponse(BaseModel):
     email: str
     username: str
     is_admin: bool
+    email_verified: bool
     has_api_key: bool
     friend_code: Optional[str] = None
     display_name: Optional[str] = None
@@ -80,6 +81,7 @@ def _user_response(user: User) -> UserResponse:
         email=user.email,
         username=user.username,
         is_admin=user.is_admin,
+        email_verified=user.email_verified,
         has_api_key=user.encrypted_api_key is not None,
         friend_code=user.friend_code,
         display_name=user.display_name,

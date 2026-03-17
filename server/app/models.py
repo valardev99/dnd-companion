@@ -50,6 +50,7 @@ class User(Base):
     display_name = Column(String(100), nullable=True)
     avatar_url = Column(String(500), nullable=True)
     is_admin = Column(Boolean, default=False, nullable=False)
+    email_verified = Column(Boolean, default=False, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
