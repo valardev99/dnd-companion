@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth import create_reset_token, create_verify_token, decode_token, hash_password
 from app.config import RESEND_API_KEY
 from app.database import get_db
-from app.email import send_reset_email, send_verification_email
+from app.email import send_reset_email, send_verification_email, send_welcome_email
 from app.models import User
 
 logger = logging.getLogger(__name__)
@@ -108,6 +108,9 @@ async def verify_email(body: VerifyEmailRequest, db: AsyncSession = Depends(get_
     user.email_verified = True
     db.add(user)
     await db.flush()
+
+    # Send welcome email now that they're verified
+    send_welcome_email(user.email, user.username)
 
     return {"status": "ok", "message": "Email verified successfully. Welcome to the realm!"}
 

@@ -24,6 +24,7 @@ trap cleanup EXIT INT TERM
 echo "Starting backend on :8000..."
 DATABASE_URL="sqlite+aiosqlite:///./dev.db" \
   RESEND_API_KEY="re_AvbLFGe2_EQoCFpfQ6ahD361dmE9vnoUd" \
+  RESEND_FROM_EMAIL="noreply@wonderloreai.com" \
   python3 -m uvicorn server.app.main:app \
   --host 0.0.0.0 --port 8000 --reload \
   --reload-dir "$SCRIPT_DIR/server" &

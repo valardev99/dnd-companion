@@ -29,5 +29,5 @@ STRIPE_PRICE_PREMIUM = os.environ.get("STRIPE_PRICE_PREMIUM", "")  # Stripe Pric
 # Resend email (for verification and password reset)
 # ---------------------------------------------------------------------------
 RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
-RESEND_FROM_EMAIL = os.environ.get("RESEND_FROM_EMAIL", "onboarding@resend.dev")
+RESEND_FROM_EMAIL = os.environ.get("RESEND_FROM_EMAIL", "noreply@wonderloreai.com")
 FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:5173")

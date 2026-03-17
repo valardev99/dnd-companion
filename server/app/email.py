@@ -99,3 +99,39 @@ def send_reset_email(to: str, token: str) -> bool:
       </p>
     """
     return _send(to, "Reset Your Password — Wanderlore AI", _email_wrapper(body))
+
+
+def send_welcome_email(to: str, username: str) -> bool:
+    """Send welcome email after successful verification."""
+    url = f"{FRONTEND_URL}/play"
+    body = f"""
+      <p style="color:#e8dcc8; font-size:16px; line-height:1.6; margin:0 0 8px;">
+        Hail, <strong style="color:#c9a84c;">{username}</strong>!
+      </p>
+      <p style="color:#e8dcc8; font-size:16px; line-height:1.6; margin:0 0 20px;">
+        Your email has been verified and your account is fully activated.
+        Welcome to Wanderlore AI — your personal AI-powered Dungeon Master.
+      </p>
+      <div style="background:#12121a; border:1px solid #3d3520; padding:20px 24px; text-align:left; margin:0 0 20px;">
+        <p style="color:#c9a84c; font-family:'Cinzel',serif; font-size:13px; letter-spacing:1px; margin:0 0 12px; text-transform:uppercase;">
+          What Awaits You
+        </p>
+        <p style="color:#b8a88a; font-size:14px; line-height:1.7; margin:0;">
+          ⚔️ Create campaigns with rich, evolving storylines<br>
+          🐉 Battle creatures with AI-driven combat encounters<br>
+          📜 Shape your legend with branching narrative choices<br>
+          🎭 Bring characters to life with deep personality and lore
+        </p>
+      </div>
+      <a href="{url}"
+         style="display:inline-block; padding:14px 32px; background:linear-gradient(180deg,#d4b050,#c9a84c,#a88a3e);
+                color:#0a0a0f; font-family:'Cinzel',serif; font-size:14px; font-weight:700;
+                letter-spacing:2px; text-transform:uppercase; text-decoration:none;
+                border:2px solid #d4b050;">
+        BEGIN YOUR ADVENTURE
+      </a>
+      <p style="color:#888; font-size:13px; margin:20px 0 0;">
+        May your rolls be high and your stories legendary.
+      </p>
+    """
+    return _send(to, "Welcome to Wanderlore AI — Your Adventure Begins", _email_wrapper(body))
