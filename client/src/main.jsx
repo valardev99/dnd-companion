@@ -12,6 +12,8 @@ import LobbyPage from './pages/LobbyPage.jsx';
 import StoriesPage from './pages/StoriesPage.jsx';
 import SharePage from './pages/SharePage.jsx';
 import AdminPage from './pages/AdminPage.jsx';
+import ResetPasswordPage from './pages/ResetPasswordPage.jsx';
+import VerifyEmailPage from './pages/VerifyEmailPage.jsx';
 import './styles/index.css';
 
 createRoot(document.getElementById('root')).render(
@@ -27,6 +29,8 @@ createRoot(document.getElementById('root')).render(
           <Route path="/stories" element={<StoriesPage />} />
           <Route path="/share/:slug" element={<SharePage />} />
           <Route path="/admin" element={<AdminPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
+          <Route path="/verify-email" element={<VerifyEmailPage />} />
         </Routes>
         <NotificationToast />
       </NotificationProvider>
