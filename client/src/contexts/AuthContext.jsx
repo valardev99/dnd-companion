@@ -90,6 +90,18 @@ export function AuthProvider({ children }) {
     if (!res.ok) throw new Error('Failed to store API key');
   }, [token]);
 
+  const resendVerification = useCallback(async () => {
+    if (!user?.email) return;
+    const res = await fetch('/auth/resend-verification', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: user.email }),
+    });
+    if (!res.ok) throw new Error('Failed to resend verification email');
+    return res.json();
+  }, [user]);
+
   // Authenticated fetch helper — injects JWT
   const authFetch = useCallback(async (url, options = {}) => {
     const headers = { ...options.headers };
@@ -101,7 +113,7 @@ export function AuthProvider({ children }) {
     <AuthContext.Provider value={{
       user, setUser, token, loading,
       isAuthenticated: !!user,
-      register, login, logout, storeApiKey, authFetch,
+      register, login, logout, storeApiKey, authFetch, resendVerification,
     }}>
       {children}
     </AuthContext.Provider>
