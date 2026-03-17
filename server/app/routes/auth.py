@@ -116,9 +116,11 @@ async def register(body: RegisterRequest, response: Response, db: AsyncSession =
     await db.flush()  # Populate user.id
 
     # Send verification email (skip in dev if no API key)
+    print(f"[AUTH] Registration: RESEND_API_KEY={'SET' if RESEND_API_KEY else 'EMPTY'}")
     if RESEND_API_KEY:
         verify_token = create_verify_token(str(user.id))
-        send_verification_email(user.email, verify_token)
+        result = send_verification_email(user.email, verify_token)
+        print(f"[AUTH] Verification email to {user.email}: {'sent' if result else 'FAILED'}")
     else:
         # Dev mode: auto-verify
         user.email_verified = True
