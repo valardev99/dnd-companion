@@ -40,7 +40,19 @@ export function AuthProvider({ children }) {
     });
     if (!res.ok) {
       const err = await res.json();
-      throw new Error(err.detail || 'Registration failed');
+      // Pydantic validation errors return detail as an array of objects
+      let message = 'Registration failed';
+      if (typeof err.detail === 'string') {
+        message = err.detail;
+      } else if (Array.isArray(err.detail) && err.detail.length > 0) {
+        const field = err.detail[0].loc?.slice(-1)[0];
+        const msg = err.detail[0].msg || '';
+        if (field === 'email') message = 'Please enter a valid email address';
+        else if (field === 'password') message = 'Password must be at least 8 characters';
+        else if (field === 'username') message = 'Please enter a valid username';
+        else message = msg;
+      }
+      throw new Error(message);
     }
     const data = await res.json();
     setToken(data.access_token);
@@ -58,7 +70,15 @@ export function AuthProvider({ children }) {
     });
     if (!res.ok) {
       const err = await res.json();
-      throw new Error(err.detail || 'Login failed');
+      let message = 'Login failed';
+      if (typeof err.detail === 'string') {
+        message = err.detail;
+      } else if (Array.isArray(err.detail) && err.detail.length > 0) {
+        const field = err.detail[0].loc?.slice(-1)[0];
+        if (field === 'email') message = 'Please enter a valid email address';
+        else message = err.detail[0].msg || 'Login failed';
+      }
+      throw new Error(message);
     }
     const data = await res.json();
     setToken(data.access_token);
