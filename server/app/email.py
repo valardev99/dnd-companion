@@ -43,13 +43,13 @@ def _email_wrapper(body_html: str) -> str:
       <table width="520" cellpadding="0" cellspacing="0" style="background:#1a1a24; border:1px solid #3d3520; max-width:95vw;">
         <tr><td style="padding:32px 36px; text-align:center;">
           <h1 style="font-family:'Cinzel',serif; color:#c9a84c; font-size:22px; margin:0 0 4px; letter-spacing:2px;">
-            Wanderlore AI
+            Wonderlore AI
           </h1>
           <div style="height:1px; background:linear-gradient(90deg,transparent,#c9a84c,transparent); margin:16px 0;"></div>
           {body_html}
           <div style="height:1px; background:linear-gradient(90deg,transparent,#3d3520,transparent); margin:24px 0;"></div>
           <p style="color:#666; font-size:12px; margin:0;">
-            &copy; 2026 Wanderlore AI. All rights reserved.
+            &copy; 2026 Wonderlore AI. All rights reserved.
           </p>
         </td></tr>
       </table>
@@ -77,7 +77,7 @@ def send_verification_email(to: str, token: str) -> bool:
         This link expires in 24 hours. If you didn't create an account, ignore this email.
       </p>
     """
-    return _send(to, "Verify Your Email — Wanderlore AI", _email_wrapper(body))
+    return _send(to, "Verify Your Email — Wonderlore AI", _email_wrapper(body))
 
 
 def send_reset_email(to: str, token: str) -> bool:
@@ -98,7 +98,7 @@ def send_reset_email(to: str, token: str) -> bool:
         This link expires in 15 minutes. If you didn't request this, ignore this email.
       </p>
     """
-    return _send(to, "Reset Your Password — Wanderlore AI", _email_wrapper(body))
+    return _send(to, "Reset Your Password — Wonderlore AI", _email_wrapper(body))
 
 
 def send_welcome_email(to: str, username: str) -> bool:
@@ -110,7 +110,7 @@ def send_welcome_email(to: str, username: str) -> bool:
       </p>
       <p style="color:#e8dcc8; font-size:16px; line-height:1.6; margin:0 0 20px;">
         Your email has been verified and your account is fully activated.
-        Welcome to Wanderlore AI — your personal AI-powered Dungeon Master.
+        Welcome to Wonderlore AI — your personal AI-powered Dungeon Master.
       </p>
       <div style="background:#12121a; border:1px solid #3d3520; padding:20px 24px; text-align:left; margin:0 0 20px;">
         <p style="color:#c9a84c; font-family:'Cinzel',serif; font-size:13px; letter-spacing:1px; margin:0 0 12px; text-transform:uppercase;">
@@ -134,4 +134,4 @@ def send_welcome_email(to: str, username: str) -> bool:
         May your rolls be high and your stories legendary.
       </p>
     """
-    return _send(to, "Welcome to Wanderlore AI — Your Adventure Begins", _email_wrapper(body))
+    return _send(to, "Welcome to Wonderlore AI — Your Adventure Begins", _email_wrapper(body))

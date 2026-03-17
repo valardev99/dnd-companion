@@ -15,7 +15,7 @@ export default function HubNav({ activeView, onNavigate, onProfileClick }) {
     <nav className="hub-nav">
       <div className="hub-nav-logo">
         <div className="hub-nav-logo-icon">W</div>
-        <div className="hub-nav-logo-text">Wanderlore</div>
+        <div className="hub-nav-logo-text">Wonderlore</div>
       </div>
 
       <div className="hub-nav-divider" />

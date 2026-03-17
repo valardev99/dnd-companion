@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED: Use superpowers:subagent-driven-development (if subagents available) or superpowers:executing-plans to implement this plan. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Unify the Wanderlore AI layout across single-player, multiplayer, desktop, and mobile with a chat-first design, collapsible companion panel, and hybrid message styling.
+**Goal:** Unify the Wonderlore AI layout across single-player, multiplayer, desktop, and mobile with a chat-first design, collapsible companion panel, and hybrid message styling.
 
 **Architecture:** Replace the current 3-column grid (`two-screen-layout`) with a 4-column desktop grid (Nav Rail | Chat | Icon Sidebar | Companion). Add new components (NavRail, StatusBar, ChannelTabs, CombatBanner). Rewrite responsive breakpoints from 1024px/768px to 1200px/768px. Mobile switches from bottom nav to horizontal top icon bar with full-screen panel takeover.
 
@@ -412,7 +412,7 @@ export default function NavRail({ campaigns = [], activeCampaignId }) {
 
   return (
     <nav className="nav-rail" aria-label="Campaign navigation">
-      <div className="nav-rail-logo" title="Wanderlore AI">W</div>
+      <div className="nav-rail-logo" title="Wonderlore AI">W</div>
       <div className="nav-rail-divider" />
       <div className="nav-rail-campaigns">
         {campaigns.map(c => (

@@ -1,4 +1,4 @@
-"""SQLAlchemy models for Wanderlore AI."""
+"""SQLAlchemy models for Wonderlore AI."""
 import secrets
 import uuid
 from datetime import datetime

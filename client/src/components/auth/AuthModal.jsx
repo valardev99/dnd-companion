@@ -74,7 +74,7 @@ function getPasswordStrength(pw) {
    ═══════════════════════════════════════════════════════════════ */
 
 /**
- * AuthModal — Unified Login / Register modal for Wanderlore AI.
+ * AuthModal — Unified Login / Register modal for Wonderlore AI.
  *
  * Props:
  *   isOpen       — boolean, controls visibility

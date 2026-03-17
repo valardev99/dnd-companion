@@ -1,5 +1,5 @@
 /**
- * Wanderlore AI membership tier definitions.
+ * Wonderlore AI membership tier definitions.
  *
  * These are the source of truth for plan display on the client.
  * Stripe Price IDs are configured server-side via environment variables.

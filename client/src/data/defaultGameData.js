@@ -1,10 +1,10 @@
 // ═══════════════════════════════════════════════════════════════
-// DEFAULT GAME DATA — Blank Wanderlore AI (no active campaign)
+// DEFAULT GAME DATA — Blank Wonderlore AI (no active campaign)
 // ═══════════════════════════════════════════════════════════════
 
 export const DEFAULT_GAME_DATA = {
   campaign: {
-    name: "Wanderlore AI",
+    name: "Wonderlore AI",
     session: 0,
     day: 0,
     time: "—",

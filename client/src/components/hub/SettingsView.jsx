@@ -86,7 +86,7 @@ export default function SettingsView() {
     : dmStyle <= 35
     ? 'Semi-structured. Dice rolls for important moments, light resource tracking.'
     : dmStyle <= 65
-    ? 'Balanced blend of narrative and mechanics. The default Wanderlore experience.'
+    ? 'Balanced blend of narrative and mechanics. The default Wonderlore experience.'
     : dmStyle <= 85
     ? 'Story-driven. Rich descriptions, cinematic combat, character development.'
     : 'Pure narrative freedom. No visible mechanics. The world responds to creativity.';

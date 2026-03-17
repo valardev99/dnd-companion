@@ -119,7 +119,7 @@ export default function StoriesPage() {
     <div className="stories-page">
       {/* Navigation */}
       <nav className="stories-nav">
-        <Link to="/" className="stories-nav-brand">WANDERLORE</Link>
+        <Link to="/" className="stories-nav-brand">WONDERLORE</Link>
         <div className="stories-nav-links">
           <Link to="/">Home</Link>
           <Link to="/play">Play</Link>
@@ -263,7 +263,7 @@ export default function StoriesPage() {
 
       {/* Footer */}
       <footer className="stories-footer">
-        <span className="stories-footer-brand">WANDERLORE</span>
+        <span className="stories-footer-brand">WONDERLORE</span>
         <div className="stories-footer-links">
           <Link to="/">Home</Link>
           <Link to="/play">Play</Link>

@@ -61,7 +61,7 @@ The player wants freedom. No rails, no gates. Pure story. Still emit metadata ta
 
 /**
  * Freedom + Consequence philosophy injected into every campaign.
- * This is the core design principle of Wanderlore AI.
+ * This is the core design principle of Wonderlore AI.
  */
 const FREEDOM_CONSEQUENCE_PHILOSOPHY = `
 

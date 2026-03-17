@@ -1,5 +1,5 @@
 # ═══════════════════════════════════════════════════════════════
-# Wanderlore AI — Multi-stage Production Build
+# Wonderlore AI — Multi-stage Production Build
 # Stage 1: Build Vite frontend
 # Stage 2: Python API server + built frontend as static files
 # ═══════════════════════════════════════════════════════════════

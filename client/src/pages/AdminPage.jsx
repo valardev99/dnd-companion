@@ -22,9 +22,9 @@ export default function AdminPage() {
     setLoading(true);
     try {
       const [statsRes, qualityRes, feedbackRes] = await Promise.all([
-        fetch('/api/admin/stats', { headers: { 'Authorization': `Bearer ${localStorage.getItem('wanderlore-token') || ''}` } }),
-        fetch('/api/admin/quality', { headers: { 'Authorization': `Bearer ${localStorage.getItem('wanderlore-token') || ''}` } }),
-        fetch('/api/feedback', { headers: { 'Authorization': `Bearer ${localStorage.getItem('wanderlore-token') || ''}` } }),
+        fetch('/api/admin/stats', { headers: { 'Authorization': `Bearer ${localStorage.getItem('wonderlore-token') || ''}` } }),
+        fetch('/api/admin/quality', { headers: { 'Authorization': `Bearer ${localStorage.getItem('wonderlore-token') || ''}` } }),
+        fetch('/api/feedback', { headers: { 'Authorization': `Bearer ${localStorage.getItem('wonderlore-token') || ''}` } }),
       ]);
       if (statsRes.ok) setStats(await statsRes.json());
       if (qualityRes.ok) setQuality(await qualityRes.json());
@@ -41,7 +41,7 @@ export default function AdminPage() {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('wanderlore-token') || ''}`,
+          'Authorization': `Bearer ${localStorage.getItem('wonderlore-token') || ''}`,
         },
         body: JSON.stringify({ status: newStatus }),
       });
@@ -99,7 +99,7 @@ export default function AdminPage() {
             fontSize: '1.5rem',
             margin: 0,
           }}>
-            Wanderlore AI — Admin
+            Wonderlore AI — Admin
           </h1>
           <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginTop: 4 }}>
             Platform management and quality metrics

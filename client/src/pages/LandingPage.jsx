@@ -441,7 +441,7 @@ export default function LandingPage() {
 
       {/* ─── Navigation ─── */}
       <nav className="landing-nav">
-        <span className="landing-nav-brand">Wanderlore AI</span>
+        <span className="landing-nav-brand">Wonderlore AI</span>
         <div className="landing-nav-links">
           <a href="#how-it-works">How It Works</a>
           <a href="#what-makes-us-different">Features</a>
@@ -488,7 +488,7 @@ export default function LandingPage() {
           <div className="landing-hero-rune">
             {'\u25C7'} {'\u2727'} {'\u25C8'} {'\u2727'} {'\u25C7'}
           </div>
-          <h1 className="landing-hero-title">Wanderlore AI</h1>
+          <h1 className="landing-hero-title">Wonderlore AI</h1>
           <p className="landing-hero-subtitle">AI-Driven Dark Fantasy</p>
           <div className="landing-hero-divider" />
           <p className="landing-hero-tagline">
@@ -690,13 +690,13 @@ export default function LandingPage() {
 
       {/* ─── Footer ─── */}
       <footer className="landing-footer">
-        <span className="landing-footer-brand">Wanderlore AI</span>
+        <span className="landing-footer-brand">Wonderlore AI</span>
         <div className="landing-footer-links">
           <Link to="/stories">Stories</Link>
           <Link to="/play">Play</Link>
           <a href="#how-it-works">How It Works</a>
         </div>
-        <span className="landing-footer-copy">&copy; 2026 Wanderlore AI. All rights reserved.</span>
+        <span className="landing-footer-copy">&copy; 2026 Wonderlore AI. All rights reserved.</span>
       </footer>
     </div>
   );

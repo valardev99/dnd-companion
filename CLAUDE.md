@@ -1,4 +1,4 @@
-# Wanderlore AI — Project Guidelines
+# Wonderlore AI — Project Guidelines
 
 ## Design System (DO NOT OVERRIDE)
 

@@ -68,7 +68,7 @@ def _require_stripe():
 # Customer management
 # ---------------------------------------------------------------------------
 async def create_customer(user_id: str, email: str) -> Dict[str, Any]:
-    """Create a Stripe Customer for a Wanderlore user.
+    """Create a Stripe Customer for a Wonderlore user.
 
     Returns dict with 'id' (Stripe customer ID) on success.
     """
@@ -76,7 +76,7 @@ async def create_customer(user_id: str, email: str) -> Dict[str, Any]:
 
     customer = stripe.Customer.create(
         email=email,
-        metadata={"wanderlore_user_id": user_id},
+        metadata={"wonderlore_user_id": user_id},
     )
     logger.info("Created Stripe customer %s for user %s", customer.id, user_id)
     return {"id": customer.id, "email": email}

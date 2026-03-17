@@ -1,4 +1,4 @@
-"""Wanderlore AI — FastAPI application entry point."""
+"""Wonderlore AI — FastAPI application entry point."""
 import os
 from contextlib import asynccontextmanager
 
@@ -22,8 +22,8 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="Wanderlore AI API",
-    description="Backend API for the Wanderlore AI D&D companion application.",
+    title="Wonderlore AI API",
+    description="Backend API for the Wonderlore AI D&D companion application.",
     version="0.1.0",
     lifespan=lifespan,
 )

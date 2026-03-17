@@ -103,7 +103,7 @@ function CampaignWizard() {
       case -2: return (
         <div className="wizard-step-content">
           <p style={{textAlign:'center',fontSize:'0.85rem',color:'var(--silver)',marginBottom:20,lineHeight:1.6}}>
-            Wanderlore AI uses an AI service to power your Dungeon Master. Connect your API key to get started.
+            Wonderlore AI uses an AI service to power your Dungeon Master. Connect your API key to get started.
           </p>
           <div className="wizard-field">
             <label className="wizard-label">API Key <span className="wizard-required">*</span></label>

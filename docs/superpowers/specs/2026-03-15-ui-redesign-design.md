@@ -1,4 +1,4 @@
-# Wanderlore AI — UI Redesign Spec
+# Wonderlore AI — UI Redesign Spec
 
 **Date:** 2026-03-15
 **Status:** Draft
@@ -33,7 +33,7 @@ Companion panel is **open by default** on desktop.
 ### 3.2 Nav Rail (40px)
 
 Left edge of the screen. Contains:
-- **App logo** (top) — Wanderlore "W" mark
+- **App logo** (top) — Wonderlore "W" mark
 - **Campaign list** — One icon per campaign, showing first letter. Active campaign highlighted with gold border. Clicking switches campaigns.
 - **Bottom actions** — New campaign (+), Settings gear
 - **Scrolling:** If campaigns exceed visible space, the campaign list scrolls vertically. Max ~8 visible before scroll.

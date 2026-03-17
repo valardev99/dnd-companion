@@ -22,7 +22,7 @@ export default function NavRail({ campaigns = [], activeCampaignId }) {
 
   return (
     <nav className="nav-rail" aria-label="Campaign navigation">
-      <div className="nav-rail-logo" title="Wanderlore AI">W</div>
+      <div className="nav-rail-logo" title="Wonderlore AI">W</div>
       <div className="nav-rail-divider" />
       <div className="nav-rail-campaigns">
         {campaigns.map(c => (
