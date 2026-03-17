@@ -7,6 +7,7 @@ import CampaignsView from '../components/hub/CampaignsView.jsx';
 import FriendsView from '../components/hub/FriendsView.jsx';
 import SettingsView from '../components/hub/SettingsView.jsx';
 import ProfileDrawer from '../components/hub/ProfileDrawer.jsx';
+import VerifyBanner from '../components/auth/VerifyBanner.jsx';
 
 export default function HubPage() {
   const { user, isAuthenticated, loading } = useAuth();
@@ -35,6 +36,7 @@ export default function HubPage() {
       <div className="hub-main">
         <HubTopBar title={titles[activeView]} onProfileClick={() => setProfileOpen(true)} />
         <div className="hub-content">
+          <VerifyBanner />
           <ActiveView />
         </div>
       </div>
