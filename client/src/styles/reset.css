@@ -52,6 +52,14 @@ body {
   position: relative;
 }
 
+/* Scrollable pages (landing, stories, etc.) need root to grow beyond viewport */
+#root:has(.landing-page),
+#root:has(.stories-page),
+#root:has(.reset-page) {
+  height: auto;
+  min-height: 100vh;
+}
+
 /* ═══ SCROLLBAR ═══ */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: var(--void); }

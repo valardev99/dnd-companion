@@ -407,6 +407,12 @@ export default function LandingPage() {
   const [authModal, setAuthModal] = useState(null); // 'login' | 'register' | null
   const [heroIndex, setHeroIndex] = useState(0);
 
+  // Allow body scrolling on the landing page (game session sets overflow:hidden)
+  useEffect(() => {
+    document.body.style.overflow = 'auto';
+    return () => { document.body.style.overflow = ''; };
+  }, []);
+
   const handleAuthSuccess = () => {
     setAuthModal(null);
     navigate('/play');

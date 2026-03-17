@@ -452,7 +452,9 @@
     width: 100%;
     max-width: 100vw;
     max-height: 100vh;
-    border-width: 24px;
+    border-width: 20px;
+    padding: 16px 14px 12px;
+    box-sizing: border-box;
   }
 
   .wizard-title {
