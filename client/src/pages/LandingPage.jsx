@@ -406,6 +406,7 @@ export default function LandingPage() {
   const navigate = useNavigate();
   const [authModal, setAuthModal] = useState(null); // 'login' | 'register' | null
   const [heroIndex, setHeroIndex] = useState(0);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Allow body scrolling on the landing page (game session sets overflow:hidden)
   useEffect(() => {
@@ -475,7 +476,54 @@ export default function LandingPage() {
             Play Now
           </button>
         </div>
+
+        {/* ─── Mobile Hamburger ─── */}
+        <button
+          className="landing-nav-hamburger"
+          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          aria-label="Toggle menu"
+        >
+          <span className={`hamburger-bar ${mobileMenuOpen ? 'open' : ''}`} />
+          <span className={`hamburger-bar ${mobileMenuOpen ? 'open' : ''}`} />
+          <span className={`hamburger-bar ${mobileMenuOpen ? 'open' : ''}`} />
+        </button>
       </nav>
+
+      {/* ─── Mobile Menu Drawer ─── */}
+      {mobileMenuOpen && (
+        <div className="landing-mobile-menu-backdrop" onClick={() => setMobileMenuOpen(false)}>
+          <div className="landing-mobile-menu" onClick={e => e.stopPropagation()}>
+            <a href="#how-it-works" onClick={() => setMobileMenuOpen(false)}>How It Works</a>
+            <a href="#what-makes-us-different" onClick={() => setMobileMenuOpen(false)}>Features</a>
+            <a href="#stories" onClick={() => setMobileMenuOpen(false)}>Stories</a>
+            <div className="landing-mobile-menu-divider" />
+            {isAuthenticated ? (
+              <>
+                <span className="landing-mobile-menu-user">{user?.username || user?.email}</span>
+                <button onClick={() => { logout(); setMobileMenuOpen(false); }} className="landing-mobile-menu-btn">
+                  Sign Out
+                </button>
+              </>
+            ) : (
+              <>
+                <button onClick={() => { setAuthModal('login'); setMobileMenuOpen(false); }} className="landing-mobile-menu-btn">
+                  Sign In
+                </button>
+                <button onClick={() => { setAuthModal('register'); setMobileMenuOpen(false); }} className="landing-mobile-menu-btn landing-mobile-menu-btn-primary">
+                  Create Account
+                </button>
+              </>
+            )}
+            <div className="landing-mobile-menu-divider" />
+            <button
+              onClick={() => { isAuthenticated ? navigate('/play') : setAuthModal('register'); setMobileMenuOpen(false); }}
+              className="landing-mobile-menu-btn landing-mobile-menu-play"
+            >
+              Play Now
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ─── Hero Section ─── */}
       <section className="landing-hero">

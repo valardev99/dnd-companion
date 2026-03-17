@@ -912,6 +912,140 @@ html {
   color: var(--ash);
 }
 
+/* ═══ MOBILE HAMBURGER & MENU ═══ */
+
+.landing-nav-hamburger {
+  display: none; /* hidden on desktop */
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  background: none;
+  border: 1px solid var(--border-dim);
+  border-radius: 4px;
+  padding: 8px 7px;
+  cursor: pointer;
+  z-index: 101;
+}
+
+.hamburger-bar {
+  display: block;
+  width: 20px;
+  height: 2px;
+  background: var(--gold);
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.hamburger-bar.open:nth-child(1) {
+  transform: translateY(7px) rotate(45deg);
+}
+
+.hamburger-bar.open:nth-child(2) {
+  opacity: 0;
+}
+
+.hamburger-bar.open:nth-child(3) {
+  transform: translateY(-7px) rotate(-45deg);
+}
+
+.landing-mobile-menu-backdrop {
+  display: none; /* shown via media query */
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 99;
+}
+
+.landing-mobile-menu {
+  position: absolute;
+  top: 60px;
+  left: 0;
+  right: 0;
+  background: linear-gradient(180deg, rgba(18, 16, 10, 0.98) 0%, rgba(10, 10, 15, 0.98) 100%);
+  border-bottom: 1px solid var(--border-dim);
+  padding: 20px 24px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  animation: mobileMenuSlide 0.25s ease-out;
+}
+
+@keyframes mobileMenuSlide {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.landing-mobile-menu a {
+  color: var(--silver);
+  text-decoration: none;
+  font-family: 'Cinzel', serif;
+  font-size: 1.1rem;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 12px 0;
+  transition: color 0.2s ease;
+}
+
+.landing-mobile-menu a:hover {
+  color: var(--gold);
+}
+
+.landing-mobile-menu-divider {
+  height: 1px;
+  background: var(--border-dim);
+  margin: 8px 0;
+}
+
+.landing-mobile-menu-user {
+  color: var(--gold);
+  font-family: 'Cinzel', serif;
+  font-size: 0.9rem;
+  letter-spacing: 1px;
+  padding: 10px 0 4px;
+}
+
+.landing-mobile-menu-btn {
+  background: none;
+  border: 1px solid var(--border-dim);
+  color: var(--silver);
+  font-family: 'Cinzel', serif;
+  font-size: 1rem;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+  margin-top: 4px;
+}
+
+.landing-mobile-menu-btn:hover {
+  color: var(--gold);
+  border-color: var(--gold-dim);
+}
+
+.landing-mobile-menu-btn-primary {
+  background: linear-gradient(180deg, rgba(201, 168, 76, 0.15) 0%, rgba(201, 168, 76, 0.05) 100%);
+  border-color: var(--gold-dim);
+  color: var(--gold);
+}
+
+.landing-mobile-menu-play {
+  background: linear-gradient(180deg, var(--gold) 0%, #a88a3a 100%);
+  color: var(--void);
+  border: none;
+  font-weight: 700;
+  margin-top: 8px;
+  padding: 14px 16px;
+}
+
+.landing-mobile-menu-play:hover {
+  filter: brightness(1.1);
+  color: var(--void);
+}
+
 /* ═══ RESPONSIVE ═══ */
 
 /* Medium-large screens: tighten nav */
@@ -981,13 +1115,19 @@ html {
 }
 
 @media (max-width: 600px) {
-  .landing-nav-links a:not(.landing-cta-btn),
-  .landing-nav-link-signin,
-  .landing-nav-link-btn,
-  .landing-nav-user,
-  .landing-nav-auth,
-  .landing-nav-create-btn {
+  /* Hide desktop nav links */
+  .landing-nav-links {
     display: none;
+  }
+
+  /* Show hamburger button */
+  .landing-nav-hamburger {
+    display: flex;
+  }
+
+  /* Show mobile menu backdrop when open */
+  .landing-mobile-menu-backdrop {
+    display: block;
   }
 
   .landing-section {
@@ -1001,5 +1141,36 @@ html {
   .landing-cta-btn {
     padding: 14px 32px;
     font-size: 1.2rem;
+  }
+
+  .landing-hero-title {
+    font-size: clamp(2rem, 10vw, 2.8rem);
+    letter-spacing: 3px;
+  }
+
+  .landing-hero-tagline {
+    font-size: 1.1rem;
+    padding: 0 8px;
+  }
+}
+
+/* Extra small screens (iPhone SE, 320px) */
+@media (max-width: 359px) {
+  .landing-hero-title {
+    font-size: 2rem;
+    letter-spacing: 2px;
+  }
+
+  .landing-hero-subtitle {
+    font-size: 0.9rem;
+    letter-spacing: 3px;
+  }
+
+  .landing-nav {
+    padding: 10px 12px;
+  }
+
+  .landing-nav-brand {
+    font-size: 1rem;
   }
 }
