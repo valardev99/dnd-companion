@@ -39,18 +39,22 @@ export function AuthProvider({ children }) {
       body: JSON.stringify({ email, username, password }),
     });
     if (!res.ok) {
-      const err = await res.json();
-      // Pydantic validation errors return detail as an array of objects
       let message = 'Registration failed';
-      if (typeof err.detail === 'string') {
-        message = err.detail;
-      } else if (Array.isArray(err.detail) && err.detail.length > 0) {
-        const field = err.detail[0].loc?.slice(-1)[0];
-        const msg = err.detail[0].msg || '';
-        if (field === 'email') message = 'Please enter a valid email address';
-        else if (field === 'password') message = 'Password must be at least 8 characters';
-        else if (field === 'username') message = 'Please enter a valid username';
-        else message = msg;
+      try {
+        const err = await res.json();
+        // Pydantic validation errors return detail as an array of objects
+        if (typeof err.detail === 'string') {
+          message = err.detail;
+        } else if (Array.isArray(err.detail) && err.detail.length > 0) {
+          const field = err.detail[0].loc?.slice(-1)[0];
+          const msg = err.detail[0].msg || '';
+          if (field === 'email') message = 'Please enter a valid email address';
+          else if (field === 'password') message = 'Password must be at least 8 characters';
+          else if (field === 'username') message = 'Please enter a valid username';
+          else message = msg;
+        }
+      } catch {
+        message = res.status === 500 ? 'Server error — please try again later' : `Registration failed (${res.status})`;
       }
       throw new Error(message);
     }
@@ -69,14 +73,18 @@ export function AuthProvider({ children }) {
       body: JSON.stringify({ email, password }),
     });
     if (!res.ok) {
-      const err = await res.json();
       let message = 'Login failed';
-      if (typeof err.detail === 'string') {
-        message = err.detail;
-      } else if (Array.isArray(err.detail) && err.detail.length > 0) {
-        const field = err.detail[0].loc?.slice(-1)[0];
-        if (field === 'email') message = 'Please enter a valid email address';
-        else message = err.detail[0].msg || 'Login failed';
+      try {
+        const err = await res.json();
+        if (typeof err.detail === 'string') {
+          message = err.detail;
+        } else if (Array.isArray(err.detail) && err.detail.length > 0) {
+          const field = err.detail[0].loc?.slice(-1)[0];
+          if (field === 'email') message = 'Please enter a valid email address';
+          else message = err.detail[0].msg || 'Login failed';
+        }
+      } catch {
+        message = res.status === 500 ? 'Server error — please try again later' : `Login failed (${res.status})`;
       }
       throw new Error(message);
     }

@@ -45,7 +45,40 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
 
 
 async def init_db() -> None:
-    """Create all tables. Use for development; prefer Alembic for production."""
+    """Create all tables and add any missing columns for safe schema evolution."""
     async with engine.begin() as conn:
         from app import models  # noqa: F401 — ensure models are registered
         await conn.run_sync(Base.metadata.create_all)
+
+    # Add missing columns that create_all doesn't handle on existing tables
+    await _safe_migrate()
+
+
+async def _safe_migrate() -> None:
+    """Add columns that may be missing from existing tables (non-destructive)."""
+    import logging
+    from sqlalchemy import text
+
+    logger = logging.getLogger(__name__)
+    is_pg = not DATABASE_URL.startswith("sqlite")
+
+    migrations = [
+        # (table, column, SQL type for Postgres, SQL type for SQLite, default)
+        ("users", "email_verified", "BOOLEAN NOT NULL DEFAULT FALSE", "BOOLEAN NOT NULL DEFAULT 0", None),
+        ("users", "friend_code", "VARCHAR(8)", "VARCHAR(8)", None),
+        ("users", "display_name", "VARCHAR(100)", "VARCHAR(100)", None),
+        ("users", "avatar_url", "VARCHAR(500)", "VARCHAR(500)", None),
+        ("users", "is_admin", "BOOLEAN NOT NULL DEFAULT FALSE", "BOOLEAN NOT NULL DEFAULT 0", None),
+    ]
+
+    async with engine.begin() as conn:
+        for table, column, pg_type, sqlite_type, default in migrations:
+            col_type = pg_type if is_pg else sqlite_type
+            try:
+                await conn.execute(text(
+                    f"ALTER TABLE {table} ADD COLUMN {column} {col_type}"
+                ))
+                logger.info("Added column %s.%s", table, column)
+            except Exception:
+                # Column already exists — expected, skip silently
+                pass
