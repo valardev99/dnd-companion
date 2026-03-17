@@ -31,7 +31,7 @@ def _notification_to_response(n: Notification) -> NotificationResponse:
 # ---------------------------------------------------------------------------
 # Routes
 # ---------------------------------------------------------------------------
-@router.get("/", response_model=List[NotificationResponse])
+@router.get("", response_model=List[NotificationResponse])
 async def list_notifications(
     user=Depends(get_current_user),
     db: AsyncSession = Depends(get_db),

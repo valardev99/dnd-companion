@@ -27,7 +27,7 @@ export default function ArchiveModal({ campaign, onConfirm, onCancel }) {
     const gameData = campaign.game_data || {};
     const character = gameData.character || {};
     const campaignInfo = gameData.campaign || {};
-    const chatHistory = gameData.chat_history || [];
+    const chatHistory = campaign.chat_history || [];
 
     // Get last ~20 messages for context
     const recentMessages = chatHistory.slice(-20).map(msg => ({
@@ -100,8 +100,10 @@ Keep the tone dramatic and fitting for a dark fantasy adventure. Reference speci
             if (data === '[DONE]') continue;
             try {
               const parsed = JSON.parse(data);
-              const delta = parsed.choices?.[0]?.delta?.content;
-              if (delta) fullText += delta;
+              // Backend translates OpenRouter SSE into normalized format
+              if (parsed.type === 'content_block_delta' && parsed.delta?.text) {
+                fullText += parsed.delta.text;
+              }
             } catch (e) {
               // Skip unparseable lines
             }

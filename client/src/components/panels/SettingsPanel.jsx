@@ -29,6 +29,21 @@ function SettingsPanel() {
         </div>
       </div>
 
+      <div className="card">
+        <h4 style={{ marginBottom: 12 }}>API Configuration</h4>
+        <p style={{ fontSize: '0.82rem', color: 'var(--silver)', lineHeight: 1.6, marginBottom: 12 }}>
+          API key settings are managed from the Command Center.
+        </p>
+        <a href="/play" style={{
+          fontFamily: "'Fira Code', monospace",
+          fontSize: '0.78rem',
+          color: 'var(--gold)',
+          textDecoration: 'none',
+        }}>
+          Command Center → Settings → API Configuration
+        </a>
+      </div>
+
       <div className="card" style={{ textAlign: 'center' }}>
         <a href="/play" style={{
           fontFamily: "'Cinzel', serif",

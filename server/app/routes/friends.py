@@ -205,7 +205,7 @@ async def list_pending_requests(
     return responses
 
 
-@router.get("/", response_model=List[FriendResponse])
+@router.get("", response_model=List[FriendResponse])
 async def list_friends(
     user=Depends(get_current_user),
     db: AsyncSession = Depends(get_db),

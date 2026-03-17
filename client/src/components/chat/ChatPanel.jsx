@@ -164,7 +164,7 @@ function ChatPanel({ multiplayer, campaignId, className, activeChannel }) {
             </p>
             {state.apiStatus !== 'connected' && (
               <p style={{color:'var(--amber)',fontSize:'0.78rem',marginTop:12,fontFamily:"'Fira Code',monospace"}}>
-                ⚙ Configure your API key in Settings to connect
+                ⚙ Configure your API key via Command Center → Settings
               </p>
             )}
             {state.apiStatus === 'connected' && (
@@ -249,7 +249,7 @@ function ChatPanel({ multiplayer, campaignId, className, activeChannel }) {
       {state.apiStatus !== 'connected' ? (
         <div className="chat-disconnected-overlay">
           <span className="disconnected-icon">🔑</span>
-          <span>Connect your API key in <strong>Settings</strong> to begin</span>
+          <span>Connect your API key via <strong>Command Center → Settings</strong></span>
         </div>
       ) : (
         <div className="chat-input-area">

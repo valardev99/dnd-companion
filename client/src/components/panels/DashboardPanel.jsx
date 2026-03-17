@@ -20,7 +20,7 @@ function DashboardPanel() {
       <div className="card" style={{background:'linear-gradient(135deg, var(--deep-stone), var(--stone))', borderColor:'var(--border-gold)'}}>
         <p style={{fontSize:'0.9rem',lineHeight:1.7,color:'var(--parchment-light)'}}>
           {state.chatMessages.length === 0
-            ? `Welcome to ${c.name}. Configure your API key in Settings, then start chatting with your DM to begin the adventure.`
+            ? `Welcome to ${c.name}. Configure your API key via Command Center → Settings, then start chatting with your DM to begin the adventure.`
             : `You are at ${c.location}. The mood is ${c.mood}.`
           }
         </p>

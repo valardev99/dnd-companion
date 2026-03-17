@@ -99,6 +99,14 @@ export function useCloudSync(state, dispatch) {
       if (campaign.game_data) {
         loadPayload.gameData = campaign.game_data;
       }
+      // Sync campaign name from server into game data
+      if (campaign.name) {
+        loadPayload.gameData = loadPayload.gameData || {};
+        loadPayload.gameData.campaign = loadPayload.gameData.campaign || {};
+        if (!loadPayload.gameData.campaign.name || loadPayload.gameData.campaign.name === 'Wonderlore AI') {
+          loadPayload.gameData.campaign.name = campaign.name;
+        }
+      }
       if (campaign.world_bible) {
         loadPayload.worldBible = campaign.world_bible;
       }
