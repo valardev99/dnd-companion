@@ -1,0 +1,59 @@
+/* ═══ EMAIL VERIFICATION BANNER ═══ */
+.verify-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  background: rgba(201, 168, 76, 0.1);
+  border: 1px solid var(--gold-dim);
+  border-left: 3px solid var(--gold);
+  font-family: 'Crimson Text', serif;
+  font-size: 0.9rem;
+  color: var(--gold);
+}
+
+.verify-banner-icon {
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.verify-banner-text {
+  flex: 1;
+}
+
+.verify-banner-resend {
+  background: none;
+  border: 1px solid var(--gold-dim);
+  color: var(--gold);
+  padding: 4px 12px;
+  font-family: 'Cinzel', serif;
+  font-size: 0.72rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.verify-banner-resend:hover:not(:disabled) {
+  background: rgba(201, 168, 76, 0.15);
+  border-color: var(--gold);
+}
+
+.verify-banner-resend:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.verify-banner-close {
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 4px 8px;
+  font-size: 0.9rem;
+  transition: color 0.2s;
+  flex-shrink: 0;
+}
+
+.verify-banner-close:hover {
+  color: var(--gold);
+}
