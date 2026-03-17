@@ -55,7 +55,14 @@ async def init_db() -> None:
 
 
 async def _safe_migrate() -> None:
-    """Add columns that may be missing from existing tables (non-destructive)."""
+    """Add columns that may be missing from existing tables (non-destructive).
+
+    IMPORTANT: In PostgreSQL, a failed ALTER TABLE poisons the entire
+    transaction — all subsequent statements silently fail.  We must
+    either use SAVEPOINTs (begin_nested) or run each migration in its
+    own top-level transaction.  We use separate transactions here for
+    maximum compatibility.
+    """
     import logging
     from sqlalchemy import text
 
@@ -63,17 +70,19 @@ async def _safe_migrate() -> None:
     is_pg = not DATABASE_URL.startswith("sqlite")
 
     migrations = [
-        # (table, column, SQL type for Postgres, SQL type for SQLite, default)
-        ("users", "email_verified", "BOOLEAN NOT NULL DEFAULT FALSE", "BOOLEAN NOT NULL DEFAULT 0", None),
-        ("users", "friend_code", "VARCHAR(8)", "VARCHAR(8)", None),
-        ("users", "display_name", "VARCHAR(100)", "VARCHAR(100)", None),
-        ("users", "avatar_url", "VARCHAR(500)", "VARCHAR(500)", None),
-        ("users", "is_admin", "BOOLEAN NOT NULL DEFAULT FALSE", "BOOLEAN NOT NULL DEFAULT 0", None),
+        # (table, column, SQL type for Postgres, SQL type for SQLite)
+        ("users", "email_verified", "BOOLEAN NOT NULL DEFAULT FALSE", "BOOLEAN NOT NULL DEFAULT 0"),
+        ("users", "friend_code", "VARCHAR(8)", "VARCHAR(8)"),
+        ("users", "display_name", "VARCHAR(100)", "VARCHAR(100)"),
+        ("users", "avatar_url", "VARCHAR(500)", "VARCHAR(500)"),
+        ("users", "is_admin", "BOOLEAN NOT NULL DEFAULT FALSE", "BOOLEAN NOT NULL DEFAULT 0"),
     ]
 
-    async with engine.begin() as conn:
-        for table, column, pg_type, sqlite_type, default in migrations:
-            col_type = pg_type if is_pg else sqlite_type
+    for table, column, pg_type, sqlite_type in migrations:
+        col_type = pg_type if is_pg else sqlite_type
+        # Each migration gets its OWN transaction so a failure doesn't
+        # poison subsequent statements (critical for PostgreSQL).
+        async with engine.begin() as conn:
             try:
                 await conn.execute(text(
                     f"ALTER TABLE {table} ADD COLUMN {column} {col_type}"
