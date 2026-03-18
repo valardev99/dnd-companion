@@ -39,29 +39,41 @@
 }
 
 .icon-sidebar-btn {
-  width: 30px;
-  height: 30px;
+  width: 40px;
+  height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: none;
+  background: transparent;
   border: none;
-  border-right: 2px solid transparent;
-  color: var(--ash);
   cursor: pointer;
-  transition: all 0.2s;
+  color: var(--muted);
   font-size: 0.75rem;
+  position: relative;
+  transition: color 0.25s ease;
+}
+
+.icon-sidebar-btn::before {
+  content: '';
+  position: absolute;
+  width: 34px;
+  height: 34px;
+  clip-path: polygon(50% 0%, 93% 25%, 93% 75%, 50% 100%, 7% 75%, 7% 25%);
+  background: linear-gradient(135deg, var(--deep-stone), var(--void));
+  transition: all 0.25s ease;
+  z-index: -1;
 }
 
 .icon-sidebar-btn:hover {
   color: var(--gold);
-  background: rgba(201, 168, 76, 0.06);
+}
+
+.icon-sidebar-btn:hover::before {
+  background: linear-gradient(135deg, rgba(42, 32, 21, 0.8), var(--deep-stone));
+  box-shadow: 0 0 12px rgba(201, 168, 76, 0.15);
 }
 
 /* Styled tooltip — positioned left of sidebar */
-.icon-sidebar-btn {
-  position: relative;
-}
 
 .icon-sidebar-btn::after {
   content: attr(data-tooltip);
@@ -94,8 +106,11 @@
 
 .icon-sidebar-btn.active {
   color: var(--gold);
-  background: rgba(201, 168, 76, 0.1);
-  border-right-color: var(--gold);
+}
+
+.icon-sidebar-btn.active::before {
+  background: linear-gradient(135deg, rgba(42, 32, 21, 0.9), rgba(26, 18, 9, 0.9));
+  box-shadow: 0 0 16px rgba(201, 168, 76, 0.2), inset 0 0 8px rgba(201, 168, 76, 0.05);
 }
 
 .icon-sidebar-btn svg {
