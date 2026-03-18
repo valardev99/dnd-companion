@@ -77,6 +77,7 @@ When asked to run full testing, EVERY section below must be checked. Do not skip
 
 ### 6. Production Readiness
 - [ ] `npm run build` passes clean (no errors)
+- [ ] Direct navigation to frontend routes works (e.g. /play, /verify-email, /reset-password) — SPA catch-all must serve index.html for non-API paths
 - [ ] No hardcoded localhost URLs in production code
 - [ ] Environment variables documented (RESEND_API_KEY, DATABASE_URL, JWT_SECRET, etc.)
 - [ ] CORS origins include production domain

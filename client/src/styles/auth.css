@@ -549,19 +549,40 @@
     font-size: 1.2rem;
   }
 
+  .auth-label {
+    font-size: 0.9rem;
+  }
+
   .auth-toggle-btn {
-    font-size: 0.72rem;
+    font-size: 0.78rem;
     padding: 10px 10px;
+    min-height: 44px;
   }
 
   .auth-submit-btn {
-    padding: 12px 20px;
-    font-size: 0.85rem;
+    padding: 14px 20px;
+    font-size: 0.9rem;
   }
 
   .auth-discord-btn {
-    font-size: 0.75rem;
-    padding: 10px 14px;
+    font-size: 0.8rem;
+    padding: 12px 14px;
+  }
+
+  .auth-footer {
+    font-size: 0.95rem;
+    padding-top: 18px;
+  }
+
+  .auth-footer-link {
+    display: inline-block;
+    padding: 8px 4px;
+    min-height: 44px;
+    line-height: 28px;
+  }
+
+  .auth-hint {
+    font-size: 0.78rem;
   }
 
   .auth-close {

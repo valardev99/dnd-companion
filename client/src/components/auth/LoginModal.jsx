@@ -89,7 +89,7 @@ export default function LoginModal({ onClose, onSuccess, onSwitchToRegister }) {
                   {forgotSubmitting ? 'Sending...' : 'Send Reset Link'}
                 </button>
                 <div className="auth-switch" style={{ marginTop: '12px' }}>
-                  <a onClick={() => setForgotMode(false)}>Back to Sign In</a>
+                  <a onClick={() => setForgotMode(false)} style={{ padding: '8px 4px', display: 'inline-block', minHeight: '44px', lineHeight: '28px' }}>Back to Sign In</a>
                 </div>
               </form>
             )}
@@ -126,10 +126,13 @@ export default function LoginModal({ onClose, onSuccess, onSwitchToRegister }) {
                   style={{
                     color: 'var(--gold-dim)',
                     cursor: 'pointer',
-                    fontSize: '0.8rem',
+                    fontSize: '0.875rem',
                     fontFamily: "'Crimson Text', serif",
                     marginTop: '4px',
                     display: 'inline-block',
+                    padding: '8px 0',
+                    minHeight: '44px',
+                    lineHeight: '28px',
                   }}
                 >
                   Forgot password?
