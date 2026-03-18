@@ -4,8 +4,9 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import PlainTextResponse
+from fastapi.responses import FileResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.config import ALLOWED_ORIGINS
 from app.database import init_db
@@ -87,8 +88,20 @@ async def dm_engine():
 # Static files (production: serve built frontend from dist/)
 # ---------------------------------------------------------------------------
 _dist_dir = os.path.join(os.path.dirname(__file__), "..", "..", "dist")
+_index_html = os.path.join(_dist_dir, "index.html")
+
 if os.path.isdir(_dist_dir):
-    app.mount("/", StaticFiles(directory=_dist_dir, html=True), name="static")
+    # Serve actual static assets (JS, CSS, images)
+    app.mount("/assets", StaticFiles(directory=os.path.join(_dist_dir, "assets")), name="assets")
+
+    # SPA catch-all: any non-API route serves index.html so React Router handles it
+    @app.get("/{full_path:path}")
+    async def spa_fallback(full_path: str):
+        # Serve actual files if they exist (favicon, robots.txt, etc.)
+        file_path = os.path.join(_dist_dir, full_path)
+        if full_path and os.path.isfile(file_path):
+            return FileResponse(file_path)
+        return FileResponse(_index_html)
 
 # ---------------------------------------------------------------------------
 # Socket.IO — wrap FastAPI so both HTTP and WebSocket run on the same port
