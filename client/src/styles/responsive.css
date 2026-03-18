@@ -796,10 +796,13 @@
     font-size: 1rem;
   }
 
-  /* Treasure chest — smaller */
-  .chest-wrapper {
-    width: 120px;
-    height: 90px;
+  /* Rune circle — smaller on mobile */
+  .rune-circle {
+    width: 200px;
+    height: 200px;
+  }
+  .rune-symbol {
+    font-size: 1.2rem;
   }
 
   /* Avatar frame — slightly smaller */

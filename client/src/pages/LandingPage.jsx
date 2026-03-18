@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext.jsx';
 import LoginModal from '../components/auth/LoginModal.jsx';
 import RegisterModal from '../components/auth/RegisterModal.jsx';
 import DiceRoll from '../components/landing/DiceRoll';
-import TreasureChest from '../components/landing/TreasureChest';
+import RuneRevealCTA from '../components/landing/TreasureChest';
 
 // ═══════════════════════════════════════════════════════════════
 // INLINE SVG ICONS — Dark Fantasy themed replacements for emojis
@@ -738,7 +738,7 @@ export default function LandingPage() {
       </div>
 
       {/* ─── CTA Footer — Treasure Chest ─── */}
-      <TreasureChest />
+      <RuneRevealCTA />
 
       <div className="landing-divider" />
 
