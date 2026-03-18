@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext.jsx';
 import LoginModal from '../components/auth/LoginModal.jsx';
 import RegisterModal from '../components/auth/RegisterModal.jsx';
 import DiceRoll from '../components/landing/DiceRoll';
+import TreasureChest from '../components/landing/TreasureChest';
 
 // ═══════════════════════════════════════════════════════════════
 // INLINE SVG ICONS — Dark Fantasy themed replacements for emojis
@@ -736,21 +737,8 @@ export default function LandingPage() {
         </section>
       </div>
 
-      {/* ─── CTA Footer ─── */}
-      <section className="landing-cta-footer">
-        <LandingParticles />
-        <h2 className="landing-cta-footer-title">Your Story Begins Now</h2>
-        <p className="landing-cta-footer-subtitle">
-          No downloads. Free to play. Step into a world that remembers
-          every choice you make.
-        </p>
-        <button
-          onClick={() => isAuthenticated ? navigate('/play') : setAuthModal('register')}
-          className="landing-cta-btn"
-        >
-          Start Your Adventure
-        </button>
-      </section>
+      {/* ─── CTA Footer — Treasure Chest ─── */}
+      <TreasureChest />
 
       <div className="landing-divider" />
 

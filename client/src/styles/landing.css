@@ -837,50 +837,278 @@ html {
   margin-top: 8px;
 }
 
-/* ═══ CTA FOOTER ═══ */
-.landing-cta-footer {
+/* ═══ TREASURE CHEST CTA ═══ */
+
+/* Outer section wrapper */
+.chest-cta {
   position: relative;
-  text-align: center;
   padding: 120px 24px 80px;
-  overflow: hidden;
+  text-align: center;
+  opacity: 0;
+  transition: opacity 0.6s ease;
 }
 
-.landing-cta-footer::before {
+.chest-visible {
+  opacity: 1;
+}
+
+/* Chest 3-D wrapper — centered, fixed size, perspective */
+.chest-wrapper {
+  width: 160px;
+  height: 120px;
+  margin: 0 auto 40px;
+  perspective: 800px;
+  position: relative;
+}
+
+/* ── Chest body: lid + base stacked ── */
+.chest-body {
+  position: relative;
+  width: 160px;
+  height: 120px;
+}
+
+/* Lid */
+.chest-lid {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 160px;
+  height: 50px;
+  transform-origin: top center;
+  transform: rotateX(0deg);
+  transition: transform 1.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transform-style: preserve-3d;
+}
+
+.chest-opened .chest-lid {
+  transform: rotateX(-110deg);
+}
+
+.chest-lid-front {
+  width: 160px;
+  height: 50px;
+  background: linear-gradient(180deg, #7a5020 0%, #5a3a1a 60%, #3a2410 100%);
+  border: 2px solid rgba(201, 168, 76, 0.6);
+  border-bottom: none;
+  border-radius: 6px 6px 0 0;
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.1),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(0, 0, 0, 0.5);
+  position: relative;
+}
+
+/* Gold clasp on lid */
+.chest-lid-front::after {
   content: '';
   position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(ellipse 80% 60% at 50% 50%, rgba(201, 168, 76, 0.05) 0%, transparent 70%);
-  pointer-events: none;
+  bottom: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 24px;
+  height: 12px;
+  background: linear-gradient(180deg, var(--gold-bright) 0%, var(--gold-dim) 100%);
+  border: 1px solid rgba(245, 212, 120, 0.8);
+  border-radius: 2px;
 }
 
-.landing-cta-footer-title {
+/* Base */
+.chest-base {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 160px;
+  height: 70px;
+}
+
+.chest-base-front {
+  width: 160px;
+  height: 70px;
+  background: linear-gradient(180deg, #5a3a1a 0%, #3a2410 100%);
+  border: 2px solid rgba(180, 140, 60, 0.5);
+  border-top: none;
+  border-radius: 0 0 8px 8px;
+  box-shadow:
+    inset 0 2px 4px rgba(0, 0, 0, 0.5),
+    inset 0 -2px 0 rgba(255, 255, 255, 0.05),
+    0 4px 12px rgba(0, 0, 0, 0.6);
+  position: relative;
+}
+
+/* Horizontal band on base */
+.chest-base-front::before {
+  content: '';
+  position: absolute;
+  top: 20px;
+  left: 0;
+  right: 0;
+  height: 8px;
+  background: linear-gradient(180deg, rgba(201, 168, 76, 0.3) 0%, rgba(201, 168, 76, 0.15) 100%);
+  border-top: 1px solid rgba(201, 168, 76, 0.4);
+  border-bottom: 1px solid rgba(201, 168, 76, 0.2);
+}
+
+/* Gold lock/hasp on base */
+.chest-base-front::after {
+  content: '';
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 20px;
+  height: 16px;
+  background: linear-gradient(180deg, var(--gold-bright) 0%, var(--gold-dim) 100%);
+  border: 1px solid rgba(245, 212, 120, 0.8);
+  border-radius: 2px 2px 4px 4px;
+}
+
+/* ── Golden glow from inside ── */
+.chest-glow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(245, 212, 120, 0.9) 0%,
+    rgba(201, 168, 76, 0.6) 30%,
+    rgba(180, 130, 40, 0.3) 60%,
+    transparent 100%
+  );
+  transition: width 1s ease 0.6s, height 1s ease 0.6s, opacity 1s ease 0.6s;
+  opacity: 0;
+  pointer-events: none;
+  z-index: -1;
+}
+
+.chest-opened .chest-glow {
+  width: 400px;
+  height: 400px;
+  opacity: 1;
+}
+
+/* ── Light rays radiating out ── */
+.chest-rays {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 600px;
+  height: 600px;
+  opacity: 0;
+  transition: opacity 0.8s ease 1s;
+  pointer-events: none;
+  z-index: -2;
+  background:
+    linear-gradient(0deg,   transparent 48%, rgba(245, 212, 120, 0.12) 50%, transparent 52%),
+    linear-gradient(30deg,  transparent 48%, rgba(245, 212, 120, 0.08) 50%, transparent 52%),
+    linear-gradient(60deg,  transparent 48%, rgba(245, 212, 120, 0.10) 50%, transparent 52%),
+    linear-gradient(90deg,  transparent 48%, rgba(245, 212, 120, 0.12) 50%, transparent 52%),
+    linear-gradient(120deg, transparent 48%, rgba(245, 212, 120, 0.08) 50%, transparent 52%),
+    linear-gradient(150deg, transparent 48%, rgba(245, 212, 120, 0.10) 50%, transparent 52%),
+    linear-gradient(180deg, transparent 48%, rgba(245, 212, 120, 0.12) 50%, transparent 52%),
+    linear-gradient(210deg, transparent 48%, rgba(245, 212, 120, 0.08) 50%, transparent 52%),
+    linear-gradient(240deg, transparent 48%, rgba(245, 212, 120, 0.10) 50%, transparent 52%),
+    linear-gradient(270deg, transparent 48%, rgba(245, 212, 120, 0.12) 50%, transparent 52%),
+    linear-gradient(300deg, transparent 48%, rgba(245, 212, 120, 0.08) 50%, transparent 52%),
+    linear-gradient(330deg, transparent 48%, rgba(245, 212, 120, 0.10) 50%, transparent 52%);
+}
+
+.chest-opened .chest-rays {
+  opacity: 1;
+}
+
+/* ── CTA content fades in after chest opens ── */
+.chest-content {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.6s ease 0.8s, transform 0.6s ease 0.8s;
+}
+
+.chest-opened .chest-content {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.chest-title {
   font-family: 'Cinzel', serif;
   font-size: clamp(1.8rem, 4vw, 3rem);
   font-weight: 700;
   color: var(--gold-bright);
   margin-bottom: 16px;
   letter-spacing: 3px;
-  text-shadow: 0 0 40px rgba(245, 212, 120, 0.2);
-  position: relative;
-  z-index: 1;
+  text-shadow:
+    0 0 40px rgba(245, 212, 120, 0.3),
+    0 0 80px rgba(201, 168, 76, 0.15);
 }
 
-.landing-cta-footer-subtitle {
+.chest-subtitle {
   font-size: 1.2rem;
   color: var(--silver);
-  margin-bottom: 48px;
-  max-width: 500px;
-  margin-left: auto;
-  margin-right: auto;
+  margin-bottom: 40px;
   line-height: 1.7;
-  position: relative;
-  z-index: 1;
 }
 
-.landing-cta-footer .landing-cta-btn {
-  position: relative;
-  z-index: 1;
+.chest-btn {
+  display: inline-block;
+  text-decoration: none;
+}
+
+/* ── No-motion / reduced-motion: show everything immediately ── */
+.chest-no-motion,
+.chest-no-motion .chest-lid,
+.chest-no-motion .chest-glow,
+.chest-no-motion .chest-rays,
+.chest-no-motion .chest-content {
+  transition: none !important;
+  animation: none !important;
+}
+
+.chest-no-motion {
+  opacity: 1;
+}
+
+.chest-no-motion .chest-content {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.chest-no-motion .chest-glow {
+  width: 400px;
+  height: 400px;
+  opacity: 1;
+}
+
+.chest-no-motion .chest-rays {
+  opacity: 1;
+}
+
+.chest-no-motion .chest-lid {
+  transform: rotateX(-110deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chest-cta,
+  .chest-lid,
+  .chest-glow,
+  .chest-rays,
+  .chest-content {
+    transition: none !important;
+    animation: none !important;
+  }
+
+  .chest-cta {
+    opacity: 1;
+  }
+
+  .chest-content {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* ═══ SITE FOOTER ═══ */
