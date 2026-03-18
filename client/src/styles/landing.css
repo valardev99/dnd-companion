@@ -1072,6 +1072,143 @@ html {
   }
 }
 
+/* ═══ D20 DICE ROLL ═══ */
+
+.dice-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  pointer-events: none;
+  transition: opacity 0.8s ease;
+}
+
+.dice-overlay.dice-fade-out {
+  opacity: 0;
+}
+
+.dice-container {
+  width: 100px;
+  height: 100px;
+}
+
+.dice-face {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, rgba(20, 16, 8, 0.9), rgba(42, 32, 21, 0.9));
+  border: 2px solid var(--gold);
+  transform: rotate(45deg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow:
+    0 0 30px rgba(201, 168, 76, 0.3),
+    inset 0 0 20px rgba(201, 168, 76, 0.1);
+}
+
+.dice-number {
+  transform: rotate(-45deg);
+  font-family: 'Cinzel', serif;
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--gold-bright);
+  text-shadow: 0 0 20px rgba(201, 168, 76, 0.5);
+}
+
+.dice-spinning {
+  animation: dice-spin 2s cubic-bezier(0.25, 0.1, 0.25, 1) forwards;
+}
+
+@keyframes dice-spin {
+  0% {
+    transform: rotateY(0deg) rotateX(0deg) scale(0.5);
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+    transform: rotateY(360deg) rotateX(180deg) scale(1.1);
+  }
+  60% {
+    transform: rotateY(720deg) rotateX(360deg) scale(1);
+  }
+  100% {
+    transform: rotateY(1080deg) rotateX(540deg) scale(1);
+  }
+}
+
+.dice-nat20 .dice-face {
+  border-color: var(--gold-bright);
+  box-shadow:
+    0 0 60px rgba(245, 212, 120, 0.6),
+    0 0 120px rgba(201, 168, 76, 0.3),
+    inset 0 0 30px rgba(245, 212, 120, 0.2);
+}
+
+.dice-nat20 .dice-number {
+  color: #fff;
+  text-shadow: 0 0 30px rgba(245, 212, 120, 0.8);
+}
+
+.dice-result-text {
+  margin-top: 24px;
+  font-family: 'Cinzel', serif;
+  font-size: 1.2rem;
+  color: var(--gold);
+  text-shadow: 0 0 20px rgba(201, 168, 76, 0.4);
+  animation: dice-result-reveal 0.6s ease forwards;
+  letter-spacing: 2px;
+}
+
+.dice-crit {
+  display: block;
+  color: var(--gold-bright);
+  font-size: 0.9rem;
+  margin-top: 4px;
+  animation: dice-crit-pulse 0.8s ease infinite alternate;
+}
+
+@keyframes dice-result-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes dice-crit-pulse {
+  from {
+    text-shadow: 0 0 10px rgba(245, 212, 120, 0.4);
+  }
+  to {
+    text-shadow: 0 0 30px rgba(245, 212, 120, 0.8);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dice-spinning {
+    animation: none;
+  }
+
+  .dice-crit {
+    animation: none;
+  }
+
+  .dice-result-text {
+    animation: none;
+    opacity: 1;
+  }
+
+  .dice-overlay {
+    transition: none;
+  }
+}
+
 /* ═══ RESPONSIVE ═══ */
 
 /* Medium-large screens: tighten nav */

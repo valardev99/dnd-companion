@@ -1,8 +1,9 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import LoginModal from '../components/auth/LoginModal.jsx';
 import RegisterModal from '../components/auth/RegisterModal.jsx';
+import DiceRoll from '../components/landing/DiceRoll';
 
 // ═══════════════════════════════════════════════════════════════
 // INLINE SVG ICONS — Dark Fantasy themed replacements for emojis
@@ -407,6 +408,7 @@ export default function LandingPage() {
   const [authModal, setAuthModal] = useState(null); // 'login' | 'register' | null
   const [heroIndex, setHeroIndex] = useState(0);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [heroScene, setHeroScene] = useState({ index: 0, tagline: '', isNat20: false, resolved: false });
 
   // Allow body scrolling on the landing page (game session sets overflow:hidden)
   useEffect(() => {
@@ -419,13 +421,18 @@ export default function LandingPage() {
     navigate('/play');
   };
 
-  // Rotate hero images every 8 seconds
+  const handleRollComplete = useCallback((index, tagline, isNat20) => {
+    setHeroScene({ index, tagline, isNat20, resolved: true });
+  }, []);
+
+  // Rotate hero images every 4 seconds — stops once dice roll resolves
   useEffect(() => {
+    if (heroScene.resolved) return;
     const timer = setInterval(() => {
       setHeroIndex(prev => (prev + 1) % HERO_IMAGES.length);
     }, 4000);
     return () => clearInterval(timer);
-  }, []);
+  }, [heroScene.resolved]);
 
   return (
     <div className="landing-page">
@@ -528,16 +535,20 @@ export default function LandingPage() {
       {/* ─── Hero Section ─── */}
       <section className="landing-hero">
         <div className="landing-hero-bg">
-          {HERO_IMAGES.map((src, i) => (
-            <img
-              key={src}
-              src={src}
-              alt=""
-              className={`landing-hero-bg-img ${i === heroIndex ? 'active' : ''}`}
-            />
-          ))}
+          {HERO_IMAGES.map((src, i) => {
+            const activeIndex = heroScene.resolved ? heroScene.index : heroIndex;
+            return (
+              <img
+                key={src}
+                src={src}
+                alt=""
+                className={`landing-hero-bg-img ${i === activeIndex ? 'active' : ''}`}
+              />
+            );
+          })}
         </div>
         <LandingParticles />
+        <DiceRoll onRollComplete={handleRollComplete} />
         <div className="landing-hero-content">
           <div className="landing-hero-rune">
             {'\u25C7'} {'\u2727'} {'\u25C8'} {'\u2727'} {'\u25C7'}
@@ -546,8 +557,9 @@ export default function LandingPage() {
           <p className="landing-hero-subtitle">AI-Driven Dark Fantasy</p>
           <div className="landing-hero-divider" />
           <p className="landing-hero-tagline">
-            Enter a world with no rules, no preset expectations. You lead the story
-            and every choice you make has impact and consequence.
+            {heroScene.resolved && heroScene.tagline
+              ? heroScene.tagline
+              : 'Enter a world with no rules, no preset expectations. You lead the story and every choice you make has impact and consequence.'}
           </p>
           <div className="landing-hero-cta">
             <button
