@@ -625,13 +625,18 @@ html {
 }
 
 .landing-pillar {
-  background: linear-gradient(180deg, rgba(26, 18, 9, 0.8) 0%, rgba(20, 16, 8, 0.6) 100%);
-  border: 1px solid var(--border-dim);
+  background: rgba(20, 16, 8, 0.4);
+  backdrop-filter: blur(20px) saturate(1.2);
+  -webkit-backdrop-filter: blur(20px) saturate(1.2);
+  border: 1px solid rgba(201, 168, 76, 0.15);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  background-image: radial-gradient(circle at 30% 20%, rgba(201, 168, 76, 0.06), transparent 50%);
+  background-repeat: no-repeat;
   padding: 48px 32px;
   text-align: center;
   position: relative;
   overflow: hidden;
-  transition: all 0.5s ease;
+  transition: all 0.3s ease;
 }
 
 .landing-pillar::before {
@@ -656,11 +661,11 @@ html {
 }
 
 .landing-pillar:hover {
-  border-color: var(--border-gold);
+  background: rgba(20, 16, 8, 0.5);
+  border-color: rgba(201, 168, 76, 0.35);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4), inset 0 0 40px rgba(201, 168, 76, 0.08);
+  background-image: radial-gradient(circle at 30% 20%, rgba(201, 168, 76, 0.12), transparent 50%);
   transform: translateY(-4px);
-  box-shadow:
-    0 8px 40px rgba(0, 0, 0, 0.4),
-    0 0 30px rgba(201, 168, 76, 0.08);
 }
 
 .landing-pillar:hover::before,
@@ -725,20 +730,25 @@ html {
 }
 
 .landing-story-card {
-  background: linear-gradient(180deg, var(--stone) 0%, var(--deep-stone) 100%);
-  border: 1px solid var(--border-dim);
+  background: rgba(20, 16, 8, 0.4);
+  backdrop-filter: blur(20px) saturate(1.2);
+  -webkit-backdrop-filter: blur(20px) saturate(1.2);
+  border: 1px solid rgba(201, 168, 76, 0.15);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  background-image: radial-gradient(circle at 30% 20%, rgba(201, 168, 76, 0.06), transparent 50%);
+  background-repeat: no-repeat;
   padding: 0;
   overflow: hidden;
-  transition: all 0.4s ease;
+  transition: all 0.3s ease;
   position: relative;
 }
 
 .landing-story-card:hover {
-  border-color: var(--border-gold);
+  background: rgba(20, 16, 8, 0.5);
+  border-color: rgba(201, 168, 76, 0.35);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4), inset 0 0 40px rgba(201, 168, 76, 0.08);
+  background-image: radial-gradient(circle at 30% 20%, rgba(201, 168, 76, 0.12), transparent 50%);
   transform: translateY(-4px);
-  box-shadow:
-    0 12px 40px rgba(0, 0, 0, 0.5),
-    0 0 20px rgba(201, 168, 76, 0.1);
 }
 
 .landing-story-image {
@@ -1052,6 +1062,14 @@ html {
 .landing-mobile-menu-play:hover {
   filter: brightness(1.1);
   color: var(--void);
+}
+
+/* ═══ BACKDROP-FILTER FALLBACK ═══ */
+@supports not (backdrop-filter: blur(1px)) {
+  .landing-pillar,
+  .landing-story-card {
+    background: rgba(20, 16, 8, 0.85);
+  }
 }
 
 /* ═══ RESPONSIVE ═══ */
