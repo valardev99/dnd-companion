@@ -776,6 +776,41 @@
     opacity: 0.2;
   }
 
+  /* ═══ MOBILE PREMIUM ADAPTATIONS ═══ */
+
+  /* Hexagonal sidebar icons — smaller visual hex */
+  .icon-sidebar-btn::before {
+    width: 30px;
+    height: 30px;
+  }
+
+  /* Dice overlay — smaller on mobile */
+  .dice-container {
+    width: 80px;
+    height: 80px;
+  }
+  .dice-number {
+    font-size: 1.5rem;
+  }
+  .dice-result-text {
+    font-size: 1rem;
+  }
+
+  /* Treasure chest — smaller */
+  .chest-wrapper {
+    width: 120px;
+    height: 90px;
+  }
+
+  /* Avatar frame — slightly smaller */
+  .header-avatar-frame {
+    width: 32px;
+    height: 32px;
+  }
+  .header-avatar-initial {
+    font-size: 0.85rem;
+  }
+
   /* Touch target minimum */
   button,
   [role="button"],
@@ -889,6 +924,20 @@
   /* Active states for touch feedback */
   .card:active {
     filter: brightness(1.1);
+  }
+}
+
+@media (hover: none) {
+  /* Disable hover lifts on touch */
+  .campaign-card:hover,
+  .landing-pillar:hover,
+  .landing-story-card:hover {
+    transform: none;
+  }
+
+  /* Remove texture overlays for GPU performance */
+  .texture-overlay::after {
+    display: none;
   }
 }
 
