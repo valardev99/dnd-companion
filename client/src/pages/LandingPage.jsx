@@ -5,6 +5,7 @@ import LoginModal from '../components/auth/LoginModal.jsx';
 import RegisterModal from '../components/auth/RegisterModal.jsx';
 import DiceRoll from '../components/landing/DiceRoll';
 import RuneRevealCTA from '../components/landing/TreasureChest';
+import { SkipLink } from '../components/shared';
 
 // ═══════════════════════════════════════════════════════════════
 // INLINE SVG ICONS — Dark Fantasy themed replacements for emojis
@@ -437,6 +438,7 @@ export default function LandingPage() {
 
   return (
     <div className="landing-page">
+      <SkipLink target="landing-main">Skip to main content</SkipLink>
 
       {/* ─── Auth Modals ─── */}
       {authModal === 'login' && (
@@ -533,8 +535,8 @@ export default function LandingPage() {
         </div>
       )}
 
-      {/* ─── Hero Section ─── */}
-      <section className="landing-hero">
+      {/* ─── Hero Section (primary landmark) ─── */}
+      <section className="landing-hero" id="landing-main" role="main" tabIndex={-1} aria-label="Wonderlore AI introduction">
         <div className="landing-hero-bg">
           {HERO_IMAGES.map((src, i) => {
             const activeIndex = heroScene.resolved ? heroScene.index : heroIndex;

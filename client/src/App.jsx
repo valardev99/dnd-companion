@@ -33,6 +33,9 @@ import ChatPanel from './components/chat/ChatPanel.jsx';
 import CampaignWizard from './components/CampaignWizard.jsx';
 import MobileCampaignPicker from './components/layout/MobileCampaignPicker.jsx';
 
+// Accessibility primitives
+import { SkipLink } from './components/shared';
+
 // Panel registry
 const PANEL_MAP = {
   dashboard: DashboardPanel,
@@ -129,6 +132,7 @@ function App() {
 
   return (
     <React.Fragment>
+      <SkipLink target="chat-messages-region">Skip to chat</SkipLink>
       <ParticleBackground />
       <Header />
 
@@ -137,7 +141,13 @@ function App() {
         <NavRail activeCampaignId={state.campaignId} campaigns={[]} />
 
         {/* Chat Area — always visible on desktop/tablet, hidden when mobile panel open */}
-        <div className={`chat-area ${mobilePanelOpen ? 'mobile-hidden' : ''}`}>
+        <div
+          id="chat-messages-region"
+          role="main"
+          aria-label="Game session chat"
+          className={`chat-area ${mobilePanelOpen ? 'mobile-hidden' : ''}`}
+          tabIndex={-1}
+        >
           <StatusBar />
           <CombatBanner />
           <ChannelTabs

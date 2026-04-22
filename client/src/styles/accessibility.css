@@ -1,0 +1,63 @@
+/* ═══════════════════════════════════════════════════════════════
+   ACCESSIBILITY — global a11y primitives (WCAG 2.2)
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── sr-only: visually hidden, still in the accessibility tree ── */
+.sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+/* ── Skip link — hidden until focused, visible at top when tabbed to ── */
+.skip-link {
+  position: absolute;
+  top: -48px;
+  left: 12px;
+  padding: 10px 18px;
+  background: var(--gold, #c9a84c);
+  color: var(--obsidian, #0c0a06);
+  font-family: 'Cinzel', serif;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-decoration: none;
+  border: 2px solid var(--gold-bright, #f5d478);
+  border-radius: 4px;
+  z-index: 10000;
+  transition: top 0.15s ease;
+}
+
+.skip-link:focus,
+.skip-link:focus-visible {
+  top: 12px;
+  outline: 3px solid var(--gold-bright, #f5d478);
+  outline-offset: 2px;
+}
+
+/* ── Visible focus ring across the app ── */
+:focus-visible {
+  outline: 2px solid var(--gold-bright, #f5d478);
+  outline-offset: 2px;
+}
+
+/* Never remove focus entirely — if a component wants a custom ring,
+   it must provide one. We deliberately do NOT add :focus { outline: none; }. */
+
+/* ── Respect reduced motion globally ── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

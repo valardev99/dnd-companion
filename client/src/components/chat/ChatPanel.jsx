@@ -152,9 +152,34 @@ function ChatPanel({ multiplayer, campaignId, className, activeChannel }) {
   const textSizeMap = { small: '0.85rem', medium: '0.95rem', large: '1.1rem', xl: '1.25rem' };
   const chatTextVar = textSizeMap[state.chatTextSize || 'medium'] || '0.95rem';
 
+  // Screen-reader live region: announce the latest DM line as it completes.
+  // We only expose "role, content" once streaming settles, not every token,
+  // to avoid flooding the SR output with partial words.
+  const lastMsg = state.chatMessages[state.chatMessages.length - 1];
+  const liveAnnouncement = (!state.isStreaming && lastMsg && lastMsg.role === 'dm')
+    ? `Dungeon Master: ${lastMsg.content}`
+    : '';
+
   return (
     <div className={`chat-panel ${className || ''}`} style={{ '--chat-text-size': chatTextVar }}>
-      <div className="chat-messages" ref={messagesContainerRef}>
+      {/* Screen-reader-only live region announcing new DM narration */}
+      <div
+        aria-live="polite"
+        aria-atomic="true"
+        style={{
+          position: 'absolute',
+          width: 1, height: 1, overflow: 'hidden',
+          clip: 'rect(0 0 0 0)', whiteSpace: 'nowrap',
+        }}
+      >
+        {liveAnnouncement}
+      </div>
+      <div
+        className="chat-messages"
+        ref={messagesContainerRef}
+        role="log"
+        aria-label="Adventure chat log"
+      >
         {state.chatMessages.length === 0 && (
           <div className="chat-welcome">
             <div style={{fontSize:'2rem',marginBottom:12}}>⚔️</div>

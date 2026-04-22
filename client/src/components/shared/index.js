@@ -4,3 +4,4 @@ export { default as Badge } from './Badge.jsx';
 export { default as ConditionTag } from './ConditionTag.jsx';
 export { default as FeedbackWidget } from './FeedbackWidget.jsx';
 export { default as SessionRating } from './SessionRating.jsx';
+export { default as SkipLink } from './SkipLink.jsx';
