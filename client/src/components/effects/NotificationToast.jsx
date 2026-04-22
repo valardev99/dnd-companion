@@ -1,17 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { useNotifications } from '../../contexts/NotificationContext.jsx';
 
-// Notification type → icon mapping
+// Notification type → icon mapping (using String.fromCodePoint so values render)
 const TYPE_ICONS = {
-  friend_request: '\u2694',      // crossed swords
-  campaign_invite: '\uD83D\uDCDC', // scroll
-  friend_online: '\uD83D\uDD2E',   // crystal ball
-  campaign_ready: '\u2618',       // shamrock/clover
-  campaign_invite_accepted: '\uD83E\uDD1D', // handshake
-  info: '\uD83D\uDD14',          // bell
-  success: '\u2714',             // check
-  error: '\u26A0',               // warning
+  friend_request: '\u2694',                 // ⚔ crossed swords
+  campaign_invite: '\uD83D\uDCDC',           // 📜 scroll
+  friend_online: '\uD83D\uDD2E',             // 🔮 crystal ball
+  campaign_ready: '\u2618',                  // ☘ shamrock
+  campaign_invite_accepted: '\uD83E\uDD1D',  // 🤝 handshake
+  info: '\uD83D\uDD14',                      // 🔔 bell
+  success: '\u2714',                         // ✔ check
+  error: '\u26A0',                           // ⚠ warning
 };
+
+// Dismiss glyph (× — renders literal unicode, not an escape sequence)
+const CLOSE_GLYPH = '\u2715';
 
 function NotificationToast() {
   const { notifications, dismissNotification } = useNotifications();
@@ -41,6 +44,15 @@ function Toast({ notification, index, onDismiss }) {
     return () => clearTimeout(timer);
   }, []);
 
+  // Dismiss on Escape while toast is visible
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === 'Escape') onDismiss();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onDismiss]);
+
   const handleAccept = () => {
     if (notification.onAccept) notification.onAccept(notification.data);
     onDismiss();
@@ -55,6 +67,8 @@ function Toast({ notification, index, onDismiss }) {
 
   return (
     <div
+      role="status"
+      aria-live="polite"
       style={{
         ...styles.toast,
         opacity: phase === 'entering' ? 0 : 1,
@@ -66,14 +80,15 @@ function Toast({ notification, index, onDismiss }) {
 
       {/* Header */}
       <div style={styles.header}>
-        <span style={styles.icon}>{icon}</span>
+        <span style={styles.icon} aria-hidden="true">{icon}</span>
         <span style={styles.title}>{notification.title}</span>
         <button
+          type="button"
           style={styles.closeBtn}
           onClick={onDismiss}
           aria-label="Dismiss notification"
         >
-          \u2715
+          {CLOSE_GLYPH}
         </button>
       </div>
 

@@ -15,16 +15,19 @@ export default function AdminPage() {
   const [feedbackFilter, setFeedbackFilter] = useState('all');
 
   useEffect(() => {
-    loadData();
-  }, []);
+    // Only load once auth has resolved and we have a token; otherwise authFetch
+    // is a no-op and this would trigger 401 churn on mount.
+    if (authFetch) loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authFetch]);
 
   const loadData = async () => {
     setLoading(true);
     try {
       const [statsRes, qualityRes, feedbackRes] = await Promise.all([
-        fetch('/api/admin/stats', { headers: { 'Authorization': `Bearer ${localStorage.getItem('wonderlore-token') || ''}` } }),
-        fetch('/api/admin/quality', { headers: { 'Authorization': `Bearer ${localStorage.getItem('wonderlore-token') || ''}` } }),
-        fetch('/api/feedback', { headers: { 'Authorization': `Bearer ${localStorage.getItem('wonderlore-token') || ''}` } }),
+        authFetch('/api/admin/stats'),
+        authFetch('/api/admin/quality'),
+        authFetch('/api/feedback'),
       ]);
       if (statsRes.ok) setStats(await statsRes.json());
       if (qualityRes.ok) setQuality(await qualityRes.json());
@@ -37,12 +40,9 @@ export default function AdminPage() {
 
   const updateFeedbackStatus = async (id, newStatus) => {
     try {
-      const res = await fetch(`/api/feedback/${id}`, {
+      const res = await authFetch(`/api/feedback/${id}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('wonderlore-token') || ''}`,
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus }),
       });
       if (res.ok) {

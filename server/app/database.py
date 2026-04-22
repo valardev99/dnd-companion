@@ -69,13 +69,62 @@ async def _safe_migrate() -> None:
     logger = logging.getLogger(__name__)
     is_pg = not DATABASE_URL.startswith("sqlite")
 
+    # ------------------------------------------------------------------
+    # Defensive migrations — add columns that may be missing on tables
+    # that existed before the column was introduced in the model.
+    #
+    # ADD COLUMN is idempotent via the per-migration try/except: if the
+    # column already exists, the ALTER fails, we swallow it, and move on.
+    # Err on the side of listing MORE columns than necessary — duplicates
+    # are harmless.
+    # ------------------------------------------------------------------
     migrations = [
         # (table, column, SQL type for Postgres, SQL type for SQLite)
+
+        # ---- users --------------------------------------------------
         ("users", "email_verified", "BOOLEAN NOT NULL DEFAULT FALSE", "BOOLEAN NOT NULL DEFAULT 0"),
         ("users", "friend_code", "VARCHAR(8)", "VARCHAR(8)"),
         ("users", "display_name", "VARCHAR(100)", "VARCHAR(100)"),
         ("users", "avatar_url", "VARCHAR(500)", "VARCHAR(500)"),
         ("users", "is_admin", "BOOLEAN NOT NULL DEFAULT FALSE", "BOOLEAN NOT NULL DEFAULT 0"),
+
+        # ---- campaigns ----------------------------------------------
+        ("campaigns", "is_public", "BOOLEAN NOT NULL DEFAULT FALSE", "BOOLEAN NOT NULL DEFAULT 0"),
+        ("campaigns", "is_multiplayer", "BOOLEAN NOT NULL DEFAULT FALSE", "BOOLEAN NOT NULL DEFAULT 0"),
+        ("campaigns", "max_players", "INTEGER NOT NULL DEFAULT 1", "INTEGER NOT NULL DEFAULT 1"),
+        ("campaigns", "status", "VARCHAR(20) NOT NULL DEFAULT 'active'", "VARCHAR(20) NOT NULL DEFAULT 'active'"),
+        ("campaigns", "chat_history", "JSONB", "TEXT"),
+        ("campaigns", "session_summary", "TEXT", "TEXT"),
+        ("campaigns", "thumbnail_url", "VARCHAR(500)", "VARCHAR(500)"),
+        ("campaigns", "last_played_at", "TIMESTAMP", "TIMESTAMP"),
+        ("campaigns", "share_slug", "VARCHAR(100)", "VARCHAR(100)"),
+
+        # ---- stories ------------------------------------------------
+        ("stories", "slug", "VARCHAR(200)", "VARCHAR(200)"),
+        ("stories", "excerpt", "VARCHAR(500)", "VARCHAR(500)"),
+        ("stories", "author_display_name", "VARCHAR(150)", "VARCHAR(150)"),
+        ("stories", "character_name", "VARCHAR(150)", "VARCHAR(150)"),
+        ("stories", "world_name", "VARCHAR(255)", "VARCHAR(255)"),
+        ("stories", "recap_text", "TEXT", "TEXT"),
+        ("stories", "likes", "INTEGER NOT NULL DEFAULT 0", "INTEGER NOT NULL DEFAULT 0"),
+        ("stories", "is_public", "BOOLEAN NOT NULL DEFAULT TRUE", "BOOLEAN NOT NULL DEFAULT 1"),
+
+        # ---- subscriptions ------------------------------------------
+        ("subscriptions", "stripe_customer_id", "VARCHAR(255)", "VARCHAR(255)"),
+        ("subscriptions", "stripe_subscription_id", "VARCHAR(255)", "VARCHAR(255)"),
+        ("subscriptions", "current_period_start", "TIMESTAMP", "TIMESTAMP"),
+        ("subscriptions", "current_period_end", "TIMESTAMP", "TIMESTAMP"),
+        ("subscriptions", "cancel_at_period_end", "BOOLEAN NOT NULL DEFAULT FALSE", "BOOLEAN NOT NULL DEFAULT 0"),
+
+        # ---- notifications (likely new table — belt & suspenders) ---
+        ("notifications", "data", "JSONB", "TEXT"),
+        ("notifications", "read", "BOOLEAN NOT NULL DEFAULT FALSE", "BOOLEAN NOT NULL DEFAULT 0"),
+
+        # ---- feedback -----------------------------------------------
+        ("feedback", "category", "VARCHAR(50)", "VARCHAR(50)"),
+        ("feedback", "rating", "INTEGER", "INTEGER"),
+        ("feedback", "tags", "JSONB", "TEXT"),
+        ("feedback", "status", "VARCHAR(50) NOT NULL DEFAULT 'new'", "VARCHAR(50) NOT NULL DEFAULT 'new'"),
     ]
 
     for table, column, pg_type, sqlite_type in migrations:

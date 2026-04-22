@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth import get_current_user
 from app.config import STRIPE_PRICE_PREMIUM
 from app.database import get_db
-from app.models import PaymentHistory, Subscription, User
+from app.models import PaymentHistory, StripeWebhookEvent, Subscription, User
 from app.services.stripe_service import (
     StripeNotConfiguredError,
     cancel_subscription as stripe_cancel_subscription,
@@ -294,9 +294,29 @@ async def webhook(request: Request, db: AsyncSession = Depends(get_db)):
         )
 
     event_type = event["type"]
+    event_id = event.get("id")
     data = event["data"]
 
-    logger.info("Processing Stripe webhook: %s", event_type)
+    # ---- Idempotency guard -----------------------------------------------
+    # Stripe guarantees at-least-once delivery.  Record event.id BEFORE
+    # processing.  A UNIQUE violation means we already handled it and we
+    # short-circuit with a 200 so Stripe stops retrying.
+    if event_id:
+        existing = await db.execute(
+            select(StripeWebhookEvent).where(StripeWebhookEvent.id == event_id)
+        )
+        if existing.scalar_one_or_none() is not None:
+            logger.info("Stripe event %s already processed, skipping", event_id)
+            return {"status": "ok", "deduped": True}
+        db.add(StripeWebhookEvent(id=event_id, event_type=event_type))
+        try:
+            await db.flush()
+        except Exception as exc:  # Race: another worker wrote the row first
+            await db.rollback()
+            logger.info("Stripe event %s insert race, skipping: %s", event_id, exc)
+            return {"status": "ok", "deduped": True}
+
+    logger.info("Processing Stripe webhook: %s (%s)", event_type, event_id)
 
     # --- checkout.session.completed -------------------------------------------
     if event_type == "checkout.session.completed":

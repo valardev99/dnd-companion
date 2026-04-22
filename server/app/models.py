@@ -335,6 +335,20 @@ class Notification(Base):
     user = relationship("User", back_populates="notifications")
 
 
+class StripeWebhookEvent(Base):
+    """Idempotency ledger for Stripe webhook events.
+
+    Stripe guarantees *at-least-once* delivery, so duplicates are expected.
+    We insert the event.id BEFORE processing; a UNIQUE violation means
+    we've already handled it and the handler short-circuits.
+    """
+    __tablename__ = "stripe_webhook_events"
+
+    id = Column(String(255), primary_key=True)  # Stripe event.id, e.g. "evt_1ABC..."
+    event_type = Column(String(100), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+
 class ArchivedCampaign(Base):
     """Archived campaign record for the user's hall of legends."""
     __tablename__ = "archived_campaigns"

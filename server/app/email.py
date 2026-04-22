@@ -9,9 +9,10 @@ logger = logging.getLogger(__name__)
 def _send(to: str, subject: str, html: str) -> bool:
     """Send an email via Resend. Returns True on success."""
     if not RESEND_API_KEY:
-        print(f"[EMAIL] RESEND_API_KEY not set — skipping email to {to}")
+        logger.warning("RESEND_API_KEY not set — skipping email to %s", to)
         return False
-    print(f"[EMAIL] Attempting to send '{subject}' to {to} (key: {RESEND_API_KEY[:8]}...)")
+
+    logger.info("Sending email %r to %s", subject, to)
 
     import resend
     resend.api_key = RESEND_API_KEY
@@ -23,12 +24,12 @@ def _send(to: str, subject: str, html: str) -> bool:
             "subject": subject,
             "html": html,
         })
-        print(f"[EMAIL] Sent to {to} — Resend ID: {result}")
+        # Resend returns {"id": "re_..."}
+        resend_id = result.get("id") if isinstance(result, dict) else None
+        logger.info("Email sent to %s (resend_id=%s)", to, resend_id)
         return True
-    except Exception as e:
-        print(f"[EMAIL ERROR] Failed to send to {to}: {e}")
-        import traceback
-        traceback.print_exc()
+    except Exception as exc:
+        logger.exception("Failed to send email to %s: %s", to, exc)
         return False
 
 
