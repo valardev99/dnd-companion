@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { connectSocket, disconnectSocket } from '../services/socketService.js';
 
 const AuthContext = createContext();
@@ -130,19 +130,51 @@ export function AuthProvider({ children }) {
     return res.json();
   }, [user]);
 
-  // Authenticated fetch helper — injects JWT
+  // Latest token in a ref so authFetch can read it after a mid-flight refresh
+  const tokenRef = useRef(token);
+  useEffect(() => { tokenRef.current = token; }, [token]);
+
+  // Authenticated fetch helper — injects JWT. On 401 (access token expired
+  // mid-session — it only lives 30 min and only in memory), silently tries
+  // /auth/refresh once and retries; on refresh failure, signs the user out
+  // so the UI can prompt re-auth instead of silently dropping saves forever.
   const authFetch = useCallback(async (url, options = {}) => {
-    const headers = { ...options.headers };
-    if (token) headers['Authorization'] = `Bearer ${token}`;
-    return fetch(url, { ...options, headers, credentials: 'include' });
-  }, [token]);
+    const doFetch = (tok) => {
+      const headers = { ...options.headers };
+      if (tok) headers['Authorization'] = `Bearer ${tok}`;
+      return fetch(url, { ...options, headers, credentials: 'include' });
+    };
+
+    let res = await doFetch(tokenRef.current);
+    if (res.status !== 401 || !tokenRef.current) return res;
+
+    // Access token rejected — try to refresh the session once
+    try {
+      const refreshRes = await fetch('/auth/refresh', { method: 'POST', credentials: 'include' });
+      if (refreshRes.ok) {
+        const data = await refreshRes.json();
+        setToken(data.access_token);
+        setUser(data.user);
+        tokenRef.current = data.access_token;
+        return doFetch(data.access_token);
+      }
+    } catch (e) { /* network failure — fall through to sign-out */ }
+
+    // Refresh failed — session is truly dead
+    disconnectSocket();
+    setToken(null);
+    setUser(null);
+    return res;
+  }, []);
+
+  const contextValue = useMemo(() => ({
+    user, setUser, token, loading,
+    isAuthenticated: !!user,
+    register, login, logout, storeApiKey, authFetch, resendVerification,
+  }), [user, token, loading, register, login, logout, storeApiKey, authFetch, resendVerification]);
 
   return (
-    <AuthContext.Provider value={{
-      user, setUser, token, loading,
-      isAuthenticated: !!user,
-      register, login, logout, storeApiKey, authFetch, resendVerification,
-    }}>
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   );

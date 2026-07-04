@@ -5,11 +5,32 @@ import { buildSystemPrompt } from '../utils/systemPrompt.js';
 // STREAMING CHAT — sends messages to API, processes SSE stream
 // ═══════════════════════════════════════════════════════════════
 
+// One stream at a time. The controller lets the UI cancel an in-flight
+// generation (Stop button); the flag prevents two concurrent loops from
+// fighting over the stream placeholder.
+let activeController = null;
+
+function isStreamActive() {
+  return activeController !== null;
+}
+
+function stopStreaming() {
+  if (activeController) {
+    activeController.abort();
+  }
+}
+
 async function sendChatMessage(message, state, dispatch) {
   if (!state.apiKey) {
     dispatch({ type: 'ADD_CHAT_MESSAGE', payload: { role: 'system', content: '⚠ No API key configured. Go to Settings → API Configuration to add your key.' } });
     return;
   }
+
+  // Hard guard against concurrent streams — the isStreaming render-state
+  // check in ChatPanel can race (auto-opening effect + user send in the
+  // same commit window).
+  if (activeController) return;
+  activeController = new AbortController();
 
   // Add player message
   dispatch({ type: 'ADD_CHAT_MESSAGE', payload: { role: 'player', content: message } });
@@ -20,16 +41,23 @@ async function sendChatMessage(message, state, dispatch) {
     content: m.content,
   })).filter(m => m.role === 'user' || m.role === 'assistant');
 
-  // Add placeholder DM message for streaming
-  dispatch({ type: 'ADD_CHAT_MESSAGE', payload: { role: 'dm', content: '' } });
+  // Add placeholder DM message for streaming — targeted by id so a message
+  // appended mid-stream (multiplayer relay, system notice) can't hijack it.
+  const streamId = `stream-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  dispatch({ type: 'ADD_CHAT_MESSAGE', payload: { role: 'dm', content: '', id: streamId } });
   dispatch({ type: 'SET_STREAMING', payload: true });
 
   const systemPrompt = buildSystemPrompt(state.dmEngine, state.gameData, state.worldBible, state.dmStyle);
+  const setStreamText = (content) =>
+    dispatch({ type: 'UPDATE_STREAM_TEXT', payload: { id: streamId, content } });
+
+  let fullText = '';
 
   try {
     const response = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      signal: activeController.signal,
       body: JSON.stringify({
         apiKey: state.apiKey,
         model: state.model,
@@ -42,14 +70,12 @@ async function sendChatMessage(message, state, dispatch) {
 
     if (!response.ok) {
       const err = await response.json().catch(() => ({ message: 'Connection failed' }));
-      dispatch({ type: 'UPDATE_STREAM_TEXT', payload: `⚠ Error: ${err.message || 'Unknown error'}` });
-      dispatch({ type: 'SET_STREAMING', payload: false });
+      setStreamText(`⚠ Error: ${err.detail || err.message || 'Unknown error'}`);
       return;
     }
 
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
-    let fullText = '';
     let buffer = '';
     let streamDone = false;
 
@@ -72,10 +98,10 @@ async function sendChatMessage(message, state, dispatch) {
           if (event.type === 'content_block_delta' && event.delta?.text) {
             fullText += event.delta.text;
             const { cleanText } = parseMetadataTags(fullText);
-            dispatch({ type: 'UPDATE_STREAM_TEXT', payload: cleanText });
+            setStreamText(cleanText);
           }
           if (event.type === 'error') {
-            dispatch({ type: 'UPDATE_STREAM_TEXT', payload: `⚠ ${event.error?.message || 'Stream error'}` });
+            setStreamText(`⚠ ${event.error?.message || 'Stream error'}`);
           }
         } catch(e) { /* skip unparseable SSE lines */ }
       }
@@ -84,14 +110,21 @@ async function sendChatMessage(message, state, dispatch) {
 
     // Final parse — dispatch metadata tags
     const { cleanText, tags } = parseMetadataTags(fullText);
-    dispatch({ type: 'UPDATE_STREAM_TEXT', payload: cleanText });
+    setStreamText(cleanText);
     if (tags.length > 0) dispatchTagActions(tags, dispatch, state);
 
   } catch (err) {
-    dispatch({ type: 'UPDATE_STREAM_TEXT', payload: `⚠ Connection error: ${err.message}` });
+    if (err.name === 'AbortError') {
+      // User pressed Stop — keep whatever streamed so far, mark it plainly
+      const { cleanText } = parseMetadataTags(fullText);
+      setStreamText(cleanText ? `${cleanText}\n\n— generation stopped —` : '— generation stopped —');
+    } else {
+      setStreamText(`⚠ Connection error: ${err.message}`);
+    }
+  } finally {
+    activeController = null;
+    dispatch({ type: 'SET_STREAMING', payload: false });
   }
-
-  dispatch({ type: 'SET_STREAMING', payload: false });
 }
 
-export { sendChatMessage };
+export { sendChatMessage, stopStreaming, isStreamActive };

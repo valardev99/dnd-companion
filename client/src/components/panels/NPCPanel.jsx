@@ -1,5 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
-import * as d3 from 'd3';
+// Scoped d3 imports — the umbrella 'd3' namespace import defeats
+// tree-shaking and drags the entire library into the bundle.
+import { select } from 'd3-selection';
+import { forceSimulation, forceLink, forceManyBody, forceCenter, forceCollide } from 'd3-force';
+import { drag } from 'd3-drag';
+
 import { useGame } from '../../contexts/GameContext.jsx';
 import { Stars } from '../shared';
 import { generatePortraitAsync } from '../../services/imageService.js';
@@ -11,7 +16,7 @@ function RelationshipWeb() {
 
   useEffect(() => {
     if (!svgRef.current) return;
-    const svg = d3.select(svgRef.current);
+    const svg = select(svgRef.current);
     svg.selectAll('*').remove();
     const width = 600, height = 400;
     svg.attr('viewBox', `0 0 ${width} ${height}`);
@@ -37,11 +42,11 @@ function RelationshipWeb() {
     });
     const links = rels.map(r => ({ source: r.source, target: r.target, type: r.type }));
 
-    const sim = d3.forceSimulation(nodes)
-      .force('link', d3.forceLink(links).id(d => d.id).distance(100))
-      .force('charge', d3.forceManyBody().strength(-200))
-      .force('center', d3.forceCenter(width/2, height/2))
-      .force('collision', d3.forceCollide().radius(30));
+    const sim = forceSimulation(nodes)
+      .force('link', forceLink(links).id(d => d.id).distance(100))
+      .force('charge', forceManyBody().strength(-200))
+      .force('center', forceCenter(width/2, height/2))
+      .force('collision', forceCollide().radius(30));
 
     const linkColors = { ally: '#4caf50', hostile: '#c62828', neutral: '#4fc3f7', unknown: '#3a3a55' };
     const link = svg.append('g').selectAll('line').data(links).enter().append('line')
@@ -65,7 +70,7 @@ function RelationshipWeb() {
         event.stopPropagation();
         dispatch({ type: 'SELECT_ITEM', category: 'npc', payload: d.id === selectedNpc ? null : d.id });
       })
-      .call(d3.drag()
+      .call(drag()
         .on('start', (e,d) => { if(!e.active) sim.alphaTarget(0.3).restart(); d.fx=d.x; d.fy=d.y; })
         .on('drag', (e,d) => { d.fx=e.x; d.fy=e.y; })
         .on('end', (e,d) => { if(!e.active) sim.alphaTarget(0); d.fx=null; d.fy=null; })

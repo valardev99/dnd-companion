@@ -73,6 +73,7 @@ export default function LoginModal({ onClose, onSuccess, onSwitchToRegister }) {
                   <input
                     id="forgot-email"
                     type="email"
+                  maxLength={255}
                     value={forgotEmail}
                     onChange={(e) => setForgotEmail(e.target.value)}
                     placeholder="adventurer@realm.com"
@@ -103,6 +104,7 @@ export default function LoginModal({ onClose, onSuccess, onSwitchToRegister }) {
                 <input
                   id="login-email"
                   type="email"
+                  maxLength={255}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="adventurer@realm.com"
@@ -115,6 +117,7 @@ export default function LoginModal({ onClose, onSuccess, onSwitchToRegister }) {
                 <input
                   id="login-password"
                   type="password"
+                  maxLength={128}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Enter your password"

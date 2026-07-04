@@ -8,8 +8,6 @@ export function connectSocket(token) {
     auth: { token },
     transports: ['websocket', 'polling'],
   });
-  socket.on('connect', () => console.log('[WS] Connected'));
-  socket.on('disconnect', () => console.log('[WS] Disconnected'));
   return socket;
 }
 

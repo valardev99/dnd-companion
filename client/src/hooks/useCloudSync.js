@@ -9,7 +9,6 @@ import { useAuth } from '../contexts/AuthContext.jsx';
  */
 export function useCloudSync(state, dispatch) {
   const { isAuthenticated, authFetch } = useAuth();
-  const saveTimerRef = useRef(null);
   const isSyncingRef = useRef(false);
   const lastSavedRef = useRef(null); // track last saved hash to avoid no-op saves
   const campaignIdRef = useRef(state?.activeSaveId || null);
@@ -40,10 +39,13 @@ export function useCloudSync(state, dispatch) {
         last_played_at: new Date().toISOString(),
       };
 
-      // Include campaign name from game data if available
-      const worldName = state?.gameData?.campaign?.worldName;
-      if (worldName && worldName !== 'New Campaign') {
-        payload.name = worldName;
+      // Include campaign name from game data if available.
+      // NOTE: the field is campaign.name (see defaultGameData.js and the
+      // UPDATE_CAMPAIGN reducer) — reading .worldName here silently dropped
+      // every mid-session rename from sync.
+      const campaignName = state?.gameData?.campaign?.name;
+      if (campaignName && campaignName !== 'New Campaign' && campaignName !== 'New World') {
+        payload.name = campaignName;
       }
 
       // Also include world_bible if present
@@ -65,19 +67,34 @@ export function useCloudSync(state, dispatch) {
     }
   }, [isAuthenticated, authFetch, state?.gameData, state?.chatMessages, state?.worldBible]);
 
-  // Debounced auto-save every 30s when game data changes
-  useEffect(() => {
-    if (!isAuthenticated || !campaignIdRef.current) return;
-    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-    saveTimerRef.current = setTimeout(syncToCloud, 30000);
-    return () => { if (saveTimerRef.current) clearTimeout(saveTimerRef.current); };
-  }, [state?.gameData, state?.chatMessages, syncToCloud, isAuthenticated]);
+  // Keep the latest sync fn + auth state in refs so interval/unmount callbacks
+  // never run a stale closure. (The old [] unmount effect captured the
+  // FIRST-render syncToCloud — which closed over initial/empty state — and
+  // could overwrite real progress with a blank snapshot on navigate-away.)
+  const syncRef = useRef(syncToCloud);
+  const authRef = useRef(isAuthenticated);
+  useEffect(() => { syncRef.current = syncToCloud; authRef.current = isAuthenticated; });
 
-  // Save on unmount
+  // Dirty-flag + fixed interval instead of a trailing debounce. The old
+  // debounce RESET on every state change, so during active play (a change
+  // at least every 30s) it never fired at all.
+  const dirtyRef = useRef(false);
+  useEffect(() => { dirtyRef.current = true; }, [state?.gameData, state?.chatMessages]);
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (dirtyRef.current && authRef.current && campaignIdRef.current) {
+        dirtyRef.current = false;
+        syncRef.current();
+      }
+    }, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Save on unmount — via refs, so it flushes the LATEST state
   useEffect(() => {
     return () => {
-      if (campaignIdRef.current && isAuthenticated) {
-        syncToCloud();
+      if (campaignIdRef.current && authRef.current) {
+        syncRef.current();
       }
     };
   }, []);

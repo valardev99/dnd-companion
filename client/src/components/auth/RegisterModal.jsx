@@ -43,6 +43,7 @@ export default function RegisterModal({ onClose, onSuccess, onSwitchToLogin }) {
             <input
               id="register-email"
               type="email"
+                  maxLength={255}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="adventurer@realm.com"
@@ -55,6 +56,7 @@ export default function RegisterModal({ onClose, onSuccess, onSwitchToLogin }) {
             <input
               id="register-username"
               type="text"
+              maxLength={100}
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               placeholder="Choose a username"
@@ -66,6 +68,7 @@ export default function RegisterModal({ onClose, onSuccess, onSwitchToLogin }) {
             <input
               id="register-password"
               type="password"
+                  maxLength={128}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Enter your password"

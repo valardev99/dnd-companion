@@ -23,12 +23,23 @@ function gameReducer(state, action) {
     }
 
     // ─── Chat actions ───
-    case 'ADD_CHAT_MESSAGE': return { ...state, chatMessages: [...state.chatMessages, { ...action.payload, id: Date.now() + Math.random(), timestamp: Date.now() }] };
+    // Caller-provided id wins (streaming targets its placeholder by id);
+    // defaults fill in for everything else.
+    case 'ADD_CHAT_MESSAGE': return { ...state, chatMessages: [...state.chatMessages, { id: Date.now() + Math.random(), timestamp: Date.now(), ...action.payload }] };
     case 'SET_STREAMING': return { ...state, isStreaming: action.payload };
     case 'UPDATE_STREAM_TEXT': {
+      // Preferred shape: { id, content } — targets the stream's own placeholder
+      // so a message appended mid-stream (multiplayer relay, system notice)
+      // can't hijack the stream. Legacy string payload falls back to last-DM.
+      const { id, content } = (typeof action.payload === 'string')
+        ? { id: null, content: action.payload }
+        : action.payload;
+      if (id != null) {
+        return { ...state, chatMessages: state.chatMessages.map(m => m.id === id ? { ...m, content } : m) };
+      }
       const msgs = [...state.chatMessages];
       const last = msgs[msgs.length - 1];
-      if (last && last.role === 'dm') { msgs[msgs.length - 1] = { ...last, content: action.payload }; }
+      if (last && last.role === 'dm') { msgs[msgs.length - 1] = { ...last, content }; }
       return { ...state, chatMessages: msgs };
     }
 
@@ -238,7 +249,9 @@ const initialState = {
   chatMessages: [],
   isStreaming: false,
   apiKey: '',
-  model: 'claude-sonnet-4-20250514',
+  // Must be an OpenRouter-style id (see SettingsView VALID_MODELS) — the
+  // provider default is 'openrouter', so a bare Anthropic id would 400.
+  model: 'google/gemini-2.5-flash',
   apiProvider: 'openrouter',
   apiStatus: 'disconnected', // disconnected | connected | testing | error
   dmEngine: '',
@@ -302,21 +315,27 @@ function GameProvider({ children, campaignId }) {
     })();
   }, [campaignId, isAuthenticated, authFetch, setCampaignId]);
 
-  // Load from backend on mount when we have a real campaignId and are authenticated
+  // Load from backend on mount when we have a real campaignId and are authenticated.
+  // BOTH branches are guarded by refs: this effect re-runs whenever authFetch's
+  // identity changes (token refresh) and loadFromLocalStorage APPENDS chat
+  // messages — an unguarded re-run duplicated the entire chat history.
   const cloudLoadedRef = useRef(false);
+  const localLoadedRef = useRef(false);
   useEffect(() => {
     if (campaignId && campaignId !== 'new' && isAuthenticated && !cloudLoadedRef.current) {
       cloudLoadedRef.current = true;
       loadFromCloud(campaignId).then((loaded) => {
         // Always load local settings (API key, model, etc.) — these aren't stored in the cloud
         loadLocalSettings(dispatch);
-        if (!loaded) {
+        if (!loaded && !localLoadedRef.current) {
           // Fallback: load full state from localStorage
+          localLoadedRef.current = true;
           loadFromLocalStorage(dispatch);
         }
       });
-    } else if (!campaignId || !isAuthenticated) {
+    } else if ((!campaignId || !isAuthenticated) && !localLoadedRef.current && !cloudLoadedRef.current) {
       // No campaign ID or not authenticated — use localStorage
+      localLoadedRef.current = true;
       loadFromLocalStorage(dispatch);
     }
   }, [campaignId, isAuthenticated, loadFromCloud]);
@@ -366,7 +385,8 @@ function GameProvider({ children, campaignId }) {
     return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
   }, [state.chatMessages, state.gameData, state.apiKey, state.model, state.apiProvider, state.worldBible, state.rememberKey, state.dmStyle]);
 
-  return <GameContext.Provider value={{ state, dispatch, syncNow }}>{children}</GameContext.Provider>;
+  const contextValue = React.useMemo(() => ({ state, dispatch, syncNow }), [state, syncNow]);
+  return <GameContext.Provider value={contextValue}>{children}</GameContext.Provider>;
 }
 
 /** Load local-only settings (API key, model, preferences) that aren't stored in the cloud. */
@@ -405,7 +425,9 @@ function loadFromLocalStorage(dispatch) {
     }
     if (savedModel) dispatch({ type: 'SET_MODEL', payload: savedModel });
     if (savedChat) {
-      try { const msgs = JSON.parse(savedChat); msgs.forEach(m => dispatch({ type: 'ADD_CHAT_MESSAGE', payload: m })); } catch(e) {}
+      // Replace, don't append — appending duplicated history if this ran
+      // after any messages were already in state.
+      try { dispatch({ type: 'LOAD_GAME_STATE', payload: { chatMessages: JSON.parse(savedChat) } }); } catch(e) {}
     }
     if (savedGameData) {
       try { dispatch({ type: 'SET_GAME_DATA', payload: JSON.parse(savedGameData) }); } catch(e) {}
@@ -429,4 +451,4 @@ function loadFromLocalStorage(dispatch) {
 
 function useGame() { return useContext(GameContext); }
 
-export { GameContext, gameReducer, initialState, GameProvider, useGame };
+export { GameContext, GameProvider, useGame };
