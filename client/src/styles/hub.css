@@ -363,7 +363,7 @@
   cursor: pointer;
   transition: all 0.2s;
   letter-spacing: 0.5px;
-  min-height: 30px;
+  min-height: 44px; /* WCAG 2.5.8 touch target */
 }
 
 .notif-accept {
@@ -1642,6 +1642,7 @@
     border-top: 2px solid var(--border-gold);
     z-index: 100;
     padding: 0;
+    padding-bottom: env(safe-area-inset-bottom, 0px); /* iPhone home indicator */
     background: var(--stone);
     box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.5);
   }
@@ -1686,7 +1687,7 @@
 
   /* ─── Main content ─── */
   .hub-main {
-    padding-bottom: 72px; /* room for bottom nav */
+    padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px)); /* room for bottom nav */
   }
 
   .hub-content {
@@ -1758,6 +1759,7 @@
     bottom: 0;
     width: 100vw;
     max-height: 100vh;
+    max-height: 100dvh;
     border-radius: 0;
     border: none;
     z-index: 9999;
@@ -1772,6 +1774,7 @@
 
   .notification-dropdown-list {
     max-height: calc(100vh - 60px);
+    max-height: calc(100dvh - 60px);
   }
 
   .hub-topbar-btn span {
@@ -2493,5 +2496,30 @@
 @supports not (backdrop-filter: blur(1px)) {
   .campaign-card {
     background: rgba(20, 16, 8, 0.85);
+  }
+}
+
+
+/* ═══ MOBILE INPUT FONT-SIZE — iOS zooms the viewport on focus if an input
+   is under 16px. These inputs were 11.9-14px (root font is 14px). ═══ */
+@media (max-width: 767px) {
+  .archive-modal-input,
+  .archive-modal-textarea,
+  .campaign-detail-invite-input,
+  .profile-field-input {
+    font-size: 16px;
+  }
+
+  /* Back link / bell / avatar in the hub top bar — 44px touch targets */
+  .hub-topbar-back {
+    min-width: 44px;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .hub-notification-bell {
+    min-width: 44px;
+    min-height: 44px;
   }
 }

@@ -425,3 +425,12 @@
 }
 
 .auth-switch a:hover { text-decoration: underline; }
+
+
+/* Auth footer links — inline anchors need real touch targets (WCAG 2.5.8) */
+.auth-switch a,
+.auth-forgot-link {
+  display: inline-block;
+  padding: 12px 8px;
+  margin: -8px 0;
+}

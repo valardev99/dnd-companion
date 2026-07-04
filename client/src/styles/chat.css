@@ -391,6 +391,22 @@
   box-shadow: none;
 }
 
+/* Stop button — replaces send while the DM is streaming */
+.chat-stop-btn {
+  color: var(--crimson-bright);
+}
+
+.chat-stop-btn:hover {
+  filter: brightness(1.2);
+  box-shadow: 0 0 20px rgba(198, 40, 40, 0.3);
+}
+
+/* Long unbroken strings (URLs, tokens) in DM output must wrap, not
+   widen the bubble past the viewport */
+.chat-message .msg-body {
+  overflow-wrap: anywhere;
+}
+
 /* ═══ WELCOME SCREEN ═══ */
 .chat-welcome {
   display: flex;

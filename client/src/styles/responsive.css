@@ -68,9 +68,9 @@
   }
 
   .icon-sidebar-btn {
-    width: 36px;
-    height: 36px;
-    min-width: 36px;
+    width: 44px;   /* WCAG 2.5.8 — was 36px with 2px gaps between 13 targets */
+    height: 44px;
+    min-width: 44px;
     flex-shrink: 0;
     border-right: none;
     border-bottom: 2px solid transparent;
@@ -169,6 +169,18 @@
   /* Adjust header for mobile */
   .app-header {
     height: 48px;
+  }
+
+  /* The 6-stat nowrap row is ~700px wide on desktop; on a phone it just
+     clipped — StatusBar already shows HP/level, so hide the duplicates */
+  .app-header .header-stat,
+  .app-header .header-divider {
+    display: none;
+  }
+  .app-header .header-title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   /* ── Panel content responsive (mobile) ── */
@@ -453,6 +465,7 @@
     width: 100% !important;
     max-width: 100vw !important;
     max-height: 100vh;
+    max-height: 100dvh;
     border-width: 16px;
     padding: 14px 12px 10px;
     box-sizing: border-box;
@@ -878,6 +891,7 @@
 
   .wizard-container {
     max-height: 100vh;
+    max-height: 100dvh;
     border-width: 16px;
   }
 

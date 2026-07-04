@@ -137,8 +137,10 @@ function App() {
       <Header />
 
       <div className={`redesigned-layout ${state.gameData.combat.active ? 'combat-active' : ''}`}>
-        {/* Nav Rail — campaign switching (hidden on mobile via CSS) */}
-        <NavRail activeCampaignId={state.campaignId} campaigns={[]} />
+        {/* Nav Rail — campaign switching (hidden on mobile via CSS).
+            NOTE: the field is activeSaveId (state.campaignId never existed);
+            populating the campaigns list is tracked in the V2 roadmap. */}
+        <NavRail activeCampaignId={state.activeSaveId} campaigns={[]} />
 
         {/* Chat Area — always visible on desktop/tablet, hidden when mobile panel open */}
         <div
@@ -148,7 +150,7 @@ function App() {
           className={`chat-area ${mobilePanelOpen ? 'mobile-hidden' : ''}`}
           tabIndex={-1}
         >
-          <StatusBar />
+          <StatusBar onMobilePanelSelect={handleMobilePanelSelect} />
           <CombatBanner />
           <ChannelTabs
             activeChannel={activeChannel}

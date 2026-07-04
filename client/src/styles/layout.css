@@ -231,6 +231,12 @@
   font-size: 0.8rem;
   cursor: pointer;
   transition: color 0.2s;
+  /* Only chrome for exiting a full-screen panel — must be a real target */
+  min-width: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .mobile-panel-back:hover,

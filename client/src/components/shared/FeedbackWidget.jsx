@@ -134,7 +134,9 @@ function FeedbackWidget() {
               borderRadius: 8,
               color: 'var(--parchment)',
               padding: 10,
-              fontSize: '0.8rem',
+              // 16px on mobile — anything smaller makes iOS zoom the whole
+              // viewport on focus (and it doesn't zoom back out)
+              fontSize: typeof window !== 'undefined' && window.innerWidth < 768 ? 16 : '0.8rem',
               fontFamily: "'Crimson Text', serif",
               resize: 'vertical',
               lineHeight: 1.6,

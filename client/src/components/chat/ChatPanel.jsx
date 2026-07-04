@@ -1,9 +1,26 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useGame } from '../../contexts/GameContext.jsx';
-import { sendChatMessage } from '../../services/chatService.js';
+import { sendChatMessage, stopStreaming } from '../../services/chatService.js';
 import { formatDMText } from '../../utils/textFormatter.jsx';
 import SessionRating from '../shared/SessionRating.jsx';
 import { sendPlayerAction, onMultiplayerMessage, emitTypingStart, emitTypingStop, onPeerTyping } from '../../services/socketService.js';
+
+// Memoized message row — during streaming every token dispatch rebuilds the
+// chatMessages array; without memo, EVERY historical message re-runs
+// formatDMText (a line-by-line parser) on every token. With memo, only the
+// row whose content changed re-renders.
+const ChatMessage = React.memo(function ChatMessage({ msg, senderName, messageClass }) {
+  return (
+    <div className={messageClass}>
+      {msg.role !== 'system' && (
+        <div className="msg-sender">{senderName}</div>
+      )}
+      <div className="msg-body">
+        {msg.role === 'dm' && !msg.isMultiplayer ? formatDMText(msg.content || '') : (msg.content || '')}
+      </div>
+    </div>
+  );
+});
 
 function ChatPanel({ multiplayer, campaignId, className, activeChannel }) {
   const { state, dispatch } = useGame();
@@ -163,15 +180,7 @@ function ChatPanel({ multiplayer, campaignId, className, activeChannel }) {
   return (
     <div className={`chat-panel ${className || ''}`} style={{ '--chat-text-size': chatTextVar }}>
       {/* Screen-reader-only live region announcing new DM narration */}
-      <div
-        aria-live="polite"
-        aria-atomic="true"
-        style={{
-          position: 'absolute',
-          width: 1, height: 1, overflow: 'hidden',
-          clip: 'rect(0 0 0 0)', whiteSpace: 'nowrap',
-        }}
-      >
+      <div className="sr-only" aria-live="polite" aria-atomic="true">
         {liveAnnouncement}
       </div>
       <div
@@ -219,21 +228,13 @@ function ChatPanel({ multiplayer, campaignId, className, activeChannel }) {
             messageClass += ' system-msg';
           }
 
-          const isStreaming = state.isStreaming && i === state.chatMessages.length - 1;
-          const content = msg.content || (isStreaming ? '' : '');
+          const isLast = i === state.chatMessages.length - 1;
 
           return (
             <React.Fragment key={msg.id || i}>
-              <div className={messageClass}>
-                {msg.role !== 'system' && (
-                  <div className="msg-sender">{senderName}</div>
-                )}
-                <div className="msg-body">
-                  {msg.role === 'dm' && !msg.isMultiplayer ? formatDMText(content) : content}
-                </div>
-              </div>
+              <ChatMessage msg={msg} senderName={senderName} messageClass={messageClass} />
               {/* Preserve SessionRating after completed DM messages */}
-              {msg.role === 'dm' && msg.content && !isStreaming && i === state.chatMessages.length - 1 && (
+              {msg.role === 'dm' && msg.content && !(state.isStreaming && isLast) && isLast && (
                 <SessionRating messageId={msg.id} />
               )}
             </React.Fragment>
@@ -266,9 +267,13 @@ function ChatPanel({ multiplayer, campaignId, className, activeChannel }) {
       </div>
 
       {showScrollBtn && (
-        <div className="scroll-to-bottom" onClick={() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })}>
+        <button
+          type="button"
+          className="scroll-to-bottom"
+          onClick={() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })}
+        >
           ↓ New messages
-        </div>
+        </button>
       )}
 
       {state.apiStatus !== 'connected' ? (
@@ -284,13 +289,23 @@ function ChatPanel({ multiplayer, campaignId, className, activeChannel }) {
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={state.isStreaming ? 'Waiting for the DM...' : 'What do you do?'}
-            disabled={state.isStreaming}
+            placeholder={state.isStreaming ? 'The DM is writing — you can draft your next move...' : 'What do you do?'}
             rows={2}
           />
-          <button className="chat-send-btn" onClick={handleSend} disabled={state.isStreaming || !input.trim()} aria-label="Send message">
-            ⚔
-          </button>
+          {state.isStreaming ? (
+            <button
+              className="chat-send-btn chat-stop-btn"
+              onClick={stopStreaming}
+              aria-label="Stop the DM's response"
+              title="Stop generating"
+            >
+              ■
+            </button>
+          ) : (
+            <button className="chat-send-btn" onClick={handleSend} disabled={!input.trim()} aria-label="Send message">
+              ⚔
+            </button>
+          )}
         </div>
       )}
     </div>

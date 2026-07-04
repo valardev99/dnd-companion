@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useGame } from '../contexts/GameContext.jsx';
+import { useAuth } from '../contexts/AuthContext.jsx';
 import { sendChatMessage } from '../services/chatService.js';
 import { generateWorldBible } from '../utils/worldBible.js';
 import { createBlankGameData } from '../data/defaultGameData.js';
@@ -7,6 +8,9 @@ import { PRESETS } from '../data/presets.js';
 
 function CampaignWizard() {
   const { state, dispatch } = useGame();
+  const { user } = useAuth();
+  // Derive the player's name from their account — never a hardcoded default
+  const playerName = user?.display_name || user?.username || 'Player';
   // Start at API key step (-2) if no key is configured, otherwise go straight to path selection (-1)
   const [step, setStep] = useState(state.apiKey ? -1 : -2);
   const [wizardMode, setWizardMode] = useState(null); // 'quick' or 'builder' or 'preset'
@@ -21,7 +25,7 @@ function CampaignWizard() {
     magicLevel: 'common', magicSource: 'learned', magicCost: 'expensive', magicFlavor: '',
     essenceLabel: '', sanityLabel: '', essenceVisible: true, sanityVisible: true,
     startingLocation: 'settlement', openingSituation: 'stranger', initialConflict: '', factions: '',
-    playerName: 'Chris', characterName: '', race: '', characterConcept: '',
+    playerName, characterName: '', race: '', characterConcept: '',
   });
 
   const update = (key, val) => setWizardData(prev => ({ ...prev, [key]: val }));
@@ -59,7 +63,7 @@ function CampaignWizard() {
 
   const beginQuickStart = () => {
     if (!quickStartText.trim()) return;
-    const gameData = createBlankGameData({ worldName: 'New Campaign', playerName: 'Chris' });
+    const gameData = createBlankGameData({ worldName: 'New Campaign', playerName });
     const worldBible = `# Quick Start Campaign\n\nThe player has provided a freeform world description. Use it to establish the setting, create an opening scene, and begin character creation.\n\nBuild the world, NPCs, conflicts, and magic system from the player's description. Assign the player a character that fits naturally into the world they described. Start with the character creation process, then launch directly into the opening scene.\n`;
     dispatch({ type: 'START_NEW_CAMPAIGN', payload: { gameData, worldBible } });
     localStorage.removeItem('dnd-chat');
@@ -80,7 +84,7 @@ function CampaignWizard() {
     if (!selectedPreset) return;
     const preset = PRESETS.find(p => p.id === selectedPreset);
     if (!preset) return;
-    const presetWizardData = { worldName: preset.worldName, premise: preset.premise, sentient: preset.sentient, worldAge: preset.worldAge, characterName: '', playerName: 'Chris' };
+    const presetWizardData = { worldName: preset.worldName, premise: preset.premise, sentient: preset.sentient, worldAge: preset.worldAge, characterName: '', playerName };
     const gameData = createBlankGameData(presetWizardData);
     const worldBible = `# ${preset.worldName} — Preset Campaign\n\n## Core Premise\n${preset.premise}\n\n## Tone\n${preset.tone}\n\n## Magic Level\n${preset.magicLevel}\n\nThis is a preset campaign. Build the world, NPCs, factions, conflicts, and magic system from this premise. Create a rich, living world. Assign the player a class and starting stats that fit this setting. Begin with character creation, then launch into the opening scene.\n`;
     dispatch({ type: 'START_NEW_CAMPAIGN', payload: { gameData, worldBible } });
@@ -190,7 +194,7 @@ function CampaignWizard() {
         <div className="wizard-step-content">
           <div className="wizard-field">
             <label className="wizard-label">World Name <span className="wizard-required">*</span></label>
-            <input className="wizard-input" type="text" value={wizardData.worldName} onChange={e => update('worldName', e.target.value)} placeholder="Valdris, Aethermoor, The Hollow Wastes..." autoFocus />
+            <input className="wizard-input" type="text" value={wizardData.worldName} maxLength={255} onChange={e => update('worldName', e.target.value)} placeholder="Valdris, Aethermoor, The Hollow Wastes..." autoFocus />
           </div>
           <div className="wizard-field">
             <label className="wizard-label">Core Premise</label>
@@ -342,7 +346,7 @@ function CampaignWizard() {
         <div className="wizard-step-content">
           <div className="wizard-field">
             <label className="wizard-label">Character Name <span className="wizard-hint">(leave blank to choose in chat)</span></label>
-            <input className="wizard-input" type="text" value={wizardData.characterName} onChange={e => update('characterName', e.target.value)} placeholder="Aldric, Theron, Lyra..." />
+            <input className="wizard-input" type="text" value={wizardData.characterName} maxLength={150} onChange={e => update('characterName', e.target.value)} placeholder="Aldric, Theron, Lyra..." />
           </div>
           <div className="wizard-field">
             <label className="wizard-label">Race Preference</label>
