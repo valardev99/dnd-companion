@@ -1,4 +1,5 @@
 """Email service using Resend for transactional emails."""
+import asyncio
 import logging
 
 from app.config import FRONTEND_URL, RESEND_API_KEY, RESEND_FROM_EMAIL
@@ -6,8 +7,13 @@ from app.config import FRONTEND_URL, RESEND_API_KEY, RESEND_FROM_EMAIL
 logger = logging.getLogger(__name__)
 
 
-def _send(to: str, subject: str, html: str) -> bool:
-    """Send an email via Resend. Returns True on success."""
+async def _send(to: str, subject: str, html: str) -> bool:
+    """Send an email via Resend. Returns True on success.
+
+    The resend SDK is synchronous (requests-based) — run it in a worker
+    thread so it never blocks the event loop (which would stall every
+    in-flight SSE chat stream for the duration of the HTTP call).
+    """
     if not RESEND_API_KEY:
         logger.warning("RESEND_API_KEY not set — skipping email to %s", to)
         return False
@@ -17,13 +23,16 @@ def _send(to: str, subject: str, html: str) -> bool:
     import resend
     resend.api_key = RESEND_API_KEY
 
-    try:
-        result = resend.Emails.send({
+    def _blocking():
+        return resend.Emails.send({
             "from": RESEND_FROM_EMAIL,
             "to": [to],
             "subject": subject,
             "html": html,
         })
+
+    try:
+        result = await asyncio.to_thread(_blocking)
         # Resend returns {"id": "re_..."}
         resend_id = result.get("id") if isinstance(result, dict) else None
         logger.info("Email sent to %s (resend_id=%s)", to, resend_id)
@@ -64,7 +73,7 @@ def _email_wrapper(body_html: str) -> str:
 </html>"""
 
 
-def send_verification_email(to: str, token: str) -> bool:
+async def send_verification_email(to: str, token: str) -> bool:
     """Send email verification link."""
     url = f"{FRONTEND_URL}/verify-email?token={token}"
     body = f"""
@@ -82,10 +91,10 @@ def send_verification_email(to: str, token: str) -> bool:
         This link expires in 24 hours. If you didn't create an account, ignore this email.
       </p>
     """
-    return _send(to, "Verify Your Email — Wonderlore AI", _email_wrapper(body))
+    return await _send(to, "Verify Your Email — Wonderlore AI", _email_wrapper(body))
 
 
-def send_reset_email(to: str, token: str) -> bool:
+async def send_reset_email(to: str, token: str) -> bool:
     """Send password reset link."""
     url = f"{FRONTEND_URL}/reset-password?token={token}"
     body = f"""
@@ -103,10 +112,10 @@ def send_reset_email(to: str, token: str) -> bool:
         This link expires in 15 minutes. If you didn't request this, ignore this email.
       </p>
     """
-    return _send(to, "Reset Your Password — Wonderlore AI", _email_wrapper(body))
+    return await _send(to, "Reset Your Password — Wonderlore AI", _email_wrapper(body))
 
 
-def send_welcome_email(to: str, username: str) -> bool:
+async def send_welcome_email(to: str, username: str) -> bool:
     """Send welcome email after successful verification."""
     url = f"{FRONTEND_URL}/play"
     body = f"""
@@ -139,4 +148,4 @@ def send_welcome_email(to: str, username: str) -> bool:
         May your rolls be high and your stories legendary.
       </p>
     """
-    return _send(to, "Welcome to Wonderlore AI — Your Adventure Begins", _email_wrapper(body))
+    return await _send(to, "Welcome to Wonderlore AI — Your Adventure Begins", _email_wrapper(body))

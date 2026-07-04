@@ -1,7 +1,7 @@
 """Email-based auth routes — verification, forgot password, reset password."""
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from jose import JWTError
 from pydantic import BaseModel, EmailStr
 from sqlalchemy import select
@@ -11,6 +11,7 @@ from app.auth import create_reset_token, create_verify_token, decode_token, hash
 from app.config import RESEND_API_KEY
 from app.database import get_db
 from app.email import send_reset_email, send_verification_email, send_welcome_email
+from app.limits import limiter
 from app.models import User
 
 logger = logging.getLogger(__name__)
@@ -36,14 +37,15 @@ class ResendVerificationRequest(BaseModel):
 
 
 @router.post("/auth/forgot-password")
-async def forgot_password(body: ForgotPasswordRequest, db: AsyncSession = Depends(get_db)):
+@limiter.limit("3/minute;10/hour")
+async def forgot_password(request: Request, body: ForgotPasswordRequest, db: AsyncSession = Depends(get_db)):
     """Send a password reset link. Always returns 200 to prevent email enumeration."""
     result = await db.execute(select(User).where(User.email == body.email))
     user = result.scalar_one_or_none()
 
     if user:
         token = create_reset_token(str(user.id), user.hashed_password)
-        send_reset_email(user.email, token)
+        await send_reset_email(user.email, token)
 
     return {"status": "ok", "message": "If an account exists with that email, a reset link has been sent."}
 
@@ -76,6 +78,9 @@ async def reset_password(body: ResetPasswordRequest, db: AsyncSession = Depends(
         raise HTTPException(status_code=400, detail="This reset link has already been used")
 
     user.hashed_password = hash_password(body.new_password)
+    # Invalidate every outstanding access + refresh token for this account —
+    # a stolen session must not survive a password reset.
+    user.token_version = (user.token_version or 0) + 1
     db.add(user)
     await db.flush()
 
@@ -110,19 +115,20 @@ async def verify_email(body: VerifyEmailRequest, db: AsyncSession = Depends(get_
     await db.flush()
 
     # Send welcome email now that they're verified
-    send_welcome_email(user.email, user.username)
+    await send_welcome_email(user.email, user.username)
 
     return {"status": "ok", "message": "Email verified successfully. Welcome to the realm!"}
 
 
 @router.post("/auth/resend-verification")
-async def resend_verification(body: ResendVerificationRequest, db: AsyncSession = Depends(get_db)):
+@limiter.limit("3/minute;10/hour")
+async def resend_verification(request: Request, body: ResendVerificationRequest, db: AsyncSession = Depends(get_db)):
     """Re-send verification email. Always returns 200."""
     result = await db.execute(select(User).where(User.email == body.email))
     user = result.scalar_one_or_none()
 
     if user and not user.email_verified:
         token = create_verify_token(str(user.id))
-        send_verification_email(user.email, token)
+        await send_verification_email(user.email, token)
 
     return {"status": "ok", "message": "If your account exists, a new verification email has been sent."}

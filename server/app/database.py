@@ -87,6 +87,7 @@ async def _safe_migrate() -> None:
         ("users", "display_name", "VARCHAR(100)", "VARCHAR(100)"),
         ("users", "avatar_url", "VARCHAR(500)", "VARCHAR(500)"),
         ("users", "is_admin", "BOOLEAN NOT NULL DEFAULT FALSE", "BOOLEAN NOT NULL DEFAULT 0"),
+        ("users", "token_version", "INTEGER NOT NULL DEFAULT 0", "INTEGER NOT NULL DEFAULT 0"),
 
         # ---- campaigns ----------------------------------------------
         ("campaigns", "is_public", "BOOLEAN NOT NULL DEFAULT FALSE", "BOOLEAN NOT NULL DEFAULT 0"),
@@ -140,3 +141,19 @@ async def _safe_migrate() -> None:
             except Exception:
                 # Column already exists — expected, skip silently
                 pass
+
+    # ------------------------------------------------------------------
+    # Indexes for hot query patterns (idempotent via IF NOT EXISTS).
+    # ------------------------------------------------------------------
+    indexes = [
+        "CREATE INDEX IF NOT EXISTS ix_campaigns_owner_status_updated ON campaigns (owner_id, status, updated_at)",
+        "CREATE INDEX IF NOT EXISTS ix_stories_public_created ON stories (is_public, created_at)",
+        "CREATE INDEX IF NOT EXISTS ix_notifications_user_read ON notifications (user_id, read)",
+        "CREATE INDEX IF NOT EXISTS ix_error_logs_resolution_status ON error_logs (resolution_status)",
+    ]
+    for stmt in indexes:
+        async with engine.begin() as conn:
+            try:
+                await conn.execute(text(stmt))
+            except Exception:
+                logger.warning("Index creation skipped: %s", stmt)

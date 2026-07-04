@@ -51,6 +51,9 @@ class User(Base):
     avatar_url = Column(String(500), nullable=True)
     is_admin = Column(Boolean, default=False, nullable=False)
     email_verified = Column(Boolean, default=False, nullable=False)
+    # Bumped on password reset / "log out everywhere" — invalidates all
+    # outstanding JWTs whose tv claim no longer matches.
+    token_version = Column(Integer, default=0, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 

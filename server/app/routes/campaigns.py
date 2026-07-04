@@ -5,7 +5,7 @@ import secrets
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -38,7 +38,7 @@ router = APIRouter(tags=["campaigns"])
 # Schemas
 # ---------------------------------------------------------------------------
 class CampaignCreate(BaseModel):
-    name: str
+    name: str = Field(min_length=1, max_length=255)
     world_bible: Optional[str] = None
     game_data: Optional[Dict[str, Any]] = None
 
@@ -561,7 +561,7 @@ async def create_recap(
         logger.error("Recap generation failed for campaign %s: %s", campaign_id, exc)
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f"Recap generation failed: {exc}",
+            detail="Recap generation failed. Please try again.",
         )
 
     # Build a title — use the provided one or auto-generate from campaign name
@@ -662,7 +662,7 @@ async def generate_recap_endpoint(
         logger.error("Session recap generation failed for campaign %s: %s", campaign_id, exc)
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f"Recap generation failed: {exc}",
+            detail="Recap generation failed. Please try again.",
         )
 
     # Store in campaign.session_summary

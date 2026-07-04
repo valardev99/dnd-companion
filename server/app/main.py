@@ -8,8 +8,12 @@ from fastapi.responses import FileResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from app.config import ALLOWED_ORIGINS
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+
+from app.config import ALLOWED_ORIGINS, IS_PRODUCTION
 from app.database import init_db
+from app.limits import limiter
 from app.routes import admin, auth, billing, campaigns, chat, email_auth, errors, feedback, friends, images, notifications, quality, stories, submissions, test
 
 
@@ -29,6 +33,10 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# Rate limiting (per-IP buckets; see app/limits.py for proxy caveat)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
 # ---------------------------------------------------------------------------
 # CORS
 # ---------------------------------------------------------------------------
@@ -39,6 +47,20 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# ---------------------------------------------------------------------------
+# Security headers
+# ---------------------------------------------------------------------------
+@app.middleware("http")
+async def security_headers(request, call_next):
+    resp = await call_next(request)
+    resp.headers["X-Content-Type-Options"] = "nosniff"
+    resp.headers["X-Frame-Options"] = "DENY"
+    resp.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    if IS_PRODUCTION:
+        resp.headers["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains"
+    return resp
 
 # ---------------------------------------------------------------------------
 # Route routers
@@ -95,11 +117,20 @@ if os.path.isdir(_dist_dir):
     app.mount("/assets", StaticFiles(directory=os.path.join(_dist_dir, "assets")), name="assets")
 
     # SPA catch-all: any non-API route serves index.html so React Router handles it
+    _dist_real = os.path.realpath(_dist_dir)
+
     @app.get("/{full_path:path}")
     async def spa_fallback(full_path: str):
-        # Serve actual files if they exist (favicon, robots.txt, etc.)
-        file_path = os.path.join(_dist_dir, full_path)
-        if full_path and os.path.isfile(file_path):
+        # Serve actual files if they exist (favicon, robots.txt, etc.).
+        # SECURITY: realpath + prefix check prevents path traversal — encoded
+        # dot-segments (e.g. /%2e%2e/...) are NOT normalized by Starlette for
+        # {full_path:path} catch-alls and would otherwise escape dist/.
+        file_path = os.path.realpath(os.path.join(_dist_real, full_path))
+        if (
+            full_path
+            and file_path.startswith(_dist_real + os.sep)
+            and os.path.isfile(file_path)
+        ):
             return FileResponse(file_path)
         return FileResponse(_index_html)
 

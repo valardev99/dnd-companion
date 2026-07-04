@@ -33,9 +33,12 @@ async def generate_image(
     Uses the xAI Grok Imagine API. Requires an xAI API key
     provided in the request body or stored in the user's account.
     """
-    # Resolve API key
+    # Resolve API key — the body key takes precedence. The stored key is the
+    # user's OPENROUTER key; sending it to xAI both leaks the credential to a
+    # third party and guarantees a 401. Only fall back to it if the caller
+    # supplied nothing (legacy behavior for users who stored an xAI key).
     api_key = body.apiKey
-    if user is not None and user.encrypted_api_key:
+    if not api_key and user is not None and user.encrypted_api_key:
         try:
             api_key = decrypt_api_key(user.encrypted_api_key)
         except Exception:

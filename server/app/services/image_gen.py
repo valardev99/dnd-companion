@@ -1,8 +1,8 @@
 """xAI Grok Image Generation service.
 
-Generates character/NPC portrait images via the Grok Imagine API.
+Generates character/NPC portrait images via the xAI image API.
 Endpoint: POST https://api.x.ai/v1/images/generations
-Model: grok-imagine-image ($0.02/image)
+Model: grok-2-image ($0.02/image) — must match the payload below.
 """
 import json
 from typing import Optional

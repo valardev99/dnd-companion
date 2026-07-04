@@ -1,12 +1,13 @@
 """Public stories routes — browse, view detail, and like community recaps."""
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import select, func, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_optional_user
 from app.database import get_db
+from app.limits import limiter
 from app.models import Story, StoryLike, Campaign
 from app.schemas import (
     PaginatedStories,
@@ -165,7 +166,9 @@ async def get_story(
 
 
 @router.post("/stories/{story_id}/like", response_model=StoryLikeResponse)
+@limiter.limit("20/minute")
 async def toggle_like_story(
+    request: Request,
     story_id: str,
     user=Depends(get_optional_user),
     db: AsyncSession = Depends(get_db),
@@ -282,13 +285,29 @@ async def get_public_share(
     if story and story.recap_text:
         recap_text = story.recap_text
 
+    # SECURITY/PRODUCT: never expose the raw world_bible or full game_data on
+    # a public share — they contain DM secrets, hidden trackers, and plot.
+    # Whitelist only presentation-safe stats; strip spoilers from the bible.
+    from app.routes.campaigns import extract_world_briefing
+
+    _SAFE_GAME_KEYS = (
+        "characterName", "character_name", "characterClass", "character_class",
+        "characterRace", "character_race", "level", "hp", "hit_points",
+        "quests_completed", "questsCompleted", "npcs_met", "npcsMet",
+        "sessions", "session_count", "total_xp", "totalXp",
+    )
+    safe_game_data = (
+        {k: game_data[k] for k in _SAFE_GAME_KEYS if k in game_data}
+        if isinstance(game_data, dict) else None
+    )
+
     return PublicShareResponse(
         campaign_name=campaign.name,
         character_name=character_name,
         world_name=world_name,
         recap_text=recap_text,
-        game_data=campaign.game_data,
-        world_bible=campaign.world_bible,
+        game_data=safe_game_data,
+        world_bible=extract_world_briefing(campaign.world_bible),
         story_title=story.title if story else None,
         story_excerpt=story.excerpt or (story.content[:300] + "..." if story and story.content and len(story.content) > 300 else (story.content if story else None)),
         likes=story.likes if story else 0,

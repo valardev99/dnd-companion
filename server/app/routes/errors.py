@@ -1,13 +1,14 @@
 """Error log routes — report, list, update, and auto-resolve errors."""
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from pydantic import BaseModel, Field
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_admin_user, get_optional_user
 from app.database import get_db
+from app.limits import limiter
 from app.models import ErrorLog
 
 router = APIRouter(tags=["errors"])
@@ -17,10 +18,12 @@ router = APIRouter(tags=["errors"])
 # Schemas
 # ---------------------------------------------------------------------------
 class ErrorLogCreate(BaseModel):
-    error_type: str  # "frontend" | "backend" | "api"
-    error_code: Optional[str] = None
-    message: str
-    stack_trace: Optional[str] = None
+    # Size caps: this endpoint is unauthenticated — without limits anyone
+    # could flood the Text columns and fill the database disk.
+    error_type: str = Field(max_length=50)  # "frontend" | "backend" | "api"
+    error_code: Optional[str] = Field(default=None, max_length=100)
+    message: str = Field(max_length=5000)
+    stack_trace: Optional[str] = Field(default=None, max_length=20000)
     context: Optional[Dict[str, Any]] = None
 
 
@@ -105,7 +108,9 @@ def _error_to_response(e: ErrorLog) -> ErrorLogResponse:
 # Routes
 # ---------------------------------------------------------------------------
 @router.post("/api/errors", response_model=ErrorLogResponse, status_code=status.HTTP_201_CREATED)
+@limiter.limit("30/minute")
 async def log_error(
+    request: Request,
     body: ErrorLogCreate,
     user=Depends(get_optional_user),
     db: AsyncSession = Depends(get_db),

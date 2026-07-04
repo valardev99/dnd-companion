@@ -1,10 +1,11 @@
 """Authentication routes — register, login, logout, profile, API key storage."""
+import logging
 from typing import Optional
 
 from fastapi import APIRouter, Cookie, Depends, HTTPException, Request, Response, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -21,7 +22,10 @@ from app.auth import (
 from app.config import DATABASE_URL, RESEND_API_KEY
 from app.email import send_verification_email
 from app.database import get_db
+from app.limits import limiter
 from app.models import User
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["auth"])
 
@@ -35,8 +39,8 @@ bearer_scheme = HTTPBearer(auto_error=False)
 # ---------------------------------------------------------------------------
 class RegisterRequest(BaseModel):
     email: EmailStr
-    username: str
-    password: str
+    username: str = Field(min_length=3, max_length=100, pattern=r"^[a-zA-Z0-9_\- ]+$")
+    password: str = Field(min_length=8, max_length=128)
 
 
 class LoginRequest(BaseModel):
@@ -95,7 +99,8 @@ def _user_response(user: User) -> UserResponse:
 # Routes
 # ---------------------------------------------------------------------------
 @router.post("/auth/register", response_model=AuthResponse, status_code=status.HTTP_201_CREATED)
-async def register(body: RegisterRequest, response: Response, db: AsyncSession = Depends(get_db)):
+@limiter.limit("3/minute")
+async def register(request: Request, body: RegisterRequest, response: Response, db: AsyncSession = Depends(get_db)):
     """Create a new user account and return tokens."""
     # Check for existing email
     existing = await db.execute(select(User).where(User.email == body.email))
@@ -116,19 +121,19 @@ async def register(body: RegisterRequest, response: Response, db: AsyncSession =
     await db.flush()  # Populate user.id
 
     # Send verification email (skip in dev if no API key)
-    print(f"[AUTH] Registration: RESEND_API_KEY={'SET' if RESEND_API_KEY else 'EMPTY'}")
     if RESEND_API_KEY:
         verify_token = create_verify_token(str(user.id))
-        result = send_verification_email(user.email, verify_token)
-        print(f"[AUTH] Verification email to {user.email}: {'sent' if result else 'FAILED'}")
+        result = await send_verification_email(user.email, verify_token)
+        if not result:
+            logger.warning("Verification email failed for user %s", user.id)
     else:
         # Dev mode: auto-verify
         user.email_verified = True
         db.add(user)
         await db.flush()
 
-    access_token = create_access_token(str(user.id))
-    refresh_token = create_refresh_token(str(user.id))
+    access_token = create_access_token(str(user.id), user.token_version or 0)
+    refresh_token = create_refresh_token(str(user.id), user.token_version or 0)
 
     # Set refresh token as httpOnly cookie
     response.set_cookie(
@@ -148,7 +153,8 @@ async def register(body: RegisterRequest, response: Response, db: AsyncSession =
 
 
 @router.post("/auth/login", response_model=AuthResponse)
-async def login(body: LoginRequest, response: Response, db: AsyncSession = Depends(get_db)):
+@limiter.limit("5/minute")
+async def login(request: Request, body: LoginRequest, response: Response, db: AsyncSession = Depends(get_db)):
     """Authenticate a user and return tokens."""
     result = await db.execute(select(User).where(User.email == body.email))
     user = result.scalar_one_or_none()
@@ -156,8 +162,8 @@ async def login(body: LoginRequest, response: Response, db: AsyncSession = Depen
     if user is None or not verify_password(body.password, user.hashed_password):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password")
 
-    access_token = create_access_token(str(user.id))
-    refresh_token = create_refresh_token(str(user.id))
+    access_token = create_access_token(str(user.id), user.token_version or 0)
+    refresh_token = create_refresh_token(str(user.id), user.token_version or 0)
 
     response.set_cookie(
         key="refresh_token",
@@ -205,8 +211,11 @@ async def refresh(request: Request, response: Response, db: AsyncSession = Depen
     user = result.scalar_one_or_none()
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
-    access_token = create_access_token(str(user.id))
-    new_refresh = create_refresh_token(str(user.id))
+    # Reject refresh tokens minted before a password reset / logout-everywhere
+    if payload.get("tv", 0) != (user.token_version or 0):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Session revoked")
+    access_token = create_access_token(str(user.id), user.token_version or 0)
+    new_refresh = create_refresh_token(str(user.id), user.token_version or 0)
     response.set_cookie(
         key="refresh_token", value=new_refresh,
         httponly=True, secure=not _IS_LOCAL, samesite="lax",

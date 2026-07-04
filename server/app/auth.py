@@ -38,14 +38,20 @@ def verify_password(plain: str, hashed: str) -> bool:
 ALGORITHM = "HS256"
 
 
-def create_access_token(user_id: str) -> str:
+def create_access_token(user_id: str, token_version: int = 0) -> str:
     expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    return jwt.encode({"sub": user_id, "exp": expire, "type": "access"}, SECRET_KEY, algorithm=ALGORITHM)
+    return jwt.encode(
+        {"sub": user_id, "exp": expire, "type": "access", "tv": token_version},
+        SECRET_KEY, algorithm=ALGORITHM,
+    )
 
 
-def create_refresh_token(user_id: str) -> str:
+def create_refresh_token(user_id: str, token_version: int = 0) -> str:
     expire = datetime.utcnow() + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
-    return jwt.encode({"sub": user_id, "exp": expire, "type": "refresh"}, SECRET_KEY, algorithm=ALGORITHM)
+    return jwt.encode(
+        {"sub": user_id, "exp": expire, "type": "refresh", "tv": token_version},
+        SECRET_KEY, algorithm=ALGORITHM,
+    )
 
 
 def create_verify_token(user_id: str) -> str:
@@ -128,6 +134,10 @@ async def get_current_user(
     user = result.scalar_one_or_none()
     if user is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
+    # Session revocation: tokens minted before a password reset (or explicit
+    # "log out everywhere") carry a stale tv claim and are rejected here.
+    if payload.get("tv", 0) != (user.token_version or 0):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Session revoked")
     return user
 
 
@@ -151,7 +161,10 @@ async def get_optional_user(
 
     from app.models import User
     result = await db.execute(select(User).where(User.id == user_id))
-    return result.scalar_one_or_none()
+    user = result.scalar_one_or_none()
+    if user is not None and payload.get("tv", 0) != (user.token_version or 0):
+        return None
+    return user
 
 
 async def get_admin_user(

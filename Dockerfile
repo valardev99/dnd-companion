@@ -41,5 +41,8 @@ ENV PYTHONPATH=/app/server
 # Expose port (Railway overrides via $PORT)
 EXPOSE 8000
 
-# Run with uvicorn on Railway's dynamic $PORT (default 8000 for local dev)
-CMD ["sh", "-c", "python -m uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+# Run with uvicorn on Railway's dynamic $PORT (default 8000 for local dev).
+# --proxy-headers + --forwarded-allow-ips: Railway fronts the app with a
+# proxy; without these, per-IP rate limits would bucket everyone under the
+# proxy's IP.
+CMD ["sh", "-c", "python -m uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --proxy-headers --forwarded-allow-ips='*'"]

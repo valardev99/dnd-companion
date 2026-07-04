@@ -217,7 +217,7 @@ async def checkout(
         logger.error("Checkout session creation failed: %s", exc)
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f"Failed to create checkout session: {exc}",
+            detail="Failed to create checkout session. Please try again.",
         )
 
 
@@ -253,7 +253,7 @@ async def portal(
         logger.error("Portal session creation failed: %s", exc)
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f"Failed to create portal session: {exc}",
+            detail="Failed to create portal session. Please try again.",
         )
 
 
