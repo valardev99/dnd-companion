@@ -1,6 +1,6 @@
 import React from 'react';
 import { useGame } from '../../contexts/GameContext.jsx';
-import { Badge } from '../shared';
+import { Badge, PanelEmptyState } from '../shared';
 
 function InventoryPanel() {
   const { state, dispatch } = useGame();
@@ -34,6 +34,14 @@ function InventoryPanel() {
           >{l} <span style={{color:'var(--muted)',fontSize:'0.7rem'}}>({(categories[k]||[]).length})</span></div>
         ))}
       </div>
+
+      {items.length === 0 && (
+        <PanelEmptyState
+          glyph="🎒"
+          title="Your pack is empty"
+          hint="Loot, gear, and treasures you find will gather here."
+        />
+      )}
 
       {items.map((item, i) => (
         <div key={i} className={`item-row ${sel === i ? 'selected' : ''}`}

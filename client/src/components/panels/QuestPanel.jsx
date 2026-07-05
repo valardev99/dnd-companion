@@ -1,5 +1,6 @@
 import React from 'react';
 import { useGame } from '../../contexts/GameContext.jsx';
+import { PanelEmptyState } from '../shared';
 
 function QuestEntry({ quest, selected, onClick }) {
   const statusClass = quest.type === 'main' ? 'main-quest' : quest.status;
@@ -81,6 +82,14 @@ function QuestPanel() {
           </div>
         );
       })}
+
+      {quests.length === 0 && (
+        <PanelEmptyState
+          glyph="📜"
+          title="No quests yet"
+          hint="Speak to your DM and the world — deeds and errands will be tracked here."
+        />
+      )}
     </div>
   );
 }

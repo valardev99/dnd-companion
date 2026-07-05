@@ -1,5 +1,6 @@
 import React from 'react';
 import { useGame } from '../../contexts/GameContext.jsx';
+import { PanelEmptyState } from '../shared';
 
 function MapPanel() {
   const { state, dispatch } = useGame();
@@ -14,6 +15,16 @@ function MapPanel() {
         <span className="section-count">{locs.filter(l=>l.status!=='unexplored').length}/{locs.length} discovered</span>
       </div>
 
+      {locs.length === 0 && (
+        <PanelEmptyState
+          glyph="🗺"
+          title="Uncharted"
+          hint="As you travel, the places you visit will be drawn onto your map."
+        />
+      )}
+
+      {locs.length > 0 && (
+      <>
       <div className="map-container" style={{height:480}}>
         {paths.map((path, i) => {
           const from = locs.find(l => l.id === path.from);
@@ -39,6 +50,8 @@ function MapPanel() {
       <div style={{display:'flex',gap:16,marginTop:12,fontSize:'0.7rem',color:'var(--muted)'}}>
         <span>🟡 Current</span><span>⚪ Explored</span><span>❓ Unexplored</span><span style={{color:'var(--crimson-bright)'}}>🔴 Dangerous</span>
       </div>
+      </>
+      )}
     </div>
   );
 }
