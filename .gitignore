@@ -32,3 +32,4 @@ dist/
 
 # Git worktrees
 .worktrees/
+.env.local
