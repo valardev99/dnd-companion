@@ -152,10 +152,10 @@ export default function LobbyPage() {
         </div>
 
         {/* Session Recap */}
-        {campaign?.session_recap && (
+        {campaign?.session_summary && (
           <div className="lobby-recap">
             <h3 className="lobby-recap-title">Previously on...</h3>
-            <p className="lobby-recap-text">{campaign.session_recap}</p>
+            <p className="lobby-recap-text">{campaign.session_summary}</p>
           </div>
         )}
 

@@ -48,37 +48,46 @@ function Header() {
           </span>
         </Link>
         <div className="header-title">{c.name}</div>
-        <div className="header-divider" />
-        <div className="header-stat">
-          <span className="label">Session</span>
-          <span className="value">{hasActiveGame ? c.session : '\u2014'}</span>
-        </div>
-        <div className="header-stat">
-          <span className="label">Day</span>
-          <span className="value">{hasActiveGame ? c.day : '\u2014'}</span>
-        </div>
-        <div className="header-stat">
-          <span className="label">Time</span>
-          <span className="value">{hasActiveGame ? c.time : '\u2014'}</span>
-        </div>
-        <div className="header-divider" />
-        <div className="header-stat">
-          <IconStar />
-          <span className="label">Level</span>
-          <span className="header-stat-value">{hasActiveGame ? ch.level : '\u2014'}</span>
-        </div>
-        <div className="header-stat">
-          <IconHeart />
-          <span className="label">HP</span>
-          <span className={`header-stat-value${hasActiveGame && ch.hp.current < ch.hp.max * 0.5 ? ' hp-low' : ''}`}>
-            {hasActiveGame ? `${ch.hp.current}/${ch.hp.max}` : '\u2014'}
-          </span>
-        </div>
-        <div className="header-stat">
-          <IconCoin />
-          <span className="label">Gold</span>
-          <span className="header-stat-value">{hasActiveGame ? (ch.gold ?? 0) : '\u2014'}</span>
-        </div>
+        {hasActiveGame ? (
+          <>
+            <div className="header-divider" />
+            <div className="header-stat">
+              <span className="label">Session</span>
+              <span className="value">{c.session}</span>
+            </div>
+            <div className="header-stat">
+              <span className="label">Day</span>
+              <span className="value">{c.day}</span>
+            </div>
+            <div className="header-stat">
+              <span className="label">Time</span>
+              <span className="value">{c.time}</span>
+            </div>
+            <div className="header-divider" />
+            <div className="header-stat">
+              <IconStar />
+              <span className="label">Level</span>
+              <span className="header-stat-value">{ch.level}</span>
+            </div>
+            <div className="header-stat">
+              <IconHeart />
+              <span className="label">HP</span>
+              <span className={`header-stat-value${ch.hp.current < ch.hp.max * 0.5 ? ' hp-low' : ''}${ch.hp.current < ch.hp.max * 0.25 ? ' hp-critical' : ''}`}>
+                {ch.hp.current}/{ch.hp.max}
+              </span>
+            </div>
+            <div className="header-stat">
+              <IconCoin />
+              <span className="label">Gold</span>
+              <span className="header-stat-value">{ch.gold ?? 0}</span>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="header-divider" />
+            <div className="header-awaiting">Awaiting your first words&hellip;</div>
+          </>
+        )}
       </header>
 
       {/* Save & Quit confirmation modal */}

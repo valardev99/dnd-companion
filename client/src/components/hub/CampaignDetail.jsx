@@ -32,7 +32,7 @@ export default function CampaignDetail({ campaign, onArchived, onBack }) {
     character_level,
     world_name,
     world_summary,
-    session_recap,
+    session_summary,
     session_count,
     total_play_hours,
     last_played,

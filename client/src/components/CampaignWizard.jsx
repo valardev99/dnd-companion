@@ -404,9 +404,18 @@ function CampaignWizard() {
           {step === -1 && <button className="wizard-btn wizard-btn-back" onClick={() => setStep(-2)}>← API Key</button>}
           <div style={{flex:1}} />
           {step === -2 ? (
-            <button className="wizard-btn wizard-btn-next" onClick={saveApiKey} disabled={!localApiKey.trim()}>
-              {state.apiKey ? 'Next →' : 'Connect & Continue →'}
-            </button>
+            <>
+              <button
+                className="wizard-btn wizard-btn-skip"
+                onClick={() => setStep(-1)}
+                title="Build your world now — add a key before your first message"
+              >
+                Skip — explore first
+              </button>
+              <button className="wizard-btn wizard-btn-next" onClick={saveApiKey} disabled={!localApiKey.trim()}>
+                {state.apiKey ? 'Next →' : 'Connect & Continue →'}
+              </button>
+            </>
           ) : step === -1 && wizardMode === 'quick' ? (
             <button className="wizard-btn wizard-btn-begin" onClick={beginQuickStart} disabled={!quickStartText.trim()}>⚡ Begin Adventure</button>
           ) : step === -1 && wizardMode === 'preset' ? (

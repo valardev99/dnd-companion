@@ -6,7 +6,7 @@ import { forceSimulation, forceLink, forceManyBody, forceCenter, forceCollide } 
 import { drag } from 'd3-drag';
 
 import { useGame } from '../../contexts/GameContext.jsx';
-import { Stars } from '../shared';
+import { Stars, PanelEmptyState } from '../shared';
 import { generatePortraitAsync } from '../../services/imageService.js';
 
 function RelationshipWeb() {
@@ -32,13 +32,24 @@ function RelationshipWeb() {
     feMerge.append('feMergeNode').attr('in', 'coloredBlur');
     feMerge.append('feMergeNode').attr('in', 'SourceGraphic');
 
-    const rels = state.gameData.npcRelationships;
-    const npcList = state.gameData.npcs;
+    const explicitRels = state.gameData.npcRelationships || [];
+    const npcList = state.gameData.npcs || [];
+    const playerName = state.gameData.character.name || 'You';
+
+    // Synthesize player↔NPC edges from each NPC's relationship so the web
+    // populates from met NPCs alone — no dedicated relationship tag required.
+    // Explicit NPC↔NPC edges (if the DM ever emits them) are layered on top.
+    const synthesized = npcList
+      .filter(n => n.name)
+      .map(n => ({ source: playerName, target: n.name, type: n.relationship || 'neutral' }));
+    const rels = [...synthesized, ...explicitRels];
+
     const allNames = new Set();
     rels.forEach(r => { allNames.add(r.source); allNames.add(r.target); });
+    if (npcList.length > 0) allNames.add(playerName);
     const nodes = Array.from(allNames).map(name => {
       const npc = npcList.find(n => n.name === name);
-      return { id: name, avatar: npc ? npc.avatar : '⚔️', relationship: npc ? npc.relationship : 'neutral', isPlayer: name === state.gameData.character.name };
+      return { id: name, avatar: npc ? npc.avatar : '⚔️', relationship: npc ? npc.relationship : 'neutral', isPlayer: name === playerName };
     });
     const links = rels.map(r => ({ source: r.source, target: r.target, type: r.type }));
 
@@ -48,7 +59,7 @@ function RelationshipWeb() {
       .force('center', forceCenter(width/2, height/2))
       .force('collision', forceCollide().radius(30));
 
-    const linkColors = { ally: '#4caf50', hostile: '#c62828', neutral: '#4fc3f7', unknown: '#3a3a55' };
+    const linkColors = { ally: '#4caf50', hostile: '#c62828', neutral: '#9a8d7a', unknown: '#3a3a55' };
     const link = svg.append('g').selectAll('line').data(links).enter().append('line')
       .attr('stroke', d => linkColors[d.type] || linkColors.neutral)
       .attr('stroke-width', d => {
@@ -113,7 +124,7 @@ function RelationshipWeb() {
       link.attr('x1',d=>d.source.x).attr('y1',d=>d.source.y).attr('x2',d=>d.target.x).attr('y2',d=>d.target.y);
       nodeG.attr('transform', d => `translate(${d.x},${d.y})`);
     });
-  }, [state.gameData.npcRelationships, state.gameData.npcs, selectedNpc]);
+  }, [state.gameData.npcRelationships, state.gameData.npcs, state.gameData.character.name, selectedNpc]);
 
   return <div className="relationship-web"><svg ref={svgRef} style={{width:'100%',height:400}} /></div>;
 }
@@ -184,6 +195,14 @@ function NPCPanel() {
           {showWeb ? '📋 List View' : '🕸 Relationship Web'}
         </button>
       </div>
+
+      {npcs.length === 0 && !showWeb && (
+        <PanelEmptyState
+          glyph="👥"
+          title="You've met no one yet"
+          hint="Characters you encounter will be remembered here — allies, rivals, and strangers."
+        />
+      )}
 
       {showWeb ? <RelationshipWeb /> : (
         <div>

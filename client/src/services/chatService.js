@@ -47,7 +47,7 @@ async function sendChatMessage(message, state, dispatch) {
   dispatch({ type: 'ADD_CHAT_MESSAGE', payload: { role: 'dm', content: '', id: streamId } });
   dispatch({ type: 'SET_STREAMING', payload: true });
 
-  const systemPrompt = buildSystemPrompt(state.dmEngine, state.gameData, state.worldBible, state.dmStyle);
+  const systemPrompt = buildSystemPrompt(state.dmEngine, state.gameData, state.worldBible, state.dmStyle, state.sessionSummary);
   const setStreamText = (content) =>
     dispatch({ type: 'UPDATE_STREAM_TEXT', payload: { id: streamId, content } });
 

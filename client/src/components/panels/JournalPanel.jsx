@@ -22,8 +22,11 @@ function JournalPanel() {
   const totalCombats = sessions.reduce((a,s) => a + s.combats, 0);
   const totalDecisions = sessions.reduce((a,s) => a + s.decisions, 0);
 
+  // The campaign id lives on state.activeSaveId — gameData.campaign has no id.
+  const campaignId = state.activeSaveId;
+
   const handleGenerateRecap = useCallback(async () => {
-    if (!campaign?.id) {
+    if (!campaignId) {
       setRecapError('No active campaign found.');
       return;
     }
@@ -31,7 +34,7 @@ function JournalPanel() {
     setRecapError('');
     setRecapText('');
     try {
-      const res = await authFetch(`/api/campaigns/${campaign.id}/recap`, {
+      const res = await authFetch(`/api/campaigns/${campaignId}/recap`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       });
@@ -46,10 +49,10 @@ function JournalPanel() {
     } finally {
       setRecapLoading(false);
     }
-  }, [campaign?.id, authFetch]);
+  }, [campaignId, authFetch]);
 
   const handleShareJourney = useCallback(async () => {
-    if (!campaign?.id) {
+    if (!campaignId) {
       setShareError('No active campaign found.');
       return;
     }
@@ -57,7 +60,7 @@ function JournalPanel() {
     setShareError('');
     setShareLink('');
     try {
-      const res = await authFetch(`/api/campaigns/${campaign.id}/share`, {
+      const res = await authFetch(`/api/campaigns/${campaignId}/share`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       });
@@ -74,7 +77,7 @@ function JournalPanel() {
     } finally {
       setShareLoading(false);
     }
-  }, [campaign?.id, authFetch]);
+  }, [campaignId, authFetch]);
 
   const handleCopyLink = useCallback(async () => {
     if (!shareLink) return;
