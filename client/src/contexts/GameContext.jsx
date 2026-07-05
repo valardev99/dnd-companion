@@ -17,6 +17,11 @@ function gameReducer(state, action) {
     case 'ADD_NOTIFICATION': return { ...state, notifications: [...state.notifications, { ...action.payload, id: Date.now() + Math.random(), timestamp: Date.now() }] };
     case 'REMOVE_NOTIFICATION': return { ...state, notifications: state.notifications.filter(n => n.id !== action.payload) };
     case 'TOGGLE_LEVELUP': return { ...state, showLevelUp: action.payload };
+    // Transient screen effect ('damage' | 'heal' | null) consumed by the
+    // DamageFlash overlay, which clears it after its animation.
+    case 'PULSE_EFFECT': return { ...state, pulseEffect: action.payload, pulseId: (state.pulseId || 0) + 1 };
+    case 'CLEAR_PULSE': return { ...state, pulseEffect: null };
+    case 'SET_DEFEATED': return { ...state, isDefeated: action.payload };
     case 'NEXT_TURN': {
       const next = (state.combatTurn + 1) % (state.gameData.combat.turnOrder || []).length;
       return { ...state, combatTurn: next };
@@ -126,11 +131,18 @@ function gameReducer(state, action) {
       const exists = locs.some(l => l.id === locId);
       if (exists) {
         // Mark existing location as current, demote previous current to explored
+        const prevCur = locs.find(l => l.status === 'current');
         const updated = locs.map(l => ({
           ...l,
           status: l.id === locId ? 'current' : (l.status === 'current' ? 'explored' : l.status),
         }));
-        return { ...state, gameData: { ...state.gameData, mapLocations: updated } };
+        // Draw the return route so revisits still show a traveled path
+        const rpaths = [...(state.gameData.mapPaths || [])];
+        if (prevCur && prevCur.id !== locId &&
+            !rpaths.some(pth => (pth.from === prevCur.id && pth.to === locId) || (pth.from === locId && pth.to === prevCur.id))) {
+          rpaths.push({ from: prevCur.id, to: locId, traveled: true });
+        }
+        return { ...state, gameData: { ...state.gameData, mapLocations: updated, mapPaths: rpaths } };
       }
       // Add new location — place it in a grid pattern based on how many exist
       const count = locs.length;
@@ -154,7 +166,27 @@ function gameReducer(state, action) {
       return { ...state, gameData: { ...state.gameData, mapLocations: [...updatedLocs, newLoc], mapPaths: paths } };
     }
     case 'COMBAT_START': {
-      return { ...state, gameData: { ...state.gameData, combat: { active: true, round: 1, location: action.payload.environment || '', turnOrder: [], currentTurn: 0, log: [{ text: '═══ COMBAT BEGINS ═══', type: 'system' }] } } };
+      // enemies arrive as [{ name, hp, maxHp }] parsed from the tag; feed the
+      // initiative list + banner + HP bars that were previously always empty.
+      const enemies = action.payload.enemies || [];
+      // turnOrder shape matches CombatPanel: { type, initiative, name, hp, maxHp }
+      const turnOrder = enemies.map((e, i) => ({ name: e.name, hp: e.hp, maxHp: e.maxHp, type: 'enemy', initiative: i + 1 }));
+      return { ...state, gameData: { ...state.gameData, combat: { active: true, round: 1, location: action.payload.environment || '', enemies, turnOrder, currentTurn: 0, log: [{ text: '═══ COMBAT BEGINS ═══', type: 'system' }] } } };
+    }
+    case 'ENEMY_HP': {
+      const combat = state.gameData.combat || {};
+      const enemies = (combat.enemies || []).map(e =>
+        e.name === action.payload.name ? { ...e, hp: action.payload.hp } : e
+      );
+      const turnOrder = (combat.turnOrder || []).map(t =>
+        t.type === 'enemy' && t.name === action.payload.name ? { ...t, hp: action.payload.hp } : t
+      );
+      return { ...state, gameData: { ...state.gameData, combat: { ...combat, enemies, turnOrder } } };
+    }
+    case 'COMBAT_LOG': {
+      const combat = state.gameData.combat || {};
+      const log = [...(combat.log || []), { text: action.payload.text, type: action.payload.kind || 'action' }];
+      return { ...state, gameData: { ...state.gameData, combat: { ...combat, log } } };
     }
     case 'COMBAT_END': {
       return { ...state, gameData: { ...state.gameData, combat: { ...state.gameData.combat, active: false } } };
@@ -164,6 +196,7 @@ function gameReducer(state, action) {
       const ep = { ...state.gameData.character.ep };
       ep.current = ep.current + amount;
       // Handle level-up(s) — use while loop for multi-threshold XP gains
+      const fromLevel = state.gameData.character.level || 1;
       let ch = { ...state.gameData.character, ep };
       while (ep.current >= ep.max && ep.max > 0) {
         ch.level = (ch.level || 1) + 1;
@@ -171,7 +204,14 @@ function gameReducer(state, action) {
         ep.max = Math.floor(ep.max * 1.4); // Scale XP needed for next level
         ch.ep = ep;
       }
-      return { ...state, gameData: { ...state.gameData, character: ch } };
+      const leveledUp = ch.level > fromLevel;
+      return {
+        ...state,
+        gameData: { ...state.gameData, character: ch },
+        // Fire the celebration overlay when a threshold was crossed. Record
+        // where we came from so the overlay can show "Level N → N+1" correctly.
+        ...(leveledUp ? { showLevelUp: true, levelUpFrom: fromLevel } : {}),
+      };
     }
     case 'ADD_ABILITY': {
       const abilities = [...(state.gameData.character.abilities || [])];
@@ -244,6 +284,10 @@ const initialState = {
   selected: { inventory: null, npc: null, quest: null, codex: null, map: null, session: null },
   notifications: [],
   showLevelUp: false,
+  levelUpFrom: null,
+  pulseEffect: null,
+  pulseId: 0,
+  isDefeated: false,
   combatTurn: 0,
   // Chat + API state
   chatMessages: [],

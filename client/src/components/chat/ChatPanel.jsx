@@ -3,6 +3,7 @@ import { useGame } from '../../contexts/GameContext.jsx';
 import { sendChatMessage, stopStreaming } from '../../services/chatService.js';
 import { formatDMText } from '../../utils/textFormatter.jsx';
 import SessionRating from '../shared/SessionRating.jsx';
+import DiceRollCard from './DiceRollCard.jsx';
 import { sendPlayerAction, onMultiplayerMessage, emitTypingStart, emitTypingStop, onPeerTyping } from '../../services/socketService.js';
 
 // Memoized message row — during streaming every token dispatch rebuilds the
@@ -202,14 +203,33 @@ function ChatPanel({ multiplayer, campaignId, className, activeChannel }) {
               </p>
             )}
             {state.apiStatus === 'connected' && (
-              <p style={{color:'var(--emerald-bright)',fontSize:'0.78rem',marginTop:12,fontFamily:"'Fira Code',monospace"}}>
-                ● Connected — Ready to play
-              </p>
+              <>
+                <p style={{color:'var(--emerald-bright)',fontSize:'0.78rem',marginTop:12,fontFamily:"'Fira Code',monospace"}}>
+                  ● Connected — Ready to play
+                </p>
+                <div className="chat-suggestions">
+                  {['Look around', 'Ask about local rumors', 'Check my belongings', 'Introduce myself'].map(s => (
+                    <button
+                      key={s}
+                      type="button"
+                      className="chat-suggestion-chip"
+                      onClick={() => { if (!state.isStreaming) sendChatMessage(s, state, dispatch); }}
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              </>
             )}
           </div>
         )}
 
         {state.chatMessages.map((msg, i) => {
+          // Dice rolls render as their own inline card, not a text bubble.
+          if (msg.role === 'roll' && msg.roll) {
+            return <DiceRollCard key={msg.id || i} roll={msg.roll} />;
+          }
+
           // Determine message type for styling
           let messageClass = 'chat-message';
           let senderName = '';
@@ -243,11 +263,11 @@ function ChatPanel({ multiplayer, campaignId, className, activeChannel }) {
 
         {state.isStreaming && (
           <div className="typing-indicator">
-            <span>The DM is writing</span>
-            <div className="typing-dots">
-              <span className="dot" />
-              <span className="dot" />
-              <span className="dot" />
+            <span>The Dungeon Master weaves fate</span>
+            <div className="typing-embers">
+              <span className="ember" />
+              <span className="ember" />
+              <span className="ember" />
             </div>
           </div>
         )}
@@ -277,10 +297,15 @@ function ChatPanel({ multiplayer, campaignId, className, activeChannel }) {
       )}
 
       {state.apiStatus !== 'connected' ? (
-        <div className="chat-disconnected-overlay">
-          <span className="disconnected-icon">🔑</span>
-          <span>Connect your API key via <strong>Command Center → Settings</strong></span>
-        </div>
+        <button
+          type="button"
+          className="chat-disconnected-overlay"
+          onClick={() => dispatch({ type: 'SHOW_CAMPAIGN_WIZARD', payload: true })}
+        >
+          <span className="disconnected-icon" aria-hidden="true">🔑</span>
+          <span>Connect your API key to speak to your DM</span>
+          <span className="disconnected-cta">Add a key →</span>
+        </button>
       ) : (
         <div className="chat-input-area">
           <textarea

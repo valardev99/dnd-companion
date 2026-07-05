@@ -6,14 +6,34 @@ import { generatePortraitAsync } from '../services/imageService.js';
 
 export const TAG_REGEX = /\[([A-Z_]+):\s*([^\]]+)\]/g;
 
+/** Parse an enemies="Wolf:8/8, Bandit:12/12" string into structured combatants. */
+export function parseEnemies(raw) {
+  if (!raw) return [];
+  const parts = Array.isArray(raw) ? raw : String(raw).split(',');
+  return parts.map(part => {
+    const s = String(part).trim();
+    const m = s.match(/^(.+?):\s*(\d+)\s*\/\s*(\d+)$/);
+    if (m) return { name: m[1].trim(), hp: parseInt(m[2]), maxHp: parseInt(m[3]) };
+    const m2 = s.match(/^(.+?):\s*(\d+)$/);
+    if (m2) return { name: m2[1].trim(), hp: parseInt(m2[2]), maxHp: parseInt(m2[2]) };
+    return s ? { name: s, hp: null, maxHp: null } : null;
+  }).filter(Boolean);
+}
+
 export function parseTagParams(paramStr) {
   const params = {};
-  const regex = /(\w+)\s*=\s*(?:"([^"]*)"|'([^']*)'|\[([^\]]*)\]|(\S+))/g;
+  // Unquoted values stop at a comma or closing bracket — otherwise `\S+`
+  // greedily swallows the trailing comma (e.g. "30,"), which then breaks
+  // every numeric comparison downstream (Number("30,") === NaN).
+  const regex = /(\w+)\s*=\s*(?:"([^"]*)"|'([^']*)'|\[([^\]]*)\]|([^,\]]+))/g;
   let m;
   while ((m = regex.exec(paramStr)) !== null) {
     const key = m[1];
-    const val = m[2] !== undefined ? m[2] : m[3] !== undefined ? m[3] : m[4] !== undefined ? m[4].split(',').map(s => s.trim().replace(/['"]/g, '')) : m[5];
-    if (!isNaN(val) && val !== '' && typeof val === 'string') { params[key] = parseFloat(val); }
+    let val = m[2] !== undefined ? m[2]
+      : m[3] !== undefined ? m[3]
+      : m[4] !== undefined ? m[4].split(',').map(s => s.trim().replace(/['"]/g, ''))
+      : m[5].trim();
+    if (typeof val === 'string' && val !== '' && !isNaN(val)) { params[key] = parseFloat(val); }
     else { params[key] = val; }
   }
   return params;
@@ -49,13 +69,37 @@ export function dispatchTagActions(tags, dispatch, state = null) {
           dispatch({ type: 'ADD_NOTIFICATION', payload: { title: `${p.stat} ${(p.new??0) > (p.old??0) ? 'INCREASED' : 'DECREASED'}`, body: p.reason || '', statChanges: [{ stat: p.stat, from: p.old, to: p.new ?? p.value, dir: (p.new??0) > (p.old??0) ? 'increase' : 'decrease' }] } });
         }
         break;
-      case 'HP_CHANGE':
-        dispatch({ type: 'UPDATE_VITALS', payload: { hp: p.new ?? p.value } });
-        if ((p.new??0) < (p.old??999)) dispatch({ type: 'ADD_NOTIFICATION', payload: { title: 'DAMAGE TAKEN', body: p.reason || '', style: 'critical', statChanges: [{ stat: 'HP', from: p.old, to: p.new ?? p.value, dir: 'decrease' }] } });
+      case 'HP_CHANGE': {
+        const newHp = p.new ?? p.value;
+        const oldHp = p.old ?? 999;
+        dispatch({ type: 'UPDATE_VITALS', payload: { hp: newHp } });
+        if (Number(newHp) < Number(oldHp)) {
+          // Damage — toast + a screen-edge vignette flash (see DamageFlash effect)
+          dispatch({ type: 'ADD_NOTIFICATION', payload: { title: 'DAMAGE TAKEN', body: p.reason || '', style: 'critical', statChanges: [{ stat: 'HP', from: p.old, to: newHp, dir: 'decrease' }] } });
+          dispatch({ type: 'PULSE_EFFECT', payload: 'damage' });
+          if (Number(newHp) <= 0) dispatch({ type: 'SET_DEFEATED', payload: true });
+        } else if (Number(newHp) > Number(oldHp)) {
+          // Healing — previously silent
+          dispatch({ type: 'ADD_NOTIFICATION', payload: { title: 'HEALED', body: p.reason || '', style: 'success', statChanges: [{ stat: 'HP', from: p.old, to: newHp, dir: 'increase' }] } });
+          dispatch({ type: 'PULSE_EFFECT', payload: 'heal' });
+        }
         break;
+      }
       case 'MP_CHANGE':
         dispatch({ type: 'UPDATE_VITALS', payload: { mp: p.new ?? p.value } });
         break;
+      case 'GOLD_CHANGE': {
+        const newGold = p.new ?? p.value;
+        dispatch({ type: 'UPDATE_VITALS', payload: { gold: Number(newGold) } });
+        const delta = Number(newGold) - Number(p.old ?? 0);
+        if (delta !== 0) dispatch({ type: 'ADD_NOTIFICATION', payload: { title: delta > 0 ? 'GOLD GAINED' : 'GOLD SPENT', body: `${delta > 0 ? '+' : ''}${delta} gold${p.reason ? ` — ${p.reason}` : ''}`, style: delta > 0 ? 'success' : 'arcane' } });
+        break;
+      }
+      case 'SANITY_CHANGE': {
+        dispatch({ type: 'UPDATE_VITALS', payload: { sanity: p.new ?? p.value } });
+        if (Number(p.new ?? 0) < Number(p.old ?? 999)) dispatch({ type: 'ADD_NOTIFICATION', payload: { title: 'SANITY SLIPS', body: p.reason || '', style: 'critical' } });
+        break;
+      }
       case 'XP_GAIN':
         dispatch({ type: 'ADD_XP', payload: { amount: parseInt(p.amount) || 0 } });
         dispatch({ type: 'ADD_NOTIFICATION', payload: { title: 'EXPERIENCE GAINED', body: `+${p.amount} XP — ${p.reason || p.source || ''}`, style: 'success' } });
@@ -73,18 +117,26 @@ export function dispatchTagActions(tags, dispatch, state = null) {
         else if (keyTypes.some(t => itemType.includes(t))) category = 'keyItems';
         const iconMap = { weapon: '⚔', armor: '🛡', shield: '🛡', ring: '💍', amulet: '📿', accessory: '💎', consumable: '🧪', potion: '🧪', scroll: '📜', material: '🔮', key: '🔑', tool: '🔧', relic: '✨', valuable: '💰', lore: '📖' };
         const icon = Object.entries(iconMap).find(([k]) => itemType.includes(k))?.[1] || '🔮';
-        dispatch({ type: 'ADD_ITEM', payload: { category, item: { name: p.name, rarity: p.rarity || 'common', icon, desc: p.desc || '', qty: 1, weight: 0 } } });
-        dispatch({ type: 'ADD_NOTIFICATION', payload: { title: 'ITEM ACQUIRED', body: `${p.name} (${p.rarity || 'common'}) — ${p.desc || ''}`, style: 'arcane' } });
+        dispatch({ type: 'ADD_ITEM', payload: { category, item: { name: p.name, rarity: p.rarity || 'common', icon, desc: p.desc || '', qty: 1, weight: 0, slot: p.slot || (category === 'equipped' ? itemType : undefined) } } });
+        dispatch({ type: 'ADD_NOTIFICATION', payload: { title: 'ITEM ACQUIRED', body: `${p.name} (${p.rarity || 'common'}) — ${p.desc || ''}`, style: 'arcane', rarity: (p.rarity || 'common').toLowerCase() } });
         break;
       }
       case 'ITEM_REMOVED':
         dispatch({ type: 'REMOVE_ITEM', payload: p.name });
         dispatch({ type: 'ADD_NOTIFICATION', payload: { title: 'ITEM LOST', body: `${p.name}${p.reason ? ` — ${p.reason}` : ''}`, style: 'critical' } });
         break;
-      case 'QUEST_UPDATE':
-        dispatch({ type: 'UPDATE_QUEST', payload: { id: p.id, status: p.status, progress: p.progress, objective: p.objective } });
-        dispatch({ type: 'ADD_NOTIFICATION', payload: { title: 'QUEST UPDATED', body: `${p.id} — ${p.objective || p.status || ''}`, style: 'success' } });
+      case 'QUEST_UPDATE': {
+        dispatch({ type: 'UPDATE_QUEST', payload: { id: p.id, status: p.status, progress: p.progress, objective: p.objective, giver: p.giver, deadline: p.deadline, consequence: p.consequence } });
+        // Completion is its own celebrated moment, distinct from a progress tick.
+        if ((p.status || '').toLowerCase() === 'completed') {
+          dispatch({ type: 'ADD_NOTIFICATION', payload: { title: 'QUEST COMPLETE', body: p.objective || p.id, style: 'quest-complete' } });
+        } else if ((p.status || '').toLowerCase() === 'failed') {
+          dispatch({ type: 'ADD_NOTIFICATION', payload: { title: 'QUEST FAILED', body: p.objective || p.id, style: 'critical' } });
+        } else {
+          dispatch({ type: 'ADD_NOTIFICATION', payload: { title: 'QUEST UPDATED', body: `${p.id} — ${p.objective || p.status || ''}`, style: 'success' } });
+        }
         break;
+      }
       case 'NPC_UPDATE': {
         dispatch({ type: 'UPDATE_NPC', payload: { name: p.name, relationship: p.relationship, status: p.status, location: p.location, loyalty: p.loyalty, role: p.role, desc: p.desc, avatar: p.avatar } });
         // Generate portrait for NEW NPCs (ones that don't exist yet)
@@ -102,17 +154,40 @@ export function dispatchTagActions(tags, dispatch, state = null) {
         }
         break;
       }
-      case 'COMBAT_START':
-        dispatch({ type: 'COMBAT_START', payload: { environment: p.environment } });
-        dispatch({ type: 'ADD_NOTIFICATION', payload: { title: '⚔ COMBAT INITIATED', body: p.environment || 'Roll initiative!', style: 'critical' } });
+      case 'COMBAT_START': {
+        // enemies="Wolf:8/8, Bandit:12/12" → [{ name, hp, maxHp }]
+        const enemies = parseEnemies(p.enemies);
+        dispatch({ type: 'COMBAT_START', payload: { environment: p.environment, enemies } });
+        const foeSummary = enemies.length ? enemies.map(e => e.name).join(', ') : (p.environment || 'Roll initiative!');
+        dispatch({ type: 'ADD_NOTIFICATION', payload: { title: '⚔ COMBAT INITIATED', body: foeSummary, style: 'critical' } });
+        break;
+      }
+      case 'ENEMY_HP':
+        dispatch({ type: 'ENEMY_HP', payload: { name: p.name, hp: parseInt(p.hp ?? p.new ?? p.value) || 0 } });
+        break;
+      case 'COMBAT_LOG':
+        dispatch({ type: 'COMBAT_LOG', payload: { text: p.text || p.entry || '', kind: p.kind } });
         break;
       case 'COMBAT_END':
         dispatch({ type: 'COMBAT_END', payload: {} });
         dispatch({ type: 'ADD_NOTIFICATION', payload: { title: 'COMBAT ENDED', body: `Result: ${p.result || 'Victory'}${p.xp ? ` — +${p.xp} XP` : ''}`, style: 'success' } });
         break;
-      case 'ROLL_RESULT':
-        dispatch({ type: 'ADD_NOTIFICATION', payload: { title: `ROLL: ${p.type || 'Check'}`, body: `Rolled ${p.rolled}${p.modifier ? `+${p.modifier}` : ''} vs DC ${p.dc || '?'} — ${p.result || ''}`, style: p.result === 'success' || p.result === 'critical_success' ? 'success' : 'critical' } });
+      case 'ROLL_RESULT': {
+        // Render the roll as an inline chat card — the d20 is the heart of the
+        // game and deserves more than a corner toast.
+        const rolled = parseInt(p.rolled) || 0;
+        const modifier = parseInt(p.modifier) || 0;
+        const dc = p.dc !== undefined ? parseInt(p.dc) : null;
+        const resultStr = (p.result || '').toLowerCase();
+        const success = resultStr.includes('success') || resultStr === 'pass';
+        const crit = resultStr.includes('critical') || rolled === 20;
+        const critFail = resultStr.includes('fumble') || resultStr.includes('critical_fail') || rolled === 1;
+        dispatch({ type: 'ADD_CHAT_MESSAGE', payload: {
+          role: 'roll',
+          roll: { type: p.type || 'Check', rolled, modifier, dc, total: rolled + modifier, success, crit, critFail, result: p.result || '' },
+        } });
         break;
+      }
       case 'HIDDEN_TRACKER':
         dispatch({ type: 'UPDATE_TRACKER', payload: { tracker: p.tracker, value: p.new_value, hint: p.hint } });
         break;

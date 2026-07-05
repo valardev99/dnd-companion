@@ -64,7 +64,7 @@ function NotificationOverlay() {
   return (
     <div className="notification-overlay">
       {visible.map(n => (
-        <div key={n.id} className={`system-notification ${n.style || ''} notif-${n.phase}`}>
+        <div key={n.id} className={`system-notification ${n.style || ''} notif-${n.phase}`} data-rarity={n.rarity || undefined}>
           <div className="notification-border">═══════════════════════════════</div>
           <div className="notification-title">{n.title}</div>
           <div className="notification-body">{n.body}</div>

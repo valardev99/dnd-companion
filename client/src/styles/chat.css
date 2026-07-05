@@ -304,22 +304,34 @@
 
 /* ═══ CHAT INPUT ═══ */
 .chat-disconnected-overlay {
-  padding: 20px 16px;
+  width: 100%;
+  padding: 18px 16px;
   background: rgba(0, 0, 0, 0.4);
-  border-top: 1px solid var(--border-dim);
+  border: none;
+  border-top: 1px solid var(--border-gold);
   display: flex;
   gap: 10px;
   align-items: center;
   justify-content: center;
-  color: var(--muted);
-  font-family: 'Inter', sans-serif;
-  font-size: 0.85rem;
+  color: var(--silver);
+  font-family: 'Crimson Text', serif;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+.chat-disconnected-overlay:hover,
+.chat-disconnected-overlay:focus-visible {
+  background: rgba(201, 168, 76, 0.1);
+  color: var(--parchment);
 }
 .chat-disconnected-overlay .disconnected-icon {
   font-size: 1.2rem;
 }
-.chat-disconnected-overlay strong {
-  color: var(--gold-dim);
+.chat-disconnected-overlay .disconnected-cta {
+  color: var(--gold-bright);
+  font-family: 'Cinzel', serif;
+  font-size: 0.8rem;
+  letter-spacing: 0.5px;
 }
 
 .chat-input-area {

@@ -7,7 +7,7 @@ import { useGame } from './contexts/GameContext.jsx';
 import { Header, Sidebar, Footer, NavRail, StatusBar, ChannelTabs, CombatBanner } from './components/layout';
 
 // Effects
-import { ParticleBackground, NotificationOverlay, LevelUpOverlay } from './components/effects';
+import { ParticleBackground, NotificationOverlay, LevelUpOverlay, DamageFlash, DefeatOverlay } from './components/effects';
 
 // Panels
 import {
@@ -225,6 +225,8 @@ function App() {
       <Footer />
       <NotificationOverlay />
       <LevelUpOverlay />
+      <DamageFlash />
+      <DefeatOverlay />
       {state.showCampaignWizard && <CampaignWizard />}
     </React.Fragment>
   );
